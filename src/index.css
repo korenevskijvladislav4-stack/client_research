@@ -1,0 +1,170 @@
+/* Ant Design reset is imported in main.tsx.
+   Keep this file minimal to avoid conflicting with Ant Design. */
+#root { min-height: 100vh; }
+
+/* Smooth theme transitions */
+body,
+.ant-layout,
+.ant-layout-sider,
+.ant-card,
+.ant-table,
+.ant-table-wrapper,
+.ant-menu,
+.ant-btn,
+.ant-input,
+.ant-select,
+.ant-modal-content,
+.ant-drawer-content {
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.2s ease;
+}
+
+/* Custom scrollbar for dark theme */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.5);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.7);
+}
+
+/* Responsive utilities */
+@media (max-width: 768px) {
+  /* Tables */
+  .ant-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .ant-table {
+    min-width: 600px;
+  }
+
+  /* Cards */
+  .ant-card {
+    margin-bottom: 16px;
+  }
+
+  .ant-card-head {
+    padding: 12px 16px;
+  }
+
+  .ant-card-body {
+    padding: 16px;
+  }
+
+  /* Forms */
+  .ant-form-item {
+    margin-bottom: 16px;
+  }
+
+  /* Modals */
+  .ant-modal {
+    max-width: calc(100vw - 32px);
+    margin: 16px auto;
+  }
+
+  .ant-modal-content {
+    padding: 16px;
+  }
+
+  /* Descriptions */
+  .ant-descriptions-item-label {
+    width: 120px !important;
+    min-width: 120px !important;
+  }
+
+  /* Space components */
+  .ant-space {
+    width: 100%;
+  }
+
+  .ant-space-vertical {
+    width: 100%;
+  }
+
+  /* Typography */
+  .ant-typography {
+    word-break: break-word;
+  }
+
+  /* Buttons */
+  .ant-btn {
+    white-space: nowrap;
+  }
+
+  /* Select */
+  .ant-select {
+    width: 100% !important;
+  }
+
+  /* Input groups */
+  .ant-input-group {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .ant-input-group .ant-input {
+    margin-bottom: 8px;
+  }
+
+  /* Filters */
+  .filter-container {
+    flex-direction: column;
+  }
+
+  .filter-container .ant-space-item {
+    width: 100%;
+  }
+
+  /* Tables with actions */
+  .ant-table-tbody > tr > td:last-child {
+    position: sticky;
+    right: 0;
+    background: inherit;
+    z-index: 1;
+  }
+}
+
+@media (max-width: 576px) {
+  /* Even smaller screens */
+  .ant-modal {
+    max-width: calc(100vw - 16px);
+    margin: 8px auto;
+  }
+
+  .ant-card-body {
+    padding: 12px;
+  }
+
+  .ant-table {
+    font-size: 12px;
+  }
+
+  .ant-btn {
+    padding: 4px 8px;
+    height: auto;
+  }
+}
+
+/* Print styles */
+@media print {
+  .ant-layout-sider,
+  .ant-btn,
+  .ant-pagination {
+    display: none !important;
+  }
+
+  .ant-layout-content {
+    margin-left: 0 !important;
+  }
+}
