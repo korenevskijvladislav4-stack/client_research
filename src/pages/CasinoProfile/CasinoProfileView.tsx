@@ -24,7 +24,7 @@ import {
   Image,
   Pagination,
 } from 'antd';
-import { ArrowLeftOutlined, InfoCircleOutlined, EyeOutlined, UserOutlined, DeleteOutlined, PictureOutlined, PlusOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, InfoCircleOutlined, EyeOutlined, UserOutlined, DeleteOutlined, PictureOutlined, PlusOutlined, DownloadOutlined } from '@ant-design/icons';
 import { ProfileSettingsTable } from '../../components/ProfileSettingsTable';
 import { AccountsTable } from '../../components/AccountsTable';
 import { useGetCasinoByIdQuery } from '../../store/api/casinoApi';
@@ -71,6 +71,8 @@ import {
 } from '../../store/api/casinoCommentApi';
 import { useSelector } from 'react-redux';
 import dayjs from 'dayjs';
+import { getApiBaseUrl } from '../../config/api';
+import { exportProfileToInteractiveHtml, ExportData } from '../../utils/exportProfileToInteractiveHtml';
 
 // Форматирование числа
 const fmt = (n: any) => {
@@ -218,6 +220,7 @@ export default function CasinoProfileView() {
   const [newComment, setNewComment] = useState('');
   const [pendingImageFile, setPendingImageFile] = useState<File | null>(null);
   const currentUser = useSelector((state: any) => state.auth.user);
+  const authToken = useSelector((state: any) => state.auth.token);
 
   const imagesByCommentId = useMemo(() => {
     const map = new Map<number, CasinoCommentImage[]>();
@@ -268,6 +271,128 @@ export default function CasinoProfileView() {
     }
   };
 
+  const handleExportHtml = async () => {
+    if (!casino) return;
+    const hide = message.loading({ content: 'Подготовка экспорта...', key: 'export', duration: 0 });
+    const baseUrl = getApiBaseUrl();
+    const bonusImageUrls: Record<number, string[]> = {};
+    for (const b of bonuses ?? []) {
+      try {
+        const r = await fetch(`${baseUrl}casinos/${casinoId}/bonuses/${b.id}/images`, { credentials: 'include' });
+        const data = await r.json();
+        const list = Array.isArray(data) ? data : (data?.data ?? data?.images ?? []);
+        bonusImageUrls[b.id] = (list as { url?: string }[]).map((img) => img.url).filter(Boolean) as string[];
+      } catch {
+        bonusImageUrls[b.id] = [];
+      }
+    }
+    const paymentImageUrls: Record<number, string[]> = {};
+    for (const p of payments ?? []) {
+      try {
+        const r = await fetch(`${baseUrl}casinos/${casinoId}/payments/${p.id}/images`, { credentials: 'include' });
+        const data = await r.json();
+        const list = Array.isArray(data) ? data : (data?.data ?? data?.images ?? []);
+        paymentImageUrls[p.id] = (list as { url?: string }[]).map((img) => img.url).filter(Boolean) as string[];
+      } catch {
+        paymentImageUrls[p.id] = [];
+      }
+    }
+    const commentImageUrls = (images ?? [])
+      .filter((img) => img.comment_id != null)
+      .map((img) => ({ comment_id: img.comment_id!, url: img.url }));
+
+    const authHeaders: HeadersInit = {};
+    if (authToken) authHeaders['Authorization'] = `Bearer ${authToken}`;
+
+    let profileSettingsFields: ExportData['profileSettingsFields'] = [];
+    let profileSettingsContexts: ExportData['profileSettingsContexts'] = [];
+    let profileSettings: ExportData['profileSettings'] = [];
+    try {
+      const [fieldsRes, contextsRes] = await Promise.all([
+        fetch(`${baseUrl}profile-fields`, { credentials: 'include', headers: authHeaders }),
+        fetch(`${baseUrl}profile-contexts`, { credentials: 'include', headers: authHeaders }),
+      ]);
+      const fieldsData = fieldsRes.ok ? await fieldsRes.json() : [];
+      const contextsData = contextsRes.ok ? await contextsRes.json() : [];
+      profileSettingsFields = Array.isArray(fieldsData) ? fieldsData : (fieldsData?.data ?? []);
+      profileSettingsContexts = Array.isArray(contextsData) ? contextsData : (contextsData?.data ?? []);
+      const settingsByGeo: ExportData['profileSettings'] = [];
+      for (const geo of casinoGeos) {
+        try {
+          const r = await fetch(`${baseUrl}profile-settings/casino/${casinoId}?geo=${encodeURIComponent(geo)}`, { credentials: 'include', headers: authHeaders });
+          const arr = r.ok ? await r.json() : [];
+          const list = Array.isArray(arr) ? arr : (arr?.data ?? []);
+          for (const s of list as { geo?: string; field_id: number; context_id: number; value: boolean }[]) {
+            settingsByGeo.push({ geo: s.geo ?? geo, field_id: s.field_id, context_id: s.context_id, value: s.value });
+          }
+        } catch {
+          // skip
+        }
+      }
+      profileSettings = settingsByGeo;
+    } catch {
+      // skip profile settings
+    }
+
+    const exportData: ExportData = {
+      casino: {
+        id: casino.id,
+        name: casino.name,
+        website: casino.website,
+        description: casino.description,
+        geo: casino.geo,
+        is_our: casino.is_our,
+        status: casino.status,
+      },
+      profile: items,
+      profileSettingsFields,
+      profileSettingsContexts,
+      profileSettings,
+      bonuses: bonuses ?? [],
+      payments: payments ?? [],
+      emails: emailResp?.data ?? [],
+      comments: (comments ?? []).map((c) => ({
+        id: c.id,
+        text: c.text,
+        created_at: c.created_at,
+        user: c.username ? { username: c.username } : undefined,
+      })),
+      geos: casinoGeos,
+      recipients: recipients ?? [],
+      bonusImageUrls,
+      paymentImageUrls,
+      commentImageUrls,
+    };
+    const getImageDataUrl = async (url: string): Promise<string | null> => {
+      try {
+        const abs = url.startsWith('http') ? url : new URL(url, window.location.origin).href;
+        const res = await fetch(abs, { credentials: 'include' });
+        if (!res.ok) return null;
+        const blob = await res.blob();
+        return await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      } catch {
+        return null;
+      }
+    };
+    try {
+      await exportProfileToInteractiveHtml(exportData, {
+        title: `${casino.name} — анкета`,
+        filename: `anketa-${String(casino.name).replace(/[^\w\s-]/g, '')}.html`,
+        getImageDataUrl,
+      });
+      hide();
+      message.success({ content: 'HTML-файл сохранён', key: 'export' });
+    } catch (e) {
+      hide();
+      message.error({ content: 'Ошибка экспорта', key: 'export' });
+    }
+  };
+
   const handleUploadImage = async (commentId: number, file: File) => {
     try {
       await uploadImage({ casinoId, commentId, file }).unwrap();
@@ -301,9 +426,16 @@ export default function CasinoProfileView() {
             </Typography.Text>
           </Space>
         </Space>
-        <Button type="primary" onClick={() => nav(`/casinos/${casinoId}/edit`)}>
-          Редактировать анкету
-        </Button>
+        <Space wrap>
+          <Tooltip title="Экспорт анкеты в интерактивный HTML: фильтры по GEO и получателю, просмотр бонусов и платежей в модальных окнах, просмотр писем.">
+            <Button icon={<DownloadOutlined />} onClick={handleExportHtml}>
+              Экспорт в HTML
+            </Button>
+          </Tooltip>
+          <Button type="primary" onClick={() => nav(`/casinos/${casinoId}/edit`)}>
+            Редактировать анкету
+          </Button>
+        </Space>
       </div>
 
       <Card>
