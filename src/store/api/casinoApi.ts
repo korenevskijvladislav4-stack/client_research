@@ -37,6 +37,18 @@ export const casinoApi = baseApi.injectEndpoints({
     // Paginated list
     getCasinos: builder.query<PaginatedResponse<Casino>, CasinoQueryParams | void>({
       query: (params) => `/casinos${buildQueryString(params || {})}`,
+      transformResponse: (response: any): PaginatedResponse<Casino> => {
+        // Support direct { data, pagination } or wrapped { result: { data, pagination } }
+        const payload = response?.result ?? response;
+        const data = Array.isArray(payload?.data) ? payload.data : (Array.isArray(payload) ? payload : []);
+        const pagination = payload?.pagination ?? {
+          page: 1,
+          pageSize: data.length,
+          total: data.length,
+          totalPages: 1,
+        };
+        return { data, pagination };
+      },
       providesTags: (result) =>
         result?.data && Array.isArray(result.data)
           ? [

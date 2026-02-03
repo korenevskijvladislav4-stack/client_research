@@ -95,8 +95,8 @@ export default function Casinos() {
   const [editing, setEditing] = useState<Casino | null>(null);
   const [form] = Form.useForm();
 
-  // Data from response
-  const rows = response?.data ?? [];
+  // Data from response (normalized by getCasinos transformResponse)
+  const rows = Array.isArray(response?.data) ? response.data : [];
   const total = response?.pagination?.total ?? 0;
 
   // Column config with dynamic fields
