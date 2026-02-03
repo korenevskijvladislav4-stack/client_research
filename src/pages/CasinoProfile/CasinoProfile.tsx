@@ -1227,7 +1227,7 @@ export default function CasinoProfile() {
               </Card>
             )}
 
-            {/* Поля для Кэш-бонуса (казино) */}
+            {/* Поля для Кэш-бонуса (казино): только при типе «Кэш» или «Комбо» */}
             {bonusCategory === 'casino' && (selectedBonusType === 'cash' || selectedBonusType === 'combo') && (
               <Card size="small" style={{ marginBottom: 16 }} title="Кэш-бонус">
                 <Row gutter={16}>
@@ -1256,10 +1256,53 @@ export default function CasinoProfile() {
                 <Form.Item name="max_bonus" label="Макс. бонус">
                   <InputNumber style={{ width: '100%' }} placeholder="5000" />
                 </Form.Item>
+                {/* Максвин по кэш-бонусу: значение + тип (фикс или коэф.) */}
+                {selectedBonusType === 'cash' && (
+                  <Row gutter={16}>
+                    <Col span={8}>
+                      <Form.Item name="max_win_cash_value" label="Максвин">
+                        <InputNumber style={{ width: '100%' }} min={0} placeholder="5000 или 5" />
+                      </Form.Item>
+                    </Col>
+                    <Col span={8}>
+                      <Form.Item name="max_win_cash_unit" label="Тип максвина">
+                        <Select
+                          placeholder="Фикс / Коэф."
+                          allowClear
+                          options={[
+                            { value: 'fixed', label: 'Фиксированная сумма' },
+                            { value: 'coefficient', label: 'Коэффициент (x)' },
+                          ]}
+                        />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+                )}
+                {selectedBonusType === 'combo' && (
+                  <Row gutter={16}>
+                    <Col span={8}>
+                      <Form.Item name="max_win_percent_value" label="Максвин">
+                        <InputNumber style={{ width: '100%' }} min={0} placeholder="1000 или 10" />
+                      </Form.Item>
+                    </Col>
+                    <Col span={8}>
+                      <Form.Item name="max_win_percent_unit" label="Тип максвина">
+                        <Select
+                          placeholder="Фикс / Коэф."
+                          allowClear
+                          options={[
+                            { value: 'fixed', label: 'Фиксированная сумма' },
+                            { value: 'coefficient', label: 'Коэффициент (x)' },
+                          ]}
+                        />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+                )}
               </Card>
             )}
 
-            {/* Поля для Фриспин-бонуса (казино) */}
+            {/* Поля для Фриспин-бонуса (казино): только при типе «Фриспин» или «Комбо» */}
             {bonusCategory === 'casino' && (selectedBonusType === 'freespin' || selectedBonusType === 'combo') && (
               <Card size="small" style={{ marginBottom: 16 }} title="Фриспин-бонус">
                 <Row gutter={16}>
@@ -1276,6 +1319,25 @@ export default function CasinoProfile() {
                   <Col span={8}>
                     <Form.Item name="freespin_game" label="Игра">
                       <Input placeholder="Book of Dead" />
+                    </Form.Item>
+                  </Col>
+                </Row>
+                <Row gutter={16}>
+                  <Col span={8}>
+                    <Form.Item name="max_win_freespin_value" label="Максвин">
+                      <InputNumber style={{ width: '100%' }} min={0} placeholder="500 или 5" />
+                    </Form.Item>
+                  </Col>
+                  <Col span={8}>
+                    <Form.Item name="max_win_freespin_unit" label="Тип максвина">
+                      <Select
+                        placeholder="Фикс / Коэф."
+                        allowClear
+                        options={[
+                          { value: 'fixed', label: 'Фиксированная сумма' },
+                          { value: 'coefficient', label: 'Коэффициент (x)' },
+                        ]}
+                      />
                     </Form.Item>
                   </Col>
                 </Row>
@@ -1462,13 +1524,6 @@ export default function CasinoProfile() {
             {bonusCategory === 'casino' && selectedBonusKind === 'deposit' && (
               <Form.Item name="min_deposit" label="Минимальный депозит">
                 <InputNumber style={{ width: '100%' }} placeholder="500" />
-              </Form.Item>
-            )}
-
-            {/* Макс. выигрыш - коэффициент от суммы бонуса (для казино) */}
-            {bonusCategory === 'casino' && (selectedBonusKind === 'nodeposit' || selectedBonusType) && (
-              <Form.Item name="max_cashout" label="Макс. выигрыш (коэф. от бонуса)">
-                <InputNumber style={{ width: '100%' }} placeholder="5" addonBefore="x" min={0} />
               </Form.Item>
             )}
 

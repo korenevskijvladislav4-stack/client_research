@@ -483,6 +483,33 @@ export default function Bonuses() {
                     {fmtAmount(selectedBonus.max_bonus, selectedBonus.currency)}
                   </Descriptions.Item>
                 )}
+                {/* Максвин по кэш-части / % части — рядом с кэш-бонусом */}
+                {selectedBonus.bonus_type === 'cash' &&
+                  (selectedBonus.max_win_cash_value != null || selectedBonus.max_cashout != null) && (
+                    <Descriptions.Item label="Максвин кэш-бонуса">
+                      {selectedBonus.max_win_cash_value != null ? (
+                        <>
+                          {selectedBonus.max_win_cash_unit === 'coefficient'
+                            ? `x${fmt(selectedBonus.max_win_cash_value)}`
+                            : fmtAmount(selectedBonus.max_win_cash_value, selectedBonus.currency)}
+                          {' '}
+                          ({selectedBonus.max_win_cash_unit === 'coefficient' ? 'коэффициент' : 'фикс. сумма'})
+                        </>
+                      ) : (
+                        `x${fmt(selectedBonus.max_cashout)} (коэффициент)`
+                      )}
+                    </Descriptions.Item>
+                  )}
+                {selectedBonus.bonus_type === 'combo' &&
+                  selectedBonus.max_win_percent_value != null && (
+                    <Descriptions.Item label="Максвин % части">
+                      {selectedBonus.max_win_percent_unit === 'coefficient'
+                        ? `x${fmt(selectedBonus.max_win_percent_value)}`
+                        : fmtAmount(selectedBonus.max_win_percent_value, selectedBonus.currency)}
+                      {' '}
+                      ({selectedBonus.max_win_percent_unit === 'coefficient' ? 'коэффициент' : 'фикс. сумма'})
+                    </Descriptions.Item>
+                  )}
 
                 {/* Фриспины */}
                 {selectedBonus.freespins_count != null && (
@@ -500,6 +527,17 @@ export default function Bonuses() {
                     {selectedBonus.freespin_game}
                   </Descriptions.Item>
                 )}
+                {/* Максвин фриспинов — рядом с информацией по спинам */}
+                {(selectedBonus.bonus_type === 'freespin' || selectedBonus.bonus_type === 'combo') &&
+                  selectedBonus.max_win_freespin_value != null && (
+                    <Descriptions.Item label="Максвин фриспинов">
+                      {selectedBonus.max_win_freespin_unit === 'coefficient'
+                        ? `x${fmt(selectedBonus.max_win_freespin_value)}`
+                        : fmtAmount(selectedBonus.max_win_freespin_value, selectedBonus.currency)}
+                      {' '}
+                      ({selectedBonus.max_win_freespin_unit === 'coefficient' ? 'коэффициент' : 'фикс. сумма'})
+                    </Descriptions.Item>
+                  )}
 
                 {/* Кешбек/Рейкбек */}
                 {selectedBonus.cashback_percent != null && (
@@ -524,11 +562,6 @@ export default function Bonuses() {
                 {selectedBonus.min_deposit != null && (
                   <Descriptions.Item label="Мин. депозит">
                     {fmtAmount(selectedBonus.min_deposit, selectedBonus.currency)}
-                  </Descriptions.Item>
-                )}
-                {selectedBonus.max_cashout != null && (
-                  <Descriptions.Item label="Макс. выигрыш (коэф.)">
-                    x{fmt(selectedBonus.max_cashout)}
                   </Descriptions.Item>
                 )}
                 {selectedBonus.wagering_requirement != null && (

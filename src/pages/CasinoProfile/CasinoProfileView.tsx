@@ -11,6 +11,7 @@ import {
   List,
   Modal,
   Popconfirm,
+  Select,
   Space,
   Spin,
   Table,
@@ -56,6 +57,7 @@ import {
 } from '../../store/api/slotSelectorApi';
 import {
   useGetEmailsForCasinoByNameQuery,
+  useGetRecipientsQuery,
   useMarkEmailAsReadMutation,
   Email,
 } from '../../store/api/emailApi';
@@ -172,6 +174,7 @@ export default function CasinoProfileView() {
 
   const [selectedPayment, setSelectedPayment] = useState<CasinoPayment | null>(null);
   const [pendingPaymentImages, setPendingPaymentImages] = useState<File[]>([]);
+  const [activePaymentDirection, setActivePaymentDirection] = useState<'deposit' | 'withdrawal' | undefined>(undefined);
 
   const { data: paymentImages = [] } = useGetPaymentImagesQuery(
     { casinoId, paymentId: selectedPayment?.id ?? 0 },
@@ -184,6 +187,7 @@ export default function CasinoProfileView() {
 
   const PAGE_SIZE = 20;
   const [emailPage, setEmailPage] = useState(1);
+  const [emailToFilter, setEmailToFilter] = useState<string | undefined>(undefined);
   const {
     data: emailResp,
     isLoading: emailsLoading,
@@ -193,9 +197,11 @@ export default function CasinoProfileView() {
       casinoId,
       limit: PAGE_SIZE,
       offset: (emailPage - 1) * PAGE_SIZE,
+      ...(emailToFilter ? { to_email: emailToFilter } : {}),
     },
     { skip: !casinoId } as any
   );
+  const { data: recipients = [] } = useGetRecipientsQuery();
   const [markAsRead] = useMarkEmailAsReadMutation();
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
 
@@ -790,6 +796,33 @@ export default function CasinoProfileView() {
                   {fmtAmount(selectedBonus.max_bonus, selectedBonus.currency)}
                 </Descriptions.Item>
               )}
+              {/* Максвин по кэш-части / % части — рядом с кэш-бонусом */}
+              {selectedBonus.bonus_type === 'cash' &&
+                (selectedBonus.max_win_cash_value != null || selectedBonus.max_cashout != null) && (
+                  <Descriptions.Item label="Максвин кэш-бонуса">
+                    {selectedBonus.max_win_cash_value != null ? (
+                      <>
+                        {selectedBonus.max_win_cash_unit === 'coefficient'
+                          ? `x${fmt(selectedBonus.max_win_cash_value)}`
+                          : fmtAmount(selectedBonus.max_win_cash_value, selectedBonus.currency)}
+                        {' '}
+                        ({selectedBonus.max_win_cash_unit === 'coefficient' ? 'коэффициент' : 'фикс. сумма'})
+                      </>
+                    ) : (
+                      `x${fmt(selectedBonus.max_cashout)} (коэффициент)`
+                    )}
+                  </Descriptions.Item>
+                )}
+              {selectedBonus.bonus_type === 'combo' &&
+                selectedBonus.max_win_percent_value != null && (
+                  <Descriptions.Item label="Максвин % части">
+                    {selectedBonus.max_win_percent_unit === 'coefficient'
+                      ? `x${fmt(selectedBonus.max_win_percent_value)}`
+                      : fmtAmount(selectedBonus.max_win_percent_value, selectedBonus.currency)}
+                    {' '}
+                    ({selectedBonus.max_win_percent_unit === 'coefficient' ? 'коэффициент' : 'фикс. сумма'})
+                  </Descriptions.Item>
+                )}
 
               {/* Фриспины */}
               {selectedBonus.freespins_count != null && (
@@ -807,6 +840,17 @@ export default function CasinoProfileView() {
                   {selectedBonus.freespin_game}
                 </Descriptions.Item>
               )}
+              {/* Максвин фриспинов — рядом с информацией по спинам */}
+              {(selectedBonus.bonus_type === 'freespin' || selectedBonus.bonus_type === 'combo') &&
+                selectedBonus.max_win_freespin_value != null && (
+                  <Descriptions.Item label="Максвин фриспинов">
+                    {selectedBonus.max_win_freespin_unit === 'coefficient'
+                      ? `x${fmt(selectedBonus.max_win_freespin_value)}`
+                      : fmtAmount(selectedBonus.max_win_freespin_value, selectedBonus.currency)}
+                    {' '}
+                    ({selectedBonus.max_win_freespin_unit === 'coefficient' ? 'коэффициент' : 'фикс. сумма'})
+                  </Descriptions.Item>
+                )}
 
               {/* Кешбек/Рейкбек */}
               {selectedBonus.cashback_percent != null && (
@@ -831,11 +875,6 @@ export default function CasinoProfileView() {
               {selectedBonus.min_deposit != null && (
                 <Descriptions.Item label="Мин. депозит">
                   {fmtAmount(selectedBonus.min_deposit, selectedBonus.currency)}
-                </Descriptions.Item>
-              )}
-              {selectedBonus.max_cashout != null && (
-                <Descriptions.Item label="Макс. выигрыш (коэф.)">
-                  x{fmt(selectedBonus.max_cashout)}
                 </Descriptions.Item>
               )}
               {selectedBonus.wagering_requirement != null && (
@@ -998,7 +1037,30 @@ export default function CasinoProfileView() {
 
       <Card title="Платёжные решения">
         <Space wrap style={{ marginBottom: 16 }}>
-          <Typography.Text type="secondary">Фильтр по GEO:</Typography.Text>
+          <Typography.Text type="secondary">Направление:</Typography.Text>
+          <Button
+            size="small"
+            type={activePaymentDirection === undefined ? 'primary' : 'default'}
+            onClick={() => setActivePaymentDirection(undefined)}
+          >
+            Все
+          </Button>
+          <Button
+            size="small"
+            type={activePaymentDirection === 'deposit' ? 'primary' : 'default'}
+            onClick={() => setActivePaymentDirection('deposit')}
+          >
+            Деп
+          </Button>
+          <Button
+            size="small"
+            type={activePaymentDirection === 'withdrawal' ? 'primary' : 'default'}
+            onClick={() => setActivePaymentDirection('withdrawal')}
+          >
+            Вывод
+          </Button>
+          <Divider type="vertical" />
+          <Typography.Text type="secondary">GEO:</Typography.Text>
           <Button
             size="small"
             type={!activeGeo ? 'primary' : 'default'}
@@ -1021,7 +1083,11 @@ export default function CasinoProfileView() {
           rowKey="id"
           size="small"
           loading={paymentsLoading}
-          dataSource={(payments ?? []).filter((p) => (activeGeo ? p.geo === activeGeo : true))}
+          dataSource={(payments ?? []).filter((p) => {
+            if (activePaymentDirection != null && (p.direction ?? 'deposit') !== activePaymentDirection) return false;
+            if (activeGeo && p.geo !== activeGeo) return false;
+            return true;
+          })}
           pagination={false}
           columns={[
             { title: 'Направление', dataIndex: 'direction', width: 100, render: (v: string) => v === 'withdrawal' ? 'Выплата' : 'Депозит' },
@@ -1239,6 +1305,23 @@ export default function CasinoProfileView() {
       </Card>
 
       <Card size="small" title="Почта">
+        <div style={{ marginBottom: 12 }}>
+          <Select
+            allowClear
+            showSearch
+            placeholder="Получатель"
+            style={{ minWidth: 220 }}
+            options={recipients.map((r) => ({ value: r, label: r }))}
+            value={emailToFilter}
+            onChange={(value) => {
+              setEmailToFilter(value);
+              setEmailPage(1);
+            }}
+            filterOption={(input, option) =>
+              (option?.label ?? '').toString().toLowerCase().includes(input.toLowerCase())
+            }
+          />
+        </div>
         <List
           loading={emailsLoading}
           dataSource={emailResp?.data ?? []}

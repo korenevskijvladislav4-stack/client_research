@@ -26,22 +26,28 @@ export interface EmailsResponse {
 
 export const emailApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-    getEmails: builder.query<EmailsResponse, { limit?: number; offset?: number; is_read?: boolean; related_casino_id?: number }>({
+    getRecipients: builder.query<string[], void>({
+      query: () => '/emails/recipients',
+      providesTags: ['Email'],
+    }),
+    getEmails: builder.query<EmailsResponse, { limit?: number; offset?: number; is_read?: boolean; related_casino_id?: number; to_email?: string }>({
       query: (params = {}) => {
         const queryParams = new URLSearchParams();
         if (params.limit) queryParams.append('limit', params.limit.toString());
         if (params.offset) queryParams.append('offset', params.offset.toString());
         if (params.is_read !== undefined) queryParams.append('is_read', params.is_read.toString());
         if (params.related_casino_id) queryParams.append('related_casino_id', params.related_casino_id.toString());
+        if (params.to_email) queryParams.append('to_email', params.to_email);
         return `/emails?${queryParams.toString()}`;
       },
       providesTags: ['Email'],
     }),
-    getEmailsForCasinoByName: builder.query<EmailsResponse, { casinoId: number; limit?: number; offset?: number }>({
-      query: ({ casinoId, limit, offset } = { casinoId: 0 }) => {
+    getEmailsForCasinoByName: builder.query<EmailsResponse, { casinoId: number; limit?: number; offset?: number; to_email?: string }>({
+      query: ({ casinoId, limit, offset, to_email } = { casinoId: 0 }) => {
         const queryParams = new URLSearchParams();
         if (limit) queryParams.append('limit', limit.toString());
         if (offset) queryParams.append('offset', offset.toString());
+        if (to_email) queryParams.append('to_email', to_email);
         const qs = queryParams.toString();
         return `/emails/by-casino/${casinoId}${qs ? `?${qs}` : ''}`;
       },
@@ -85,6 +91,7 @@ export const emailApi = baseApi.injectEndpoints({
 });
 
 export const {
+  useGetRecipientsQuery,
   useGetEmailsQuery,
   useGetEmailsForCasinoByNameQuery,
   useGetEmailByIdQuery,

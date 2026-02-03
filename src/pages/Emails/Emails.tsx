@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import {
   useGetEmailsQuery,
+  useGetRecipientsQuery,
   useSyncEmailsMutation,
   useMarkEmailAsReadMutation,
   useLinkEmailToCasinoMutation,
@@ -17,6 +18,7 @@ type ReadFilter = 'all' | 'unread' | 'read';
 export default function Emails() {
   const [currentPage, setCurrentPage] = useState(1);
   const [filterCasinoId, setFilterCasinoId] = useState<number | undefined>(undefined);
+  const [filterToEmail, setFilterToEmail] = useState<string | undefined>(undefined);
   const [readFilter, setReadFilter] = useState<ReadFilter>('all');
 
   const { data: emailsResponse, isLoading, refetch } = useGetEmailsQuery({
@@ -24,7 +26,9 @@ export default function Emails() {
     offset: (currentPage - 1) * PAGE_SIZE,
     ...(readFilter !== 'all' ? { is_read: readFilter === 'read' } : {}),
     ...(filterCasinoId ? { related_casino_id: filterCasinoId } : {}),
+    ...(filterToEmail ? { to_email: filterToEmail } : {}),
   });
+  const { data: recipients = [] } = useGetRecipientsQuery();
   const { data: casinos } = useGetAllCasinosQuery();
   const [syncEmails] = useSyncEmailsMutation();
   const [markAsRead] = useMarkEmailAsReadMutation();
@@ -105,6 +109,21 @@ export default function Emails() {
                 setFilterCasinoId(value);
                 setCurrentPage(1);
               }}
+            />
+            <Select
+              allowClear
+              showSearch
+              placeholder="Получатель"
+              style={{ minWidth: 220 }}
+              options={recipients.map((r) => ({ value: r, label: r }))}
+              value={filterToEmail}
+              onChange={(value) => {
+                setFilterToEmail(value);
+                setCurrentPage(1);
+              }}
+              filterOption={(input, option) =>
+                (option?.label ?? '').toString().toLowerCase().includes(input.toLowerCase())
+              }
             />
             <Select<ReadFilter>
               value={readFilter}
