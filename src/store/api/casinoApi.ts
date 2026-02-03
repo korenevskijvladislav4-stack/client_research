@@ -38,7 +38,7 @@ export const casinoApi = baseApi.injectEndpoints({
     getCasinos: builder.query<PaginatedResponse<Casino>, CasinoQueryParams | void>({
       query: (params) => `/casinos${buildQueryString(params || {})}`,
       providesTags: (result) =>
-        result
+        result?.data && Array.isArray(result.data)
           ? [
               ...result.data.map(({ id }) => ({ type: 'Casino' as const, id })),
               { type: 'Casino' as const, id: 'LIST' },

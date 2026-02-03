@@ -49,7 +49,7 @@ export const promoApi = baseApi.injectEndpoints({
     getPromos: builder.query<PaginatedResponse<PromoCampaign>, PromoQueryParams | void>({
       query: (params) => `/promos${buildQueryString(params || {})}`,
       providesTags: (result) =>
-        result
+        result?.data && Array.isArray(result.data)
           ? [
               ...result.data.map(({ id }) => ({ type: 'Promo' as const, id })),
               { type: 'Promo' as const, id: 'LIST' },
