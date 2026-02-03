@@ -1,6 +1,5 @@
 import axios from 'axios';
-
-const API_URL = '/api';
+import { getApiBaseUrl } from '../config/api';
 
 export interface LoginCredentials {
   email: string;
@@ -25,11 +24,13 @@ export interface AuthResponse {
 
 export const authService = {
   login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
-    const response = await axios.post<AuthResponse>(`${API_URL}/auth/login`, credentials);
+    const baseUrl = getApiBaseUrl();
+    const response = await axios.post<AuthResponse>(`${baseUrl}auth/login`, credentials);
     return response.data;
   },
 
   register: async (data: RegisterData): Promise<void> => {
-    await axios.post(`${API_URL}/auth/register`, data);
+    const baseUrl = getApiBaseUrl();
+    await axios.post(`${baseUrl}auth/register`, data);
   },
 };
