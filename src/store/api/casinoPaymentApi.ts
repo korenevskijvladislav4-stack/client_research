@@ -1,9 +1,13 @@
 import { baseApi } from './baseApi';
 
+/** Направление платёжного решения: Депозит / Выплата */
+export type PaymentDirection = 'deposit' | 'withdrawal';
+
 export interface CasinoPayment {
   id: number;
   casino_id: number;
   geo: string;
+  direction: PaymentDirection;
   type: string;
   method: string;
   min_amount?: number | null;
@@ -37,6 +41,7 @@ export interface GetAllPaymentsParams {
   geo?: string;
   type?: string;
   method?: string;
+  direction?: PaymentDirection;
   search?: string;
   limit?: number;
   offset?: number;
@@ -51,6 +56,7 @@ export const casinoPaymentApi = baseApi.injectEndpoints({
         if (params.geo) searchParams.append('geo', params.geo);
         if (params.type) searchParams.append('type', params.type);
         if (params.method) searchParams.append('method', params.method);
+        if (params.direction) searchParams.append('direction', params.direction);
         if (params.search) searchParams.append('search', params.search);
         if (params.limit) searchParams.append('limit', String(params.limit));
         if (params.offset) searchParams.append('offset', String(params.offset));

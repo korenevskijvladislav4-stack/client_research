@@ -6,7 +6,7 @@ import {
   useLinkEmailToCasinoMutation,
   Email,
 } from '../../store/api/emailApi';
-import { useGetCasinosQuery } from '../../store/api/casinoApi';
+import { useGetAllCasinosQuery } from '../../store/api/casinoApi';
 import { Button, Card, Descriptions, Drawer, List, Pagination, Select, Space, Tag, Typography, message } from 'antd';
 import dayjs from 'dayjs';
 
@@ -25,7 +25,7 @@ export default function Emails() {
     ...(readFilter !== 'all' ? { is_read: readFilter === 'read' } : {}),
     ...(filterCasinoId ? { related_casino_id: filterCasinoId } : {}),
   });
-  const { data: casinos } = useGetCasinosQuery();
+  const { data: casinos } = useGetAllCasinosQuery();
   const [syncEmails] = useSyncEmailsMutation();
   const [markAsRead] = useMarkEmailAsReadMutation();
   const [linkToCasino] = useLinkEmailToCasinoMutation();

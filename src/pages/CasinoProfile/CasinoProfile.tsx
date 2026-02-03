@@ -208,6 +208,7 @@ export default function CasinoProfile() {
   const [updateBonus] = useUpdateCasinoBonusMutation();
   const [deleteBonus] = useDeleteCasinoBonusMutation();
   const [activeGeo, setActiveGeo] = useState<string | undefined>(undefined);
+  const [activeDirection, setActiveDirection] = useState<'deposit' | 'withdrawal' | undefined>(undefined);
   const [imagesPage, setImagesPage] = useState(1);
   const IMAGES_PAGE_SIZE = 12;
   const [bonusDrawerOpen, setBonusDrawerOpen] = useState(false);
@@ -277,10 +278,13 @@ export default function CasinoProfile() {
   const [accountForm] = Form.useForm();
   const { data: users = [] } = useGetUsersQuery();
 
-  const geoOptions = useMemo(
-    () => (geos ?? []).map((g) => ({ value: g.code, label: `${g.code} — ${g.name}` })),
-    [geos]
-  );
+  // Только GEO, на которые работает казино (проект)
+  const geoOptions = useMemo(() => {
+    const allowed = new Set(casino?.geo ?? []);
+    return (geos ?? [])
+      .filter((g) => allowed.has(g.code))
+      .map((g) => ({ value: g.code, label: `${g.code} — ${g.name}` }));
+  }, [geos, casino?.geo]);
 
   const bonusNameOptions = useMemo(
     () => (bonusNames ?? []).map((b) => ({ value: b.name, label: b.name })),
@@ -829,7 +833,7 @@ export default function CasinoProfile() {
           </Typography.Title>
         }
       >
-        <ProfileSettingsTable casinoId={casinoId} activeGeo={activeGeo} onGeoChange={setActiveGeo} readOnly={false} />
+        <ProfileSettingsTable casinoId={casinoId} activeGeo={activeGeo} onGeoChange={setActiveGeo} readOnly={false} casinoGeoCodes={casino?.geo} />
       </Card>
 
       <Card
@@ -1663,8 +1667,20 @@ export default function CasinoProfile() {
           </div>
         }
       >
-        <Space style={{ marginBottom: 16 }}>
-          <Typography.Text type="secondary">Фильтр по GEO:</Typography.Text>
+        <Space style={{ marginBottom: 16 }} wrap>
+          <Typography.Text type="secondary">Направление:</Typography.Text>
+          <Select
+            style={{ minWidth: 140 }}
+            allowClear
+            placeholder="Депозит / Выплата"
+            value={activeDirection}
+            options={[
+              { value: 'deposit', label: 'Депозит' },
+              { value: 'withdrawal', label: 'Выплата' },
+            ]}
+            onChange={(val) => setActiveDirection(val)}
+          />
+          <Typography.Text type="secondary">GEO:</Typography.Text>
           <Select
             style={{ minWidth: 200 }}
             allowClear
@@ -1678,9 +1694,14 @@ export default function CasinoProfile() {
           rowKey="id"
           size="small"
           loading={paymentsLoading}
-          dataSource={(payments ?? []).filter((p) => (activeGeo ? p.geo === activeGeo : true))}
+          dataSource={(payments ?? []).filter((p) => {
+            if (activeDirection && (p.direction ?? 'deposit') !== activeDirection) return false;
+            if (activeGeo && p.geo !== activeGeo) return false;
+            return true;
+          })}
           pagination={false}
           columns={[
+            { title: 'Направление', dataIndex: 'direction', width: 100, render: (v: string) => v === 'withdrawal' ? 'Выплата' : 'Депозит' },
             { title: 'GEO', dataIndex: 'geo', width: 60 },
             { title: 'Тип', dataIndex: 'type', width: 140 },
             { title: 'Метод', dataIndex: 'method', width: 140 },
@@ -1708,6 +1729,7 @@ export default function CasinoProfile() {
                       setEditingPayment(p);
                       paymentForm.setFieldsValue({
                         ...p,
+                        direction: p.direction ?? 'deposit',
                         geo: [p.geo],
                         type: p.type ? [p.type] : [],
                         method: p.method ? [p.method] : [],
@@ -1748,10 +1770,7 @@ export default function CasinoProfile() {
           width={520}
           destroyOnClose
         >
-          <Form
-            layout="vertical"
-            form={paymentForm}
-            onFinish={async (values) => {
+          <Form layout="vertical" form={paymentForm} initialValues={{ direction: 'deposit' }} onFinish={async (values) => {
               try {
                 // Для платежей GEO, type, method - одно значение (не массив)
                 const geoVal = Array.isArray(values.geo)
@@ -1766,6 +1785,7 @@ export default function CasinoProfile() {
                 const payload = {
                   ...values,
                   geo: geoVal,
+                  direction: (values.direction === 'withdrawal' ? 'withdrawal' : 'deposit') as 'deposit' | 'withdrawal',
                   type: typeVal,
                   method: methodVal,
                 };
@@ -1805,6 +1825,19 @@ export default function CasinoProfile() {
               }
             }}
           >
+            <Form.Item
+              name="direction"
+              label="Направление"
+              rules={[{ required: true, message: 'Укажите направление' }]}
+            >
+              <Select
+                placeholder="Депозит или Выплата"
+                options={[
+                  { value: 'deposit', label: 'Депозит' },
+                  { value: 'withdrawal', label: 'Выплата' },
+                ]}
+              />
+            </Form.Item>
             <Form.Item
               name="geo"
               label="GEO"

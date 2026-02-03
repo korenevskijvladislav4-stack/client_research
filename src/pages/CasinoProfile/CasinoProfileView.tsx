@@ -158,19 +158,8 @@ export default function CasinoProfileView() {
   });
   const [takeScreenshot, { isLoading: takingScreenshot }] = useTakeScreenshotMutation();
 
-  const bonusGeos = useMemo(
-    () => Array.from(new Set((bonuses ?? []).map((b) => b.geo).filter(Boolean as any))) as string[],
-    [bonuses]
-  );
-  const paymentGeos = useMemo(
-    () =>
-      Array.from(new Set((payments ?? []).map((p) => p.geo).filter(Boolean as any))) as string[],
-    [payments]
-  );
-  const accountGeos = useMemo(
-    () => Array.from(new Set((accounts ?? []).map((a) => a.geo).filter(Boolean))) as string[],
-    [accounts]
-  );
+  // Только GEO, на которые работает казино (проект)
+  const casinoGeos = useMemo(() => casino?.geo ?? [], [casino?.geo]);
 
   const [selectedBonus, setSelectedBonus] = useState<CasinoBonus | null>(null);
   const [pendingBonusImages, setPendingBonusImages] = useState<File[]>([]);
@@ -461,7 +450,7 @@ export default function CasinoProfileView() {
           >
             Все
           </Button>
-          {accountGeos.map((g) => (
+          {casinoGeos.map((g) => (
             <Button
               key={g}
               size="small"
@@ -490,7 +479,7 @@ export default function CasinoProfileView() {
           >
             Все
           </Button>
-          {Array.from(new Set(screenshots.map((s) => s.geo).filter(Boolean))).map((g) => (
+          {casinoGeos.map((g) => (
             <Button
               key={g}
               size="small"
@@ -588,7 +577,7 @@ export default function CasinoProfileView() {
           </Typography.Title>
         }
       >
-        <ProfileSettingsTable casinoId={casinoId} activeGeo={activeGeo} onGeoChange={setActiveGeo} readOnly={true} />
+        <ProfileSettingsTable casinoId={casinoId} activeGeo={activeGeo} onGeoChange={setActiveGeo} readOnly={true} casinoGeoCodes={casino?.geo} />
       </Card>
 
       <Card title="Бонусы">
@@ -601,7 +590,7 @@ export default function CasinoProfileView() {
           >
             Все
           </Button>
-          {bonusGeos.map((g) => (
+          {casinoGeos.map((g) => (
             <Button
               key={g}
               size="small"
@@ -1017,7 +1006,7 @@ export default function CasinoProfileView() {
           >
             Все
           </Button>
-          {paymentGeos.map((g) => (
+          {casinoGeos.map((g) => (
             <Button
               key={g}
               size="small"
@@ -1035,6 +1024,7 @@ export default function CasinoProfileView() {
           dataSource={(payments ?? []).filter((p) => (activeGeo ? p.geo === activeGeo : true))}
           pagination={false}
           columns={[
+            { title: 'Направление', dataIndex: 'direction', width: 100, render: (v: string) => v === 'withdrawal' ? 'Выплата' : 'Депозит' },
             { title: 'GEO', dataIndex: 'geo', width: 60 },
             { title: 'Тип', dataIndex: 'type', width: 140 },
             { title: 'Метод', dataIndex: 'method', width: 140 },

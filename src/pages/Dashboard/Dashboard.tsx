@@ -9,15 +9,15 @@ import {
   CreditCardOutlined,
   BarChartOutlined,
 } from '@ant-design/icons';
-import { useGetCasinosQuery } from '../../store/api/casinoApi';
-import { useGetPromosQuery } from '../../store/api/promoApi';
+import { useGetAllCasinosQuery } from '../../store/api/casinoApi';
+import { useGetAllPromosQuery } from '../../store/api/promoApi';
 import { useGetEmailsQuery } from '../../store/api/emailApi';
 import { useGetAllBonusesQuery } from '../../store/api/casinoBonusApi';
 import { useGetAllPaymentsQuery } from '../../store/api/casinoPaymentApi';
 
 export default function Dashboard() {
-  const { data: casinos = [] } = useGetCasinosQuery();
-  const { data: promos = [] } = useGetPromosQuery();
+  const { data: casinos = [] } = useGetAllCasinosQuery();
+  const { data: promos = [] } = useGetAllPromosQuery();
   const { data: emailsResponse } = useGetEmailsQuery({ limit: 50, offset: 0 });
 
   // Берём первую страницу бонусов и платежей, но total используем для общей статистики

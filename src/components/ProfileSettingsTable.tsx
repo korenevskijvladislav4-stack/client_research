@@ -13,9 +13,11 @@ interface ProfileSettingsTableProps {
   activeGeo?: string;
   onGeoChange?: (geo: string | undefined) => void;
   readOnly?: boolean;
+  /** Только GEO, на которые работает казино. Если задано — в фильтре показываются только они. */
+  casinoGeoCodes?: string[];
 }
 
-export function ProfileSettingsTable({ casinoId, activeGeo, onGeoChange, readOnly }: ProfileSettingsTableProps) {
+export function ProfileSettingsTable({ casinoId, activeGeo, onGeoChange, readOnly, casinoGeoCodes }: ProfileSettingsTableProps) {
   const { data: geos = [] } = useGetGeosQuery();
   const { data: fields = [] } = useGetSettingsFieldsQuery();
   const { data: contexts = [] } = useGetProfileContextsQuery();
@@ -36,11 +38,15 @@ export function ProfileSettingsTable({ casinoId, activeGeo, onGeoChange, readOnl
     [contexts]
   );
 
-  // Active GEOs for buttons
-  const activeGeos = useMemo(
-    () => geos.filter((g) => g.is_active),
-    [geos]
-  );
+  // GEO для кнопок фильтра: только те, на которые работает казино (если передано casinoGeoCodes)
+  const activeGeos = useMemo(() => {
+    let list = geos.filter((g) => g.is_active);
+    if (casinoGeoCodes && casinoGeoCodes.length > 0) {
+      const allowed = new Set(casinoGeoCodes);
+      list = list.filter((g) => allowed.has(g.code));
+    }
+    return list;
+  }, [geos, casinoGeoCodes]);
 
   // Build a map of (field_id, context_id) -> value for quick lookup
   const settingsMap = useMemo(() => {

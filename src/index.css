@@ -18,6 +18,12 @@ body,
   transition: background-color 0.3s ease, border-color 0.3s ease, color 0.2s ease;
 }
 
+/* Center align all AntD table headers and cells */
+.ant-table-wrapper .ant-table-thead > tr > th,
+.ant-table-wrapper .ant-table-tbody > tr > td {
+  text-align: center;
+}
+
 /* Custom scrollbar for dark theme */
 ::-webkit-scrollbar {
   width: 8px;

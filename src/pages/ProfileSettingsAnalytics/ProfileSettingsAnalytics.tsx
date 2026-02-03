@@ -8,7 +8,7 @@ import {
   AggregatedSettingCasino,
 } from '../../store/api/profileSettingsApi';
 import { useGetGeosQuery } from '../../store/api/geoApi';
-import { useGetCasinosQuery } from '../../store/api/casinoApi';
+import { useGetAllCasinosQuery } from '../../store/api/casinoApi';
 
 const { Title, Text } = Typography;
 
@@ -19,7 +19,7 @@ export default function ProfileSettingsAnalytics() {
   const { data: fields = [] } = useGetSettingsFieldsQuery();
   const { data: contexts = [] } = useGetProfileContextsQuery();
   const { data: geos = [] } = useGetGeosQuery();
-  const { data: casinos = [] } = useGetCasinosQuery();
+  const { data: casinos = [] } = useGetAllCasinosQuery();
 
   const { data: aggregatedSettings = [], isLoading } = useGetAggregatedProfileSettingsQuery({
     geo: selectedGeo,

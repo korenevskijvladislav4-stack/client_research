@@ -2,12 +2,12 @@ import { useMemo, useState } from 'react';
 import { Button, Card, Input, Select, Space, Table, Typography } from 'antd';
 import dayjs from 'dayjs';
 import { useGetAllAccountsQuery, CasinoAccount } from '../../store/api/casinoAccountApi';
-import { useGetCasinosQuery } from '../../store/api/casinoApi';
+import { useGetAllCasinosQuery } from '../../store/api/casinoApi';
 import { useGetGeosQuery } from '../../store/api/geoApi';
 import { useGetUsersQuery } from '../../store/api/userApi';
 
 export default function Accounts() {
-  const { data: casinos = [] } = useGetCasinosQuery();
+  const { data: casinos = [] } = useGetAllCasinosQuery();
   const { data: geos = [] } = useGetGeosQuery();
   const { data: users = [] } = useGetUsersQuery();
 

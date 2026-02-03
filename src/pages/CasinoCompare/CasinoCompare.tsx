@@ -17,7 +17,7 @@ import {
 } from 'antd';
 import { ArrowLeftOutlined } from '@ant-design/icons';
 // import { ProfileSettingsTable } from '../../components/ProfileSettingsTable';
-import { useGetCasinosQuery, useGetCasinoByIdQuery } from '../../store/api/casinoApi';
+import { useGetAllCasinosQuery, useGetCasinoByIdQuery } from '../../store/api/casinoApi';
 import {
   useGetCasinoProfileQuery,
   CasinoProfileItem,
@@ -170,7 +170,7 @@ export default function CasinoCompare() {
   const [casino2Id, setCasino2Id] = useState<number | undefined>(undefined);
   const [filterGeo, setFilterGeo] = useState<string | undefined>(undefined);
 
-  const { data: casinos, isLoading: casinosLoading } = useGetCasinosQuery();
+  const { data: casinos, isLoading: casinosLoading } = useGetAllCasinosQuery();
   const { data: casino1, isLoading: casino1Loading } = useGetCasinoByIdQuery(casino1Id!, {
     skip: !casino1Id,
   });
@@ -348,12 +348,14 @@ export default function CasinoCompare() {
     const payments2Map = new Map<string, CasinoPayment>();
 
     payments1.forEach((p) => {
-      const key = `${p.geo}-${p.type}-${p.method}`;
+      const dir = p.direction ?? 'deposit';
+      const key = `${dir}-${p.geo}-${p.type}-${p.method}`;
       payments1Map.set(key, p);
     });
 
     payments2.forEach((p) => {
-      const key = `${p.geo}-${p.type}-${p.method}`;
+      const dir = p.direction ?? 'deposit';
+      const key = `${dir}-${p.geo}-${p.type}-${p.method}`;
       payments2Map.set(key, p);
     });
 
@@ -668,13 +670,15 @@ export default function CasinoCompare() {
                   size="small"
                   pagination={false}
                   columns={[
+                    { title: 'Направление', dataIndex: 'direction', key: 'direction', width: 90, render: (v: string) => v === 'withdrawal' ? 'Выплата' : 'Депозит' },
                     { title: 'GEO', dataIndex: 'geo', key: 'geo', width: 60 },
                     {
                       title: 'Тип',
                       dataIndex: 'type',
                       key: 'type',
                       render: (val: string, record: CasinoPayment) => {
-                        const key = `${record.geo}-${record.type}-${record.method}`;
+                        const dir = record.direction ?? 'deposit';
+                        const key = `${dir}-${record.geo}-${record.type}-${record.method}`;
                         const comparison = paymentsComparison?.find((c) => c.key === key);
                         const isDifferent = comparison?.isDifferent && comparison?.hasVal1;
                         return (
@@ -691,7 +695,8 @@ export default function CasinoCompare() {
                       dataIndex: 'method',
                       key: 'method',
                       render: (val: string, record: CasinoPayment) => {
-                        const key = `${record.geo}-${record.type}-${record.method}`;
+                        const dir = record.direction ?? 'deposit';
+                        const key = `${dir}-${record.geo}-${record.type}-${record.method}`;
                         const comparison = paymentsComparison?.find((c) => c.key === key);
                         const isDifferent = comparison?.isDifferent && comparison?.hasVal1;
                         return (
@@ -716,13 +721,15 @@ export default function CasinoCompare() {
                   size="small"
                   pagination={false}
                   columns={[
+                    { title: 'Направление', dataIndex: 'direction', key: 'direction', width: 90, render: (v: string) => v === 'withdrawal' ? 'Выплата' : 'Депозит' },
                     { title: 'GEO', dataIndex: 'geo', key: 'geo', width: 60 },
                     {
                       title: 'Тип',
                       dataIndex: 'type',
                       key: 'type',
                       render: (val: string, record: CasinoPayment) => {
-                        const key = `${record.geo}-${record.type}-${record.method}`;
+                        const dir = record.direction ?? 'deposit';
+                        const key = `${dir}-${record.geo}-${record.type}-${record.method}`;
                         const comparison = paymentsComparison?.find((c) => c.key === key);
                         const isDifferent = comparison?.isDifferent && comparison?.hasVal2;
                         return (
@@ -739,7 +746,8 @@ export default function CasinoCompare() {
                       dataIndex: 'method',
                       key: 'method',
                       render: (val: string, record: CasinoPayment) => {
-                        const key = `${record.geo}-${record.type}-${record.method}`;
+                        const dir = record.direction ?? 'deposit';
+                        const key = `${dir}-${record.geo}-${record.type}-${record.method}`;
                         const comparison = paymentsComparison?.find((c) => c.key === key);
                         const isDifferent = comparison?.isDifferent && comparison?.hasVal2;
                         return (

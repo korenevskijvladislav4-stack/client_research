@@ -19,12 +19,12 @@ import { SearchOutlined, FilterOutlined, EyeOutlined, PictureOutlined, DeleteOut
 import {
   useGetAllPaymentsQuery,
   CasinoPayment,
+  PaymentDirection,
   useGetPaymentImagesQuery,
   useUploadPaymentImagesMutation,
   useDeletePaymentImageMutation,
-  // CasinoPaymentImage,
 } from '../../store/api/casinoPaymentApi';
-import { useGetCasinosQuery } from '../../store/api/casinoApi';
+import { useGetAllCasinosQuery } from '../../store/api/casinoApi';
 import { useGetGeosQuery } from '../../store/api/geoApi';
 import { useGetPaymentTypesQuery } from '../../store/api/referenceApi';
 import { useGetPaymentMethodsQuery } from '../../store/api/referenceApi';
@@ -32,6 +32,7 @@ import { useColumnSettings, ColumnConfig } from '../../hooks/useColumnSettings';
 import { ColumnSelector } from '../../components/ColumnSelector';
 
 const COLUMN_CONFIG: ColumnConfig[] = [
+  { key: 'direction', title: 'Направление' },
   { key: 'casino_name', title: 'Казино' },
   { key: 'geo', title: 'GEO' },
   { key: 'type', title: 'Тип' },
@@ -64,6 +65,7 @@ export default function Payments() {
   const [search, setSearch] = useState('');
   const [filterCasino, setFilterCasino] = useState<number | undefined>(undefined);
   const [filterGeo, setFilterGeo] = useState<string | undefined>(undefined);
+  const [filterDirection, setFilterDirection] = useState<PaymentDirection | undefined>(undefined);
   const [filterType, setFilterType] = useState<string | undefined>(undefined);
   const [filterMethod, setFilterMethod] = useState<string | undefined>(undefined);
   const [page, setPage] = useState(1);
@@ -82,13 +84,14 @@ export default function Payments() {
   const [deletePaymentImage] = useDeletePaymentImageMutation();
 
   // Data
-  const { data: casinos } = useGetCasinosQuery();
+  const { data: casinos } = useGetAllCasinosQuery();
   const { data: geos } = useGetGeosQuery();
   const { data: paymentTypes } = useGetPaymentTypesQuery();
   const { data: paymentMethods } = useGetPaymentMethodsQuery();
   const { data: paymentsResp, isLoading } = useGetAllPaymentsQuery({
     casino_id: filterCasino,
     geo: filterGeo,
+    direction: filterDirection,
     type: filterType,
     method: filterMethod,
     search: search || undefined,
@@ -120,12 +123,13 @@ export default function Payments() {
     setSearch('');
     setFilterCasino(undefined);
     setFilterGeo(undefined);
+    setFilterDirection(undefined);
     setFilterType(undefined);
     setFilterMethod(undefined);
     setPage(1);
   };
 
-  const hasFilters = search || filterCasino || filterGeo || filterType || filterMethod;
+  const hasFilters = search || filterCasino || filterGeo || filterDirection || filterType || filterMethod;
 
   return (
     <Space direction="vertical" size={24} style={{ width: '100%' }}>
@@ -189,6 +193,20 @@ export default function Payments() {
               allowClear
               showSearch
             />
+            <Select<PaymentDirection>
+              placeholder="Направление"
+              value={filterDirection}
+              onChange={(v) => {
+                setFilterDirection(v);
+                setPage(1);
+              }}
+              options={[
+                { value: 'deposit', label: 'Депозит' },
+                { value: 'withdrawal', label: 'Выплата' },
+              ]}
+              style={{ width: '100%', maxWidth: 140, minWidth: 120 }}
+              allowClear
+            />
             <Select
               placeholder="Тип"
               value={filterType}
@@ -247,6 +265,16 @@ export default function Payments() {
               style: { cursor: 'pointer' },
             })}
             columns={[
+              columnSettings.isVisible('direction') && {
+                title: 'Направление',
+                dataIndex: 'direction',
+                width: 100,
+                render: (v: string) => (
+                  <Tag color={v === 'withdrawal' ? 'orange' : 'green'}>
+                    {v === 'withdrawal' ? 'Выплата' : 'Депозит'}
+                  </Tag>
+                ),
+              },
               columnSettings.isVisible('casino_name') && {
                 title: 'Казино',
                 dataIndex: 'casino_name',
@@ -327,6 +355,11 @@ export default function Payments() {
                   </Descriptions.Item>
                   <Descriptions.Item label="GEO">
                     <Tag>{selectedPayment.geo}</Tag>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Направление">
+                    <Tag color={selectedPayment.direction === 'withdrawal' ? 'orange' : 'green'}>
+                      {selectedPayment.direction === 'withdrawal' ? 'Выплата' : 'Депозит'}
+                    </Tag>
                   </Descriptions.Item>
                   <Descriptions.Item label="Тип">
                     {selectedPayment.type || '—'}

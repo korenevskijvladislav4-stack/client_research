@@ -26,7 +26,7 @@ import {
   useUploadBonusImagesMutation,
   useDeleteBonusImageMutation,
 } from '../../store/api/casinoBonusApi';
-import { useGetCasinosQuery } from '../../store/api/casinoApi';
+import { useGetAllCasinosQuery } from '../../store/api/casinoApi';
 import { useGetGeosQuery } from '../../store/api/geoApi';
 import { useColumnSettings, ColumnConfig } from '../../hooks/useColumnSettings';
 import { ColumnSelector } from '../../components/ColumnSelector';
@@ -97,7 +97,7 @@ export default function Bonuses() {
   const [uploading, setUploading] = useState(false);
 
   // Data
-  const { data: casinos } = useGetCasinosQuery();
+  const { data: casinos } = useGetAllCasinosQuery();
   const { data: geos } = useGetGeosQuery();
   
   // Bonus images

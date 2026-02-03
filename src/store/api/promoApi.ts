@@ -1,9 +1,10 @@
 import { baseApi } from './baseApi';
+import { PaginatedResponse, QueryParams, buildQueryString } from '../../types/api.types';
 
 export interface PromoCampaign {
   id: number;
   casino_id: number;
-  geo?: string | null;
+  geo?: string;
   title: string;
   description?: string;
   start_date?: string;
@@ -12,9 +13,9 @@ export interface PromoCampaign {
   bonus_type?: string;
   bonus_amount?: number;
   wagering_requirement?: number;
-  status: 'active' | 'expired' | 'upcoming';
-  created_at: string;
-  updated_at: string;
+  status: 'active' | 'upcoming' | 'expired';
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface CreatePromoDto {
@@ -28,55 +29,81 @@ export interface CreatePromoDto {
   bonus_type?: string;
   bonus_amount?: number;
   wagering_requirement?: number;
-  status?: 'active' | 'expired' | 'upcoming';
+  status?: 'active' | 'upcoming' | 'expired';
+}
+
+export interface PromoFilters {
+  casino_id?: number;
+  geo?: string;
+  status?: string;
+  search?: string;
+}
+
+export interface PromoQueryParams extends QueryParams {
+  filters?: PromoFilters;
 }
 
 export const promoApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-    getPromos: builder.query<PromoCampaign[], { casino_id?: number; geo?: string } | void>({
-      query: (params) => {
-        if (params && (params.casino_id || params.geo)) {
-          const qs = new URLSearchParams();
-          if (params.casino_id) qs.append('casino_id', String(params.casino_id));
-          if (params.geo) qs.append('geo', params.geo);
-          return `/promos?${qs.toString()}`;
-        }
-        return '/promos';
-      },
-      providesTags: ['Promo'],
+    // Paginated list
+    getPromos: builder.query<PaginatedResponse<PromoCampaign>, PromoQueryParams | void>({
+      query: (params) => `/promos${buildQueryString(params || {})}`,
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.data.map(({ id }) => ({ type: 'Promo' as const, id })),
+              { type: 'Promo' as const, id: 'LIST' },
+            ]
+          : [{ type: 'Promo' as const, id: 'LIST' }],
     }),
+
+    // All promos (for dropdowns)
+    getAllPromos: builder.query<PromoCampaign[], void>({
+      query: () => '/promos?pageSize=1000',
+      transformResponse: (response: PaginatedResponse<PromoCampaign>) => response.data,
+      providesTags: [{ type: 'Promo' as const, id: 'ALL' }],
+    }),
+
     getPromoById: builder.query<PromoCampaign, number>({
       query: (id) => `/promos/${id}`,
-      providesTags: (_result, _error, id) => [{ type: 'Promo', id }],
+      providesTags: (_result, _error, id) => [{ type: 'Promo' as const, id }],
     }),
+
     createPromo: builder.mutation<PromoCampaign, CreatePromoDto>({
       query: (body) => ({
         url: '/promos',
         method: 'POST',
         body,
       }),
-      invalidatesTags: ['Promo'],
+      invalidatesTags: [{ type: 'Promo', id: 'LIST' }, { type: 'Promo', id: 'ALL' }],
     }),
+
     updatePromo: builder.mutation<PromoCampaign, { id: number; data: Partial<CreatePromoDto> }>({
       query: ({ id, data }) => ({
         url: `/promos/${id}`,
         method: 'PUT',
         body: data,
       }),
-      invalidatesTags: (_result, _error, { id }) => [{ type: 'Promo', id }],
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'Promo', id },
+        { type: 'Promo', id: 'LIST' },
+        { type: 'Promo', id: 'ALL' },
+      ],
     }),
+
     deletePromo: builder.mutation<void, number>({
       query: (id) => ({
         url: `/promos/${id}`,
         method: 'DELETE',
       }),
-      invalidatesTags: ['Promo'],
+      invalidatesTags: [{ type: 'Promo', id: 'LIST' }, { type: 'Promo', id: 'ALL' }],
     }),
   }),
 });
 
 export const {
   useGetPromosQuery,
+  useGetAllPromosQuery,
   useGetPromoByIdQuery,
   useCreatePromoMutation,
   useUpdatePromoMutation,

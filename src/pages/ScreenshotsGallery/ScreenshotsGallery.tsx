@@ -14,7 +14,7 @@ import {
 } from 'antd';
 import { FilterOutlined } from '@ant-design/icons';
 import { useGetAllScreenshotsQuery, ScreenshotFilters } from '../../store/api/slotSelectorApi';
-import { useGetCasinosQuery } from '../../store/api/casinoApi';
+import { useGetAllCasinosQuery } from '../../store/api/casinoApi';
 import { useGetGeosQuery } from '../../store/api/geoApi';
 import dayjs, { Dayjs } from 'dayjs';
 
@@ -30,7 +30,7 @@ export default function ScreenshotsGallery() {
   
   // Fetch ALL screenshots (without filters) to get unique values for filter options
   const { data: allScreenshots = [] } = useGetAllScreenshotsQuery({});
-  const { data: casinos = [] } = useGetCasinosQuery();
+  const { data: casinos = [] } = useGetAllCasinosQuery();
   const { data: geos = [] } = useGetGeosQuery();
 
   // Extract unique values for filters from ALL screenshots (not filtered)
