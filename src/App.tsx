@@ -1,7 +1,8 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Casinos from './pages/Casinos/Casinos';
-import Promos from './pages/Promos/Promos';
+
 import Emails from './pages/Emails/Emails';
+import ImapAccounts from './pages/Emails/ImapAccounts';
 import Bonuses from './pages/Bonuses/Bonuses';
 import Payments from './pages/Payments/Payments';
 import Login from './pages/Login/Login';
@@ -16,6 +17,8 @@ import CasinoCompare from './pages/CasinoCompare/CasinoCompare';
 import Users from './pages/Users/Users';
 import Accounts from './pages/Accounts/Accounts';
 import ScreenshotsGallery from './pages/ScreenshotsGallery/ScreenshotsGallery';
+
+import EmailAnalytics from './pages/EmailAnalytics/EmailAnalytics';
 
 function App() {
   const { token } = useAppSelector((state) => state.auth);
@@ -32,14 +35,17 @@ function App() {
         <Route path="casinos/compare" element={<CasinoCompare />} />
         <Route path="casinos/:id" element={<CasinoProfileView />} />
         <Route path="casinos/:id/edit" element={<CasinoProfile />} />
-        <Route path="promos" element={<Promos />} />
+
         <Route path="bonuses" element={<Bonuses />} />
         <Route path="payments" element={<Payments />} />
         <Route path="accounts" element={<Accounts />} />
         <Route path="emails" element={<Emails />} />
+        <Route path="emails/imap-accounts" element={<ImapAccounts />} />
         <Route path="profile-fields" element={<ProfileFields />} />
         <Route path="profile-settings" element={<ProfileSettings />} />
         <Route path="profile-settings-analytics" element={<ProfileSettingsAnalytics />} />
+        <Route path="email-analytics" element={<EmailAnalytics />} />
+
         <Route path="users" element={<Users />} />
         <Route path="screenshots" element={<ScreenshotsGallery />} />
       </Route>

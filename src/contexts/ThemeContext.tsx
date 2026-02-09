@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { ConfigProvider, theme as antTheme, ThemeConfig } from 'antd';
+import ruRU from 'antd/locale/ru_RU';
 
 type ThemeMode = 'light' | 'dark';
 
@@ -181,7 +182,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <ThemeContext.Provider value={{ mode, toggleTheme, setTheme }}>
-      <ConfigProvider theme={currentTheme}>
+      <ConfigProvider theme={currentTheme} locale={ruRU}>
         {children}
       </ConfigProvider>
     </ThemeContext.Provider>

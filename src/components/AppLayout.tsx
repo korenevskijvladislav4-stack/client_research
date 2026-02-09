@@ -3,7 +3,7 @@ import { Layout, Menu, Button, theme, Switch, Space, Drawer, Typography } from '
 import {
   BankOutlined,
   MailOutlined,
-  GiftOutlined,
+
   DollarOutlined,
   CreditCardOutlined,
   SettingOutlined,
@@ -16,6 +16,7 @@ import {
   KeyOutlined,
   UserOutlined,
   PictureOutlined,
+
 } from '@ant-design/icons';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useAppDispatch } from '../hooks/redux';
@@ -30,7 +31,6 @@ const menuItems = [
   { key: '/bonuses', icon: <DollarOutlined />, label: <Link to="/bonuses">Бонусы</Link> },
   { key: '/payments', icon: <CreditCardOutlined />, label: <Link to="/payments">Платежи</Link> },
   { key: '/accounts', icon: <KeyOutlined />, label: <Link to="/accounts">Аккаунты</Link> },
-  { key: '/promos', icon: <GiftOutlined />, label: <Link to="/promos">Промо</Link> },
   { key: '/emails', icon: <MailOutlined />, label: <Link to="/emails">Почта</Link> },
   { key: '/screenshots', icon: <PictureOutlined />, label: <Link to="/screenshots">Скриншоты</Link> },
   { type: 'divider' as const },
@@ -40,6 +40,7 @@ const menuItems = [
     label: 'Аналитика',
     children: [
       { key: '/profile-settings-analytics', icon: <BarChartOutlined />, label: <Link to="/profile-settings-analytics">Профиль</Link> },
+      { key: '/email-analytics', icon: <MailOutlined />, label: <Link to="/email-analytics">Почта</Link> },
     ],
   },
   {

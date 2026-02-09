@@ -30,6 +30,7 @@ import { useGetPaymentTypesQuery } from '../../store/api/referenceApi';
 import { useGetPaymentMethodsQuery } from '../../store/api/referenceApi';
 import { useColumnSettings, ColumnConfig } from '../../hooks/useColumnSettings';
 import { ColumnSelector } from '../../components/ColumnSelector';
+import { useServerTable } from '../../hooks/useServerTable';
 
 const COLUMN_CONFIG: ColumnConfig[] = [
   { key: 'direction', title: 'Направление' },
@@ -60,20 +61,21 @@ const fmtAmount = (value: any, currency?: string | null) => {
 export default function Payments() {
   const nav = useNavigate();
   const columnSettings = useColumnSettings('payments', COLUMN_CONFIG);
+  const table = useServerTable<{
+    casino_id?: number;
+    geo?: string;
+    direction?: PaymentDirection;
+    type?: string;
+    method?: string;
+  }>({
+    defaultPageSize: 20,
+    defaultSortField: 'created_at',
+    defaultSortOrder: 'desc',
+  });
 
-  // Filters state
-  const [search, setSearch] = useState('');
-  const [filterCasino, setFilterCasino] = useState<number | undefined>(undefined);
-  const [filterGeo, setFilterGeo] = useState<string | undefined>(undefined);
-  const [filterDirection, setFilterDirection] = useState<PaymentDirection | undefined>(undefined);
-  const [filterType, setFilterType] = useState<string | undefined>(undefined);
-  const [filterMethod, setFilterMethod] = useState<string | undefined>(undefined);
-  const [page, setPage] = useState(1);
   const [selectedPayment, setSelectedPayment] = useState<(CasinoPayment & { casino_name?: string }) | null>(null);
   const [pendingImages, setPendingImages] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
-
-  const PAGE_SIZE = 20;
 
   // Загрузка изображений для выбранного платежа
   const { data: paymentImages = [] } = useGetPaymentImagesQuery(
@@ -88,16 +90,7 @@ export default function Payments() {
   const { data: geos } = useGetGeosQuery();
   const { data: paymentTypes } = useGetPaymentTypesQuery();
   const { data: paymentMethods } = useGetPaymentMethodsQuery();
-  const { data: paymentsResp, isLoading } = useGetAllPaymentsQuery({
-    casino_id: filterCasino,
-    geo: filterGeo,
-    direction: filterDirection,
-    type: filterType,
-    method: filterMethod,
-    search: search || undefined,
-    limit: PAGE_SIZE,
-    offset: (page - 1) * PAGE_SIZE,
-  });
+  const { data: paymentsResp, isLoading } = useGetAllPaymentsQuery(table.params);
 
   const casinoOptions = useMemo(
     () => (casinos ?? []).map((c) => ({ value: c.id, label: c.name })),
@@ -120,16 +113,16 @@ export default function Payments() {
   );
 
   const clearFilters = () => {
-    setSearch('');
-    setFilterCasino(undefined);
-    setFilterGeo(undefined);
-    setFilterDirection(undefined);
-    setFilterType(undefined);
-    setFilterMethod(undefined);
-    setPage(1);
+    table.reset();
   };
 
-  const hasFilters = search || filterCasino || filterGeo || filterDirection || filterType || filterMethod;
+  const hasFilters =
+    Boolean(table.search) ||
+    Boolean(table.filters.casino_id) ||
+    Boolean(table.filters.geo) ||
+    Boolean(table.filters.direction) ||
+    Boolean(table.filters.type) ||
+    Boolean(table.filters.method);
 
   return (
     <Space direction="vertical" size={24} style={{ width: '100%' }}>
@@ -158,21 +151,15 @@ export default function Payments() {
             <Input
               placeholder="Поиск по типу, методу, казино..."
               prefix={<SearchOutlined />}
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
+              value={table.search}
+              onChange={(e) => table.setSearch(e.target.value)}
               style={{ width: '100%', maxWidth: 300, minWidth: 200 }}
               allowClear
             />
             <Select
               placeholder="Казино"
-              value={filterCasino}
-              onChange={(v) => {
-                setFilterCasino(v);
-                setPage(1);
-              }}
+              value={table.filters.casino_id}
+              onChange={(v) => table.updateFilter('casino_id', v)}
               options={casinoOptions}
               style={{ width: '100%', maxWidth: 180, minWidth: 150 }}
               allowClear
@@ -183,11 +170,8 @@ export default function Payments() {
             />
             <Select
               placeholder="GEO"
-              value={filterGeo}
-              onChange={(v) => {
-                setFilterGeo(v);
-                setPage(1);
-              }}
+              value={table.filters.geo}
+              onChange={(v) => table.updateFilter('geo', v)}
               options={geoOptions}
               style={{ width: '100%', maxWidth: 120, minWidth: 100 }}
               allowClear
@@ -195,11 +179,8 @@ export default function Payments() {
             />
             <Select<PaymentDirection>
               placeholder="Направление"
-              value={filterDirection}
-              onChange={(v) => {
-                setFilterDirection(v);
-                setPage(1);
-              }}
+              value={table.filters.direction}
+              onChange={(v) => table.updateFilter('direction', v)}
               options={[
                 { value: 'deposit', label: 'Депозит' },
                 { value: 'withdrawal', label: 'Выплата' },
@@ -209,11 +190,8 @@ export default function Payments() {
             />
             <Select
               placeholder="Тип"
-              value={filterType}
-              onChange={(v) => {
-                setFilterType(v);
-                setPage(1);
-              }}
+              value={table.filters.type}
+              onChange={(v) => table.updateFilter('type', v)}
               options={typeOptions}
               style={{ width: '100%', maxWidth: 150, minWidth: 130 }}
               allowClear
@@ -224,11 +202,8 @@ export default function Payments() {
             />
             <Select
               placeholder="Метод"
-              value={filterMethod}
-              onChange={(v) => {
-                setFilterMethod(v);
-                setPage(1);
-              }}
+              value={table.filters.method}
+              onChange={(v) => table.updateFilter('method', v)}
               options={methodOptions}
               style={{ width: '100%', maxWidth: 150, minWidth: 130 }}
               allowClear
@@ -251,14 +226,8 @@ export default function Payments() {
             size="small"
             loading={isLoading}
             dataSource={paymentsResp?.data ?? []}
-            pagination={{
-              current: page,
-              total: paymentsResp?.total ?? 0,
-              pageSize: PAGE_SIZE,
-              showSizeChanger: false,
-              showTotal: (total, range) => `${range[0]}-${range[1]} из ${total}`,
-              onChange: (p) => setPage(p),
-            }}
+            pagination={table.paginationConfig(paymentsResp?.pagination?.total ?? paymentsResp?.total ?? 0)}
+            onChange={table.handleTableChange}
             scroll={{ x: 'max-content' }}
             onRow={(record) => ({
               onClick: () => nav(`/casinos/${record.casino_id}`),
@@ -552,3 +521,4 @@ export default function Payments() {
     </Space>
   );
 }
+

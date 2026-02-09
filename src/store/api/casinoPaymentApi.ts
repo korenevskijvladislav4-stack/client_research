@@ -1,4 +1,5 @@
 import { baseApi } from './baseApi';
+import { PaginationInfo, QueryParams, buildQueryString } from '../../types/api.types';
 
 /** Направление платёжного решения: Депозит / Выплата */
 export type PaymentDirection = 'deposit' | 'withdrawal';
@@ -31,12 +32,23 @@ export interface CasinoPaymentImage {
 
 export interface GetAllPaymentsResponse {
   data: (CasinoPayment & { casino_name?: string })[];
-  total: number;
-  limit: number;
-  offset: number;
+  pagination?: PaginationInfo;
+  total?: number;
+  limit?: number;
+  offset?: number;
 }
 
-export interface GetAllPaymentsParams {
+export interface PaymentFilters {
+  casino_id?: number;
+  geo?: string;
+  type?: string;
+  method?: string;
+  direction?: PaymentDirection;
+}
+
+export interface GetAllPaymentsParams extends QueryParams {
+  filters?: PaymentFilters;
+  // legacy flat params (backward compatibility)
   casino_id?: number;
   geo?: string;
   type?: string;
@@ -51,17 +63,45 @@ export const casinoPaymentApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getAllPayments: builder.query<GetAllPaymentsResponse, GetAllPaymentsParams>({
       query: (params) => {
-        const searchParams = new URLSearchParams();
-        if (params.casino_id) searchParams.append('casino_id', String(params.casino_id));
-        if (params.geo) searchParams.append('geo', params.geo);
-        if (params.type) searchParams.append('type', params.type);
-        if (params.method) searchParams.append('method', params.method);
-        if (params.direction) searchParams.append('direction', params.direction);
-        if (params.search) searchParams.append('search', params.search);
-        if (params.limit) searchParams.append('limit', String(params.limit));
-        if (params.offset) searchParams.append('offset', String(params.offset));
-        const qs = searchParams.toString();
-        return `/payments${qs ? `?${qs}` : ''}`;
+        const normalized: GetAllPaymentsParams = { ...params };
+
+        if (!normalized.filters) {
+          const legacyFilters: PaymentFilters = {
+            casino_id: params.casino_id,
+            geo: params.geo,
+            type: params.type,
+            method: params.method,
+            direction: params.direction,
+          };
+          const cleanLegacyFilters = Object.fromEntries(
+            Object.entries(legacyFilters).filter(([, value]) => value !== undefined && value !== null && value !== '')
+          ) as PaymentFilters;
+          if (Object.keys(cleanLegacyFilters).length > 0) {
+            normalized.filters = cleanLegacyFilters;
+          }
+        }
+
+        if (!normalized.pageSize && params.limit) {
+          normalized.pageSize = params.limit;
+        }
+        if (!normalized.page && params.limit && params.offset !== undefined) {
+          normalized.page = Math.floor(params.offset / params.limit) + 1;
+        }
+
+        return `/payments${buildQueryString(normalized)}`;
+      },
+      transformResponse: (response: any): GetAllPaymentsResponse => {
+        const data = Array.isArray(response?.data) ? response.data : [];
+        const pagination = response?.pagination;
+        return {
+          data,
+          pagination,
+          total: response?.total ?? pagination?.total ?? data.length,
+          limit: response?.limit ?? pagination?.pageSize ?? data.length,
+          offset:
+            response?.offset ??
+            (pagination ? Math.max(0, (pagination.page - 1) * pagination.pageSize) : 0),
+        };
       },
       providesTags: ['CasinoPayment'],
     }),
@@ -152,4 +192,3 @@ export const {
   useUploadPaymentImagesMutation,
   useDeletePaymentImageMutation,
 } = casinoPaymentApi;
-

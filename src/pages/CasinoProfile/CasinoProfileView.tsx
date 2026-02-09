@@ -1,16 +1,13 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  Avatar,
   Badge,
   Button,
   Card,
   Descriptions,
   Drawer,
-  Input,
   List,
   Modal,
-  Popconfirm,
   Select,
   Space,
   Spin,
@@ -23,10 +20,14 @@ import {
   Upload,
   Image,
   Pagination,
+  theme,
 } from 'antd';
-import { ArrowLeftOutlined, InfoCircleOutlined, EyeOutlined, UserOutlined, DeleteOutlined, PictureOutlined, PlusOutlined, DownloadOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, CameraOutlined, InfoCircleOutlined, EyeOutlined, DeleteOutlined, LoadingOutlined, PictureOutlined, DownloadOutlined, RobotOutlined, SwapOutlined } from '@ant-design/icons';
 import { ProfileSettingsTable } from '../../components/ProfileSettingsTable';
 import { AccountsTable } from '../../components/AccountsTable';
+
+import CasinoActivity from './components/CasinoActivity';
+import CasinoTags from './components/CasinoTags';
 import { useGetCasinoByIdQuery } from '../../store/api/casinoApi';
 import {
   useGetCasinoProfileQuery,
@@ -59,19 +60,18 @@ import {
   useGetEmailsForCasinoByNameQuery,
   useGetRecipientsQuery,
   useMarkEmailAsReadMutation,
+  useRequestEmailSummaryMutation,
+  useRequestEmailScreenshotMutation,
   Email,
 } from '../../store/api/emailApi';
+import { getApiBaseUrl } from '../../config/api';
 import {
   useGetCasinoCommentsQuery,
-  useCreateCommentMutation,
-  useDeleteCommentMutation,
   useGetCasinoImagesQuery,
-  useUploadCommentImageMutation,
   CasinoCommentImage,
 } from '../../store/api/casinoCommentApi';
 import { useSelector } from 'react-redux';
 import dayjs from 'dayjs';
-import { getApiBaseUrl } from '../../config/api';
 import { exportProfileToInteractiveHtml, ExportData } from '../../utils/exportProfileToInteractiveHtml';
 
 // Форматирование числа
@@ -132,6 +132,7 @@ export default function CasinoProfileView() {
   const { id } = useParams();
   const casinoId = Number(id);
   const nav = useNavigate();
+  const { token } = theme.useToken();
 
   const { data: casino, isLoading: casinoLoading } = useGetCasinoByIdQuery(casinoId);
   const { data: profileResp, isLoading: profileLoading } = useGetCasinoProfileQuery(casinoId, {
@@ -205,33 +206,19 @@ export default function CasinoProfileView() {
   );
   const { data: recipients = [] } = useGetRecipientsQuery();
   const [markAsRead] = useMarkEmailAsReadMutation();
+  const [reqSummary, { isLoading: summaryLoading }] = useRequestEmailSummaryMutation();
+  const [reqScreenshot, { isLoading: screenshotLoading }] = useRequestEmailScreenshotMutation();
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
+  const [casinoScreenshotVisible, setCasinoScreenshotVisible] = useState(false);
 
-  // Comments
-  const { data: comments, isLoading: commentsLoading } = useGetCasinoCommentsQuery(casinoId, {
+  // Comments & Images (needed for export)
+  const { data: comments } = useGetCasinoCommentsQuery(casinoId, {
     skip: !casinoId,
   } as any);
   const { data: images = [] } = useGetCasinoImagesQuery(casinoId, {
     skip: !casinoId,
   } as any);
-  const [createComment, { isLoading: creatingComment }] = useCreateCommentMutation();
-  const [deleteComment] = useDeleteCommentMutation();
-  const [uploadImage, { isLoading: uploadingImage }] = useUploadCommentImageMutation();
-  const [newComment, setNewComment] = useState('');
-  const [pendingImageFile, setPendingImageFile] = useState<File | null>(null);
-  const currentUser = useSelector((state: any) => state.auth.user);
   const authToken = useSelector((state: any) => state.auth.token);
-
-  const imagesByCommentId = useMemo(() => {
-    const map = new Map<number, CasinoCommentImage[]>();
-    for (const img of images) {
-      if (!img.comment_id) continue;
-      const arr = map.get(img.comment_id) ?? [];
-      arr.push(img);
-      map.set(img.comment_id, arr);
-    }
-    return map;
-  }, [images]);
 
   // Пагинация изображений
   const paginatedImages = useMemo(() => {
@@ -239,37 +226,6 @@ export default function CasinoProfileView() {
     const end = start + IMAGES_PAGE_SIZE;
     return images.slice(start, end);
   }, [images, imagesPage]);
-
-  const handleAddComment = async () => {
-    if (!newComment.trim()) return;
-    try {
-      const createdComment = await createComment({ casinoId, data: { text: newComment } }).unwrap();
-      setNewComment('');
-      message.success('Комментарий добавлен');
-      
-      // Если есть загруженное изображение, прикрепляем его к новому комментарию
-      if (pendingImageFile) {
-        try {
-          await uploadImage({ casinoId, commentId: createdComment.id, file: pendingImageFile }).unwrap();
-          setPendingImageFile(null);
-          message.success('Изображение прикреплено');
-        } catch {
-          message.error('Не удалось прикрепить изображение');
-        }
-      }
-    } catch {
-      message.error('Не удалось добавить комментарий');
-    }
-  };
-
-  const handleDeleteComment = async (commentId: number) => {
-    try {
-      await deleteComment({ id: commentId, casinoId }).unwrap();
-      message.success('Комментарий удалён');
-    } catch {
-      message.error('Не удалось удалить комментарий');
-    }
-  };
 
   const handleExportHtml = async () => {
     if (!casino) return;
@@ -358,7 +314,7 @@ export default function CasinoProfileView() {
         user: c.username ? { username: c.username } : undefined,
       })),
       geos: casinoGeos,
-      recipients: recipients ?? [],
+      recipients: (recipients ?? []).map((r) => r.email),
       bonusImageUrls,
       paymentImageUrls,
       commentImageUrls,
@@ -393,16 +349,6 @@ export default function CasinoProfileView() {
     }
   };
 
-  const handleUploadImage = async (commentId: number, file: File) => {
-    try {
-      await uploadImage({ casinoId, commentId, file }).unwrap();
-      message.success('Изображение загружено');
-    } catch (e: any) {
-      message.error(e?.data?.error || 'Не удалось загрузить изображение');
-      throw e;
-    }
-  };
-
   if (!casinoId) return <Card>Неверный id казино</Card>;
   if (casinoLoading || profileLoading) return <Spin />;
 
@@ -427,6 +373,11 @@ export default function CasinoProfileView() {
           </Space>
         </Space>
         <Space wrap>
+          <Tooltip title="Сравнить с другим казино">
+            <Button icon={<SwapOutlined />} onClick={() => nav(`/casinos/compare?casino1=${casinoId}`)}>
+              Сравнить
+            </Button>
+          </Tooltip>
           <Tooltip title="Экспорт анкеты в интерактивный HTML: фильтры по GEO и получателю, просмотр бонусов и платежей в модальных окнах, просмотр писем.">
             <Button icon={<DownloadOutlined />} onClick={handleExportHtml}>
               Экспорт в HTML
@@ -437,6 +388,11 @@ export default function CasinoProfileView() {
           </Button>
         </Space>
       </div>
+
+      {/* Теги казино */}
+      <Card size="small">
+        <CasinoTags casinoId={casinoId} />
+      </Card>
 
       <Card>
         <Space orientation="vertical" size={24} style={{ width: '100%' }}>
@@ -1443,7 +1399,7 @@ export default function CasinoProfileView() {
             showSearch
             placeholder="Получатель"
             style={{ minWidth: 220 }}
-            options={recipients.map((r) => ({ value: r, label: r }))}
+            options={recipients.map((r) => ({ value: r.email, label: r.email }))}
             value={emailToFilter}
             onChange={(value) => {
               setEmailToFilter(value);
@@ -1484,6 +1440,20 @@ export default function CasinoProfileView() {
                         ? dayjs(email.date_received).format('YYYY-MM-DD HH:mm')
                         : '—'}
                     </Typography.Text>
+                    {email.ai_summary && (
+                      <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                        <RobotOutlined style={{ marginRight: 4 }} />
+                        {email.ai_summary.length > 100 ? email.ai_summary.slice(0, 100) + '…' : email.ai_summary}
+                      </Typography.Text>
+                    )}
+                    <Space size={4}>
+                      {email.screenshot_url && (
+                        <Tag color="green" style={{ fontSize: 11, margin: 0 }}><CameraOutlined /> Скрин</Tag>
+                      )}
+                      {email.ai_summary && (
+                        <Tag color="blue" style={{ fontSize: 11, margin: 0 }}><RobotOutlined /> AI</Tag>
+                      )}
+                    </Space>
                   </Space>
                 }
               />
@@ -1505,34 +1475,81 @@ export default function CasinoProfileView() {
         {selectedEmail && (
           <Drawer
             open={!!selectedEmail}
-            onClose={() => setSelectedEmail(null)}
+            onClose={() => { setSelectedEmail(null); setCasinoScreenshotVisible(false); }}
             width={720}
             title={selectedEmail?.subject || '(Без темы)'}
             destroyOnClose
             extra={
-              selectedEmail && !selectedEmail.is_read ? (
-                <Button
-                  onClick={async () => {
-                    try {
-                      await markAsRead(selectedEmail.id).unwrap();
-                      refetchEmails();
-                    } catch {
-                      // ignore
-                    }
-                  }}
-                >
-                  Отметить прочитанным
-                </Button>
-              ) : null
+              <Space size={4}>
+                <Tooltip title={selectedEmail?.ai_summary ? 'Пересоздать саммари' : 'Запросить саммари'}>
+                  <Button
+                    size="small"
+                    icon={summaryLoading ? <LoadingOutlined /> : <RobotOutlined />}
+                    loading={summaryLoading}
+                    onClick={async () => {
+                      try {
+                        const updated = await reqSummary(selectedEmail.id).unwrap();
+                        setSelectedEmail(updated);
+                        refetchEmails();
+                        message.success('Саммари получено');
+                      } catch {
+                        message.error('Ошибка получения саммари');
+                      }
+                    }}
+                  >
+                    Саммари
+                  </Button>
+                </Tooltip>
+                <Tooltip title={selectedEmail?.screenshot_url ? 'Пересоздать скриншот' : 'Сделать скриншот'}>
+                  <Button
+                    size="small"
+                    icon={screenshotLoading ? <LoadingOutlined /> : <CameraOutlined />}
+                    loading={screenshotLoading}
+                    onClick={async () => {
+                      try {
+                        const updated = await reqScreenshot(selectedEmail.id).unwrap();
+                        setSelectedEmail(updated);
+                        refetchEmails();
+                        message.success('Скриншот создан');
+                      } catch {
+                        message.error('Ошибка создания скриншота');
+                      }
+                    }}
+                  >
+                    Скриншот
+                  </Button>
+                </Tooltip>
+                {selectedEmail?.screenshot_url && (
+                  <Tooltip title="Посмотреть скриншот">
+                    <Button
+                      size="small"
+                      icon={<EyeOutlined />}
+                      onClick={() => setCasinoScreenshotVisible(true)}
+                    />
+                  </Tooltip>
+                )}
+                {selectedEmail && !selectedEmail.is_read && (
+                  <Button
+                    size="small"
+                    onClick={async () => {
+                      try {
+                        await markAsRead(selectedEmail.id).unwrap();
+                        refetchEmails();
+                      } catch { /* ignore */ }
+                    }}
+                  >
+                    Прочитано
+                  </Button>
+                )}
+              </Space>
             }
           >
             <Space direction="vertical" size={16} style={{ width: '100%' }}>
               <Descriptions bordered size="small" column={1}>
                 <Descriptions.Item label="От">
-                  {selectedEmail.from_name || ''} &lt;{selectedEmail.from_email}
-                  &gt;
+                  {selectedEmail.from_name || ''} &lt;{selectedEmail.from_email}&gt;
                 </Descriptions.Item>
-                <Descriptions.Item label="К">
+                <Descriptions.Item label="Кому">
                   {selectedEmail.to_email || '—'}
                 </Descriptions.Item>
                 <Descriptions.Item label="Дата">
@@ -1541,9 +1558,44 @@ export default function CasinoProfileView() {
                     : '—'}
                 </Descriptions.Item>
               </Descriptions>
+
+              {/* AI Summary */}
+              {selectedEmail.ai_summary && (
+                <Card
+                  size="small"
+                  style={{
+                    background: token.colorPrimaryBg,
+                    borderColor: token.colorPrimaryBorder,
+                  }}
+                >
+                  <Space align="start" size={8}>
+                    <Tag icon={<RobotOutlined />} color="processing" style={{ margin: 0, flexShrink: 0 }}>AI</Tag>
+                    <Typography.Text style={{ fontSize: 13, lineHeight: 1.5 }}>
+                      {selectedEmail.ai_summary}
+                    </Typography.Text>
+                  </Space>
+                </Card>
+              )}
+
+              {/* Hidden screenshot for fullscreen preview */}
+              {selectedEmail.screenshot_url && (
+                <Image
+                  src={`${getApiBaseUrl().replace(/\/api\/?$/, '')}${selectedEmail.screenshot_url}`}
+                  alt="Email screenshot"
+                  style={{ display: 'none' }}
+                  preview={{
+                    visible: casinoScreenshotVisible,
+                    onVisibleChange: (v) => setCasinoScreenshotVisible(v),
+                  }}
+                />
+              )}
+
               <Card size="small" title="Текст письма">
                 {selectedEmail.body_html ? (
-                  <div dangerouslySetInnerHTML={{ __html: selectedEmail.body_html }} />
+                  <div
+                    dangerouslySetInnerHTML={{ __html: selectedEmail.body_html }}
+                    style={{ maxHeight: '60vh', overflow: 'auto' }}
+                  />
                 ) : (
                   <pre style={{ whiteSpace: 'pre-wrap', margin: 0 }}>
                     {selectedEmail.body_text || 'Нет содержимого'}
@@ -1555,211 +1607,8 @@ export default function CasinoProfileView() {
         )}
       </Card>
 
-      {/* Комментарии */}
-      <Card
-        title={
-          <Typography.Title level={5} style={{ margin: 0 }}>
-            Комментарии ({comments?.length ?? 0})
-          </Typography.Title>
-        }
-        loading={commentsLoading}
-      >
-        <Space direction="vertical" size={12} style={{ width: '100%' }}>
-          <div>
-            <div
-              onDragOver={(e) => {
-                e.preventDefault();
-              }}
-              onDrop={(e) => {
-                e.preventDefault();
-                const file = Array.from(e.dataTransfer.files || []).find((f) => f.type.startsWith('image/'));
-                if (!file) return;
-                setPendingImageFile(file);
-                message.info('Изображение добавлено (drop). Отправьте комментарий для загрузки.');
-              }}
-            >
-              <Input.TextArea
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                placeholder="Написать комментарий... (можно перетащить картинку или вставить Ctrl+V)"
-                rows={2}
-                style={{ width: '100%' }}
-                onPaste={(e) => {
-                  const items = Array.from(e.clipboardData?.items || []);
-                  const imgItem = items.find((it) => it.kind === 'file' && (it.type || '').startsWith('image/'));
-                  const file = imgItem?.getAsFile();
-                  if (!file) return;
-                  setPendingImageFile(file);
-                  message.info('Изображение добавлено (Ctrl+V). Отправьте комментарий для загрузки.');
-                }}
-              />
-            </div>
-
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginTop: 10,
-              }}
-            >
-              <Space size={10}>
-                <Upload
-                  showUploadList={false}
-                  accept="image/*"
-                  beforeUpload={(file) => {
-                    setPendingImageFile(file);
-                    message.info('Изображение выбрано. Отправьте комментарий для загрузки.');
-                    return false; // Предотвращаем автоматическую загрузку
-                  }}
-                >
-                  <Button
-                    type="default"
-                    shape="circle"
-                    size="middle"
-                    icon={<PictureOutlined style={{ fontSize: 18 }} />}
-                    style={{
-                      width: 38,
-                      height: 38,
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                    title="Прикрепить изображение (или перетащите/вставьте Ctrl+V)"
-                  />
-                </Upload>
-                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                  {pendingImageFile ? 'Фото выбрано — нажмите «Отправить»' : 'Фото: drag&drop / Ctrl+V / кнопка'}
-                </Typography.Text>
-              </Space>
-
-              <Button
-                type="primary"
-                onClick={handleAddComment}
-                loading={creatingComment || uploadingImage}
-                disabled={!newComment.trim()}
-                style={{ minWidth: 120 }}
-              >
-                Отправить
-              </Button>
-            </div>
-          </div>
-          {pendingImageFile && (
-            <div
-              style={{
-                padding: 8,
-                borderRadius: 6,
-                border: '1px dashed rgba(148,163,184,0.6)',
-                background: 'rgba(148,163,184,0.05)',
-                maxWidth: 420,
-              }}
-            >
-              <Space style={{ width: '100%', justifyContent: 'space-between' }}>
-                <Space>
-                  <PictureOutlined style={{ color: '#64748b' }} />
-                  <Typography.Text style={{ fontSize: 12 }}>
-                    {pendingImageFile.name}
-                  </Typography.Text>
-                </Space>
-                <Button
-                  type="text"
-                  size="small"
-                  onClick={() => setPendingImageFile(null)}
-                  style={{ paddingInline: 4, height: 20 }}
-                >
-                  Убрать
-                </Button>
-              </Space>
-            </div>
-          )}
-
-          <List
-            dataSource={comments ?? []}
-            locale={{ emptyText: 'Нет комментариев' }}
-            renderItem={(comment) => (
-              <List.Item
-                actions={
-                  currentUser?.id === comment.user_id
-                    ? [
-                        <Upload
-                          key="upload"
-                          showUploadList={false}
-                          accept="image/*"
-                          customRequest={async (options) => {
-                            const { file, onSuccess, onError } = options as any;
-                            try {
-                              await handleUploadImage(comment.id, file as File);
-                              onSuccess && onSuccess({}, file);
-                            } catch (e) {
-                              onError && onError(e);
-                            }
-                          }}
-                        >
-                          <Button
-                            type="text"
-                            size="small"
-                            icon={<PlusOutlined />}
-                            loading={uploadingImage}
-                          >
-                            Картинка
-                          </Button>
-                        </Upload>,
-                        <Popconfirm
-                          key="delete"
-                          title="Удалить комментарий?"
-                          onConfirm={() => handleDeleteComment(comment.id)}
-                          okText="Да"
-                          cancelText="Нет"
-                        >
-                          <Button type="text" size="small" danger icon={<DeleteOutlined />} />
-                        </Popconfirm>,
-                      ]
-                    : undefined
-                }
-              >
-                <List.Item.Meta
-                  avatar={<Avatar icon={<UserOutlined />} />}
-                  title={
-                    <Space>
-                      <Typography.Text strong>{comment.username || 'Пользователь'}</Typography.Text>
-                      <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                        {dayjs(comment.created_at).format('DD.MM.YYYY HH:mm')}
-                      </Typography.Text>
-                    </Space>
-                  }
-                  description={
-                    <div>
-                      <Typography.Paragraph style={{ marginBottom: 0, whiteSpace: 'pre-wrap' }}>
-                        {comment.text}
-                      </Typography.Paragraph>
-                      {(() => {
-                        const imgs = imagesByCommentId.get(comment.id) ?? [];
-                        if (imgs.length === 0) return null;
-                        return (
-                          <div style={{ marginTop: 8 }}>
-                            <Image.PreviewGroup>
-                              <Space wrap size={[8, 8]}>
-                                {imgs.map((img, index) => (
-                                  <Image
-                                    key={`${(img as any).entity_type || 'comment'}-${img.id}-${index}`}
-                                    src={img.url}
-                                    alt={img.original_name || ''}
-                                    style={{ width: 120, height: 80, objectFit: 'cover', borderRadius: 6 }}
-                                  />
-                                ))}
-                              </Space>
-                            </Image.PreviewGroup>
-                          </div>
-                        );
-                      })()}
-                    </div>
-                  }
-                />
-              </List.Item>
-            )}
-          />
-        </Space>
-      </Card>
+      {/* Активность (комментарии + история) */}
+      <CasinoActivity casinoId={casinoId} />
 
       {previewImage && (
         <Image

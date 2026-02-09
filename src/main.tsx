@@ -8,6 +8,9 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import 'antd/dist/reset.css';
 import './index.css';
 
+// Initialize dayjs plugins & locale (UTC + Russian)
+import './dayjs.config';
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <Provider store={store}>

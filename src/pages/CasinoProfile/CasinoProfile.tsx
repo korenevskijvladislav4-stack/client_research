@@ -276,7 +276,13 @@ export default function CasinoProfile() {
   const [accountDrawerOpen, setAccountDrawerOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<CasinoAccount | null>(null);
   const [accountForm] = Form.useForm();
-  const { data: users = [] } = useGetUsersQuery();
+  const { data: usersResp } = useGetUsersQuery({
+    page: 1,
+    pageSize: 100,
+    sortField: 'username',
+    sortOrder: 'asc',
+  });
+  const users = usersResp?.data ?? [];
 
   // Только GEO, на которые работает казино (проект)
   const geoOptions = useMemo(() => {
@@ -2653,4 +2659,3 @@ export default function CasinoProfile() {
     </Space>
   );
 }
-

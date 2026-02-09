@@ -25,6 +25,7 @@ import {
   CasinoFilters,
 } from '../../store/api/casinoApi';
 import { useGetGeosQuery, useCreateGeoMutation } from '../../store/api/geoApi';
+import { useGetTagsQuery, useGetAllCasinoTagsQuery, type Tag as TagType } from '../../store/api/tagApi';
 import {
   useListProfileFieldsQuery,
   useGetAllProfileValuesQuery,
@@ -36,6 +37,7 @@ import { ColumnSelector } from '../../components/ColumnSelector';
 
 const BASE_COLUMNS: ColumnConfig[] = [
   { key: 'name', title: 'Название' },
+  { key: 'tags', title: 'Теги' },
   { key: 'geo', title: 'GEO' },
   { key: 'website', title: 'Сайт' },
   { key: 'description', title: 'Описание', default: false },
@@ -90,14 +92,25 @@ export default function Casinos() {
   const [createGeo] = useCreateGeoMutation();
   const { data: profileFields } = useListProfileFieldsQuery();
   const { data: allProfileValues } = useGetAllProfileValuesQuery();
+  const { data: allTags = [] } = useGetTagsQuery();
+  const { data: allCasinoTags = {} } = useGetAllCasinoTagsQuery();
 
+  const [filterTag, setFilterTag] = useState<number | undefined>(undefined);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Casino | null>(null);
   const [form] = Form.useForm();
 
   // Data from response (normalized by getCasinos transformResponse)
-  const rows = Array.isArray(response?.data) ? response.data : [];
-  const total = response?.pagination?.total ?? 0;
+  const allRows = Array.isArray(response?.data) ? response.data : [];
+  // Client-side tag filter
+  const rows = useMemo(() => {
+    if (!filterTag) return allRows;
+    return allRows.filter((casino) => {
+      const tags = allCasinoTags[casino.id];
+      return tags && tags.some((t: TagType) => t.id === filterTag);
+    });
+  }, [allRows, filterTag, allCasinoTags]);
+  const total = filterTag ? rows.length : (response?.pagination?.total ?? 0);
 
   // Column config with dynamic fields
   const allColumnConfig = useMemo<ColumnConfig[]>(() => {
@@ -199,8 +212,35 @@ export default function Casinos() {
               { value: false, label: 'Нет' },
             ]}
           />
-          {(table.search || table.filters.status || table.filters.is_our !== undefined) && (
-            <Button onClick={table.reset}>Сбросить</Button>
+          <Select
+            placeholder="Тег"
+            allowClear
+            style={{ width: 160 }}
+            value={filterTag}
+            onChange={(value) => setFilterTag(value)}
+            options={allTags.map((t) => ({
+              value: t.id,
+              label: t.name,
+            }))}
+            optionRender={(option) => {
+              const tag = allTags.find((t) => t.id === option.value);
+              return (
+                <Space>
+                  <div
+                    style={{
+                      width: 10,
+                      height: 10,
+                      borderRadius: '50%',
+                      backgroundColor: tag?.color || '#1677ff',
+                    }}
+                  />
+                  {option.label}
+                </Space>
+              );
+            }}
+          />
+          {(table.search || table.filters.status || table.filters.is_our !== undefined || filterTag) && (
+            <Button onClick={() => { table.reset(); setFilterTag(undefined); }}>Сбросить</Button>
           )}
         </Space>
       </Card>
@@ -227,6 +267,22 @@ export default function Casinos() {
                 sorter: true,
                 sortOrder: table.sortField === 'name' ? (table.sortOrder === 'asc' ? 'ascend' : 'descend') : undefined,
                 render: (text: string) => <Typography.Text strong>{text}</Typography.Text>,
+              },
+              columnSettings.isVisible('tags') && {
+                title: 'Теги',
+                key: 'tags',
+                width: 200,
+                render: (_: any, record: Casino) => {
+                  const tags = allCasinoTags[record.id] ?? [];
+                  if (tags.length === 0) return '—';
+                  return (
+                    <Space wrap size={[4, 4]}>
+                      {tags.map((t: TagType) => (
+                        <Tag key={t.id} color={t.color} style={{ margin: 0 }}>{t.name}</Tag>
+                      ))}
+                    </Space>
+                  );
+                },
               },
               columnSettings.isVisible('geo') && {
                 title: 'GEO',

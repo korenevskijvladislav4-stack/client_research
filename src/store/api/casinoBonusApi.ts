@@ -1,4 +1,5 @@
 import { baseApi } from './baseApi';
+import { PaginationInfo, QueryParams, buildQueryString } from '../../types/api.types';
 
 export type BonusStatus = 'active' | 'paused' | 'expired' | 'draft';
 export type BonusCategory = 'casino' | 'sport';
@@ -71,12 +72,24 @@ export interface CasinoBonusImage {
 
 export interface AllBonusesResponse {
   data: CasinoBonus[];
-  total: number;
-  limit: number;
-  offset: number;
+  pagination?: PaginationInfo;
+  total?: number;
+  limit?: number;
+  offset?: number;
 }
 
-export interface AllBonusesParams {
+export interface BonusFilters {
+  casino_id?: number;
+  geo?: string;
+  bonus_category?: string;
+  bonus_kind?: string;
+  bonus_type?: string;
+  status?: string;
+}
+
+export interface AllBonusesParams extends QueryParams {
+  filters?: BonusFilters;
+  // legacy flat params (backward compatibility)
   casino_id?: number;
   geo?: string;
   bonus_category?: string;
@@ -92,17 +105,46 @@ export const casinoBonusApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getAllBonuses: builder.query<AllBonusesResponse, AllBonusesParams>({
       query: (params = {}) => {
-        const queryParams = new URLSearchParams();
-        if (params.casino_id) queryParams.append('casino_id', params.casino_id.toString());
-        if (params.geo) queryParams.append('geo', params.geo);
-        if (params.bonus_category) queryParams.append('bonus_category', params.bonus_category);
-        if (params.bonus_kind) queryParams.append('bonus_kind', params.bonus_kind);
-        if (params.bonus_type) queryParams.append('bonus_type', params.bonus_type);
-        if (params.status) queryParams.append('status', params.status);
-        if (params.search) queryParams.append('search', params.search);
-        if (params.limit) queryParams.append('limit', params.limit.toString());
-        if (params.offset !== undefined) queryParams.append('offset', params.offset.toString());
-        return `/bonuses?${queryParams.toString()}`;
+        const normalized: AllBonusesParams = { ...params };
+
+        if (!normalized.filters) {
+          const legacyFilters: BonusFilters = {
+            casino_id: params.casino_id,
+            geo: params.geo,
+            bonus_category: params.bonus_category,
+            bonus_kind: params.bonus_kind,
+            bonus_type: params.bonus_type,
+            status: params.status,
+          };
+          const cleanLegacyFilters = Object.fromEntries(
+            Object.entries(legacyFilters).filter(([, value]) => value !== undefined && value !== null && value !== '')
+          ) as BonusFilters;
+          if (Object.keys(cleanLegacyFilters).length > 0) {
+            normalized.filters = cleanLegacyFilters;
+          }
+        }
+
+        if (!normalized.pageSize && params.limit) {
+          normalized.pageSize = params.limit;
+        }
+        if (!normalized.page && params.limit && params.offset !== undefined) {
+          normalized.page = Math.floor(params.offset / params.limit) + 1;
+        }
+
+        return `/bonuses${buildQueryString(normalized)}`;
+      },
+      transformResponse: (response: any): AllBonusesResponse => {
+        const data = Array.isArray(response?.data) ? response.data : [];
+        const pagination = response?.pagination;
+        return {
+          data,
+          pagination,
+          total: response?.total ?? pagination?.total ?? data.length,
+          limit: response?.limit ?? pagination?.pageSize ?? data.length,
+          offset:
+            response?.offset ??
+            (pagination ? Math.max(0, (pagination.page - 1) * pagination.pageSize) : 0),
+        };
       },
       providesTags: ['Bonus'],
     }),

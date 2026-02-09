@@ -1,4 +1,5 @@
 import { baseApi } from './baseApi';
+import { PaginatedResponse, QueryParams, buildQueryString } from '../../types/api.types';
 
 export interface CasinoAccount {
   id: number;
@@ -15,11 +16,14 @@ export interface CasinoAccount {
   updated_at: string;
 }
 
-export interface AllAccountsParams {
+export interface AccountFilters {
   casino_id?: number;
   geo?: string;
   owner_id?: number;
-  search?: string;
+}
+
+export interface AllAccountsParams extends QueryParams {
+  filters?: AccountFilters;
 }
 
 export interface CreateCasinoAccountDto {
@@ -40,8 +44,8 @@ export interface UpdateCasinoAccountDto {
 
 export const casinoAccountApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-    getAllAccounts: builder.query<CasinoAccount[], AllAccountsParams | void>({
-      query: (params) => ({ url: `/accounts`, params: (params as any) || undefined }),
+    getAllAccounts: builder.query<PaginatedResponse<CasinoAccount>, AllAccountsParams | void>({
+      query: (params) => `/accounts${buildQueryString(params || {})}`,
       providesTags: [{ type: 'CasinoAccount', id: 'ALL' }],
     }),
     getCasinoAccounts: builder.query<CasinoAccount[], number>({

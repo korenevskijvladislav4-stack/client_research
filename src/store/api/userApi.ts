@@ -1,4 +1,5 @@
 import { baseApi } from './baseApi';
+import { PaginatedResponse, QueryParams, buildQueryString } from '../../types/api.types';
 
 export interface User {
   id: number;
@@ -26,10 +27,19 @@ export interface UpdateUserDto {
   is_active?: boolean;
 }
 
+export interface UserFilters {
+  role?: 'admin' | 'user';
+  is_active?: boolean;
+}
+
+export interface UserQueryParams extends QueryParams {
+  filters?: UserFilters;
+}
+
 export const userApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-    getUsers: builder.query<User[], void>({
-      query: () => '/auth/users',
+    getUsers: builder.query<PaginatedResponse<User>, UserQueryParams | void>({
+      query: (params) => `/auth/users${buildQueryString(params || {})}`,
       providesTags: ['User'],
     }),
     createUser: builder.mutation<User, CreateUserDto>({

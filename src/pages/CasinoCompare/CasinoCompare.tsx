@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useMemo, useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Button,
   Card,
@@ -166,8 +166,18 @@ function ComparisonValue({ value, isDifferent, hasValue }: { value: any; isDiffe
 
 export default function CasinoCompare() {
   const nav = useNavigate();
+  const [searchParams] = useSearchParams();
   const [casino1Id, setCasino1Id] = useState<number | undefined>(undefined);
   const [casino2Id, setCasino2Id] = useState<number | undefined>(undefined);
+
+  // Pre-fill casino1 from URL query params (e.g. /casinos/compare?casino1=5)
+  useEffect(() => {
+    const c1 = searchParams.get('casino1');
+    if (c1 && !casino1Id) {
+      const parsed = Number(c1);
+      if (!isNaN(parsed)) setCasino1Id(parsed);
+    }
+  }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
   const [filterGeo, setFilterGeo] = useState<string | undefined>(undefined);
 
   const { data: casinos, isLoading: casinosLoading } = useGetAllCasinosQuery();

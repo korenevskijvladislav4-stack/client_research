@@ -3,21 +3,20 @@ import { Card, Col, Row, Statistic, Typography, Space, Tag, List } from 'antd';
 import {
   BankOutlined,
   CheckCircleOutlined,
-  GiftOutlined,
+
   MailOutlined,
   DollarOutlined,
   CreditCardOutlined,
   BarChartOutlined,
 } from '@ant-design/icons';
 import { useGetAllCasinosQuery } from '../../store/api/casinoApi';
-import { useGetAllPromosQuery } from '../../store/api/promoApi';
+
 import { useGetEmailsQuery } from '../../store/api/emailApi';
 import { useGetAllBonusesQuery } from '../../store/api/casinoBonusApi';
 import { useGetAllPaymentsQuery } from '../../store/api/casinoPaymentApi';
 
 export default function Dashboard() {
   const { data: casinos = [] } = useGetAllCasinosQuery();
-  const { data: promos = [] } = useGetAllPromosQuery();
   const { data: emailsResponse } = useGetEmailsQuery({ limit: 50, offset: 0 });
 
   // Берём первую страницу бонусов и платежей, но total используем для общей статистики
@@ -27,8 +26,6 @@ export default function Dashboard() {
   const totalCasinos = casinos.length;
   const ourCasinos = casinos.filter((c: any) => c.is_our);
   const otherCasinos = casinos.filter((c: any) => !c.is_our);
-  const totalPromos = promos.length;
-
   // const unreadEmails =
   //   emailsResponse?.data?.filter((e) => !e.is_read).length ?? 0;
 
@@ -160,15 +157,6 @@ export default function Dashboard() {
               title="Чужие казино"
               value={otherCasinos.length}
               prefix={<BankOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={4}>
-          <Card>
-            <Statistic
-              title="Промо кампаний"
-              value={totalPromos}
-              prefix={<GiftOutlined />}
             />
           </Card>
         </Col>

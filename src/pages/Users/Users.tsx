@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import {
   Button,
   Card,
@@ -19,60 +19,28 @@ import {
   useGetUsersQuery,
   useCreateUserMutation,
   useUpdateUserMutation,
-  // useDeleteUserMutation,
   User,
   CreateUserDto,
   UpdateUserDto,
 } from '../../store/api/userApi';
+import { useServerTable } from '../../hooks/useServerTable';
 import dayjs from 'dayjs';
 
-const PAGE_SIZE = 20;
-
 export default function Users() {
-  const { data: users = [], isLoading } = useGetUsersQuery();
+  const table = useServerTable<{ role?: string; is_active?: boolean }>({
+    defaultPageSize: 20,
+    defaultSortField: 'username',
+    defaultSortOrder: 'asc',
+  });
+  const { data: usersResp, isLoading } = useGetUsersQuery(table.params);
+  const users = usersResp?.data ?? [];
+
   const [createUser] = useCreateUserMutation();
   const [updateUser] = useUpdateUserMutation();
-  // const [deleteUser] = useDeleteUserMutation();
 
-  // Filters state
-  const [search, setSearch] = useState('');
-  const [filterRole, setFilterRole] = useState<string | undefined>(undefined);
-  const [filterActive, setFilterActive] = useState<boolean | undefined>(undefined);
-  const [page, setPage] = useState(1);
-
-  // Drawer state
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [form] = Form.useForm();
-
-  // Filter users
-  const filteredUsers = useMemo(() => {
-    return users.filter((user) => {
-      if (search) {
-        const searchLower = search.toLowerCase();
-        if (
-          !user.username.toLowerCase().includes(searchLower) &&
-          !user.email.toLowerCase().includes(searchLower)
-        ) {
-          return false;
-        }
-      }
-      if (filterRole && user.role !== filterRole) {
-        return false;
-      }
-      if (filterActive !== undefined && user.is_active !== filterActive) {
-        return false;
-      }
-      return true;
-    });
-  }, [users, search, filterRole, filterActive]);
-
-  // Pagination
-  const paginatedUsers = useMemo(() => {
-    const start = (page - 1) * PAGE_SIZE;
-    const end = start + PAGE_SIZE;
-    return filteredUsers.slice(start, end);
-  }, [filteredUsers, page]);
 
   const showCreate = () => {
     setEditingUser(null);
@@ -92,24 +60,14 @@ export default function Users() {
       email: user.email,
       role: user.role,
       is_active: user.is_active,
-      password: undefined, // Don't prefill password
+      password: undefined,
     });
     setDrawerOpen(true);
   };
 
-  // const handleDelete = async (id: number) => {
-  //   try {
-  //     await deleteUser(id).unwrap();
-  //     message.success('Пользователь деактивирован');
-  //   } catch {
-  //     message.error('Не удалось деактивировать пользователя');
-  //   }
-  // };
-
   const onFinish = async (values: CreateUserDto | UpdateUserDto) => {
     try {
       if (editingUser) {
-        // If password is empty, don't include it in update
         const updateData: UpdateUserDto = { ...values };
         if (!values.password || values.password.trim() === '') {
           delete updateData.password;
@@ -151,37 +109,35 @@ export default function Users() {
             </Button>
           </div>
 
-          {/* Filters */}
           <Space wrap>
             <Input
               placeholder="Поиск по имени или email"
               prefix={<SearchOutlined />}
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
+              value={table.search}
+              onChange={(e) => table.setSearch(e.target.value)}
               style={{ width: 250 }}
               allowClear
             />
             <Select
               placeholder="Роль"
-              value={filterRole}
-              onChange={(val) => {
-                setFilterRole(val);
-                setPage(1);
-              }}
+              value={table.filters.role}
+              onChange={(val) => table.updateFilter('role', val)}
               allowClear
               style={{ width: 150 }}
               options={roleOptions}
             />
             <Select
               placeholder="Статус"
-              value={filterActive === undefined ? undefined : filterActive ? 'active' : 'inactive'}
-              onChange={(val) => {
-                setFilterActive(val === undefined ? undefined : val === 'active');
-                setPage(1);
-              }}
+              value={
+                table.filters.is_active === undefined
+                  ? undefined
+                  : table.filters.is_active
+                  ? 'active'
+                  : 'inactive'
+              }
+              onChange={(val) =>
+                table.updateFilter('is_active', val === undefined ? undefined : val === 'active')
+              }
               allowClear
               style={{ width: 150 }}
               options={[
@@ -191,48 +147,43 @@ export default function Users() {
             />
           </Space>
 
-          {/* Table */}
           <Table
-            dataSource={paginatedUsers}
+            dataSource={users}
             rowKey="id"
             loading={isLoading}
             size="small"
-            pagination={{
-              current: page,
-              total: filteredUsers.length,
-              pageSize: PAGE_SIZE,
-              showSizeChanger: false,
-              showTotal: (total, range) => `${range[0]}-${range[1]} из ${total}`,
-              onChange: (page) => setPage(page),
-            }}
+            pagination={table.paginationConfig(usersResp?.pagination?.total ?? 0)}
+            onChange={table.handleTableChange}
             columns={[
               {
                 title: 'ID',
                 dataIndex: 'id',
                 key: 'id',
                 width: 80,
+                sorter: true,
               },
               {
                 title: 'Имя пользователя',
                 dataIndex: 'username',
                 key: 'username',
                 width: 200,
+                sorter: true,
               },
               {
                 title: 'Email',
                 dataIndex: 'email',
                 key: 'email',
                 width: 250,
+                sorter: true,
               },
               {
                 title: 'Роль',
                 dataIndex: 'role',
                 key: 'role',
                 width: 150,
+                sorter: true,
                 render: (role: string) => (
-                  <Tag color={role === 'admin' ? 'red' : 'blue'}>
-                    {roleLabels[role] || role}
-                  </Tag>
+                  <Tag color={role === 'admin' ? 'red' : 'blue'}>{roleLabels[role] || role}</Tag>
                 ),
               },
               {
@@ -240,6 +191,7 @@ export default function Users() {
                 dataIndex: 'is_active',
                 key: 'is_active',
                 width: 120,
+                sorter: true,
                 render: (isActive: boolean) => (
                   <Tag color={isActive ? 'green' : 'default'}>
                     {isActive ? 'Активен' : 'Неактивен'}
@@ -251,8 +203,8 @@ export default function Users() {
                 dataIndex: 'created_at',
                 key: 'created_at',
                 width: 180,
-                render: (date: string) =>
-                  date ? dayjs(date).format('YYYY-MM-DD HH:mm') : '—',
+                sorter: true,
+                render: (date: string) => (date ? dayjs(date).format('YYYY-MM-DD HH:mm') : '-'),
               },
               {
                 title: 'Действия',
@@ -271,8 +223,8 @@ export default function Users() {
                       title={record.is_active ? 'Деактивировать пользователя?' : 'Активировать пользователя?'}
                       description={
                         record.is_active
-                          ? 'Пользователь не сможет войти в систему после деактивации.'
-                          : 'Пользователь сможет войти в систему после активации.'
+                          ? 'Пользователь не сможет войти в систему.'
+                          : 'Пользователь сможет снова войти в систему.'
                       }
                       onConfirm={() => {
                         updateUser({
@@ -281,9 +233,7 @@ export default function Users() {
                         })
                           .unwrap()
                           .then(() => {
-                            message.success(
-                              record.is_active ? 'Пользователь деактивирован' : 'Пользователь активирован'
-                            );
+                            message.success(record.is_active ? 'Пользователь деактивирован' : 'Пользователь активирован');
                           })
                           .catch(() => {
                             message.error('Не удалось изменить статус пользователя');
@@ -307,7 +257,6 @@ export default function Users() {
         </Space>
       </Card>
 
-      {/* Drawer for create/edit */}
       <Drawer
         title={editingUser ? 'Редактировать пользователя' : 'Создать пользователя'}
         open={drawerOpen}

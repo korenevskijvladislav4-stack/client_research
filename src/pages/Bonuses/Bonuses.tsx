@@ -30,6 +30,7 @@ import { useGetAllCasinosQuery } from '../../store/api/casinoApi';
 import { useGetGeosQuery } from '../../store/api/geoApi';
 import { useColumnSettings, ColumnConfig } from '../../hooks/useColumnSettings';
 import { ColumnSelector } from '../../components/ColumnSelector';
+import { useServerTable } from '../../hooks/useServerTable';
 
 const COLUMN_CONFIG: ColumnConfig[] = [
   { key: 'casino_name', title: 'Казино' },
@@ -64,7 +65,6 @@ const bonusTypeLabels: Record<BonusType, string> = {
   odds_boost: 'Повышение коэффициентов',
 };
 
-const PAGE_SIZE = 20;
 
 // Форматирование числа
 const fmt = (n: any) => {
@@ -83,15 +83,18 @@ const fmtAmount = (value: any, currency?: string | null) => {
 export default function Bonuses() {
   const nav = useNavigate();
   const columnSettings = useColumnSettings('bonuses', COLUMN_CONFIG);
+  const table = useServerTable<{
+    casino_id?: number;
+    geo?: string;
+    bonus_category?: string;
+    bonus_kind?: string;
+    bonus_type?: string;
+  }>({
+    defaultPageSize: 20,
+    defaultSortField: 'created_at',
+    defaultSortOrder: 'desc',
+  });
 
-  // Filters state
-  const [search, setSearch] = useState('');
-  const [filterCasino, setFilterCasino] = useState<number | undefined>(undefined);
-  const [filterGeo, setFilterGeo] = useState<string | undefined>(undefined);
-  const [filterBonusCategory, setFilterBonusCategory] = useState<string | undefined>(undefined);
-  const [filterBonusKind, setFilterBonusKind] = useState<string | undefined>(undefined);
-  const [filterBonusType, setFilterBonusType] = useState<string | undefined>(undefined);
-  const [page, setPage] = useState(1);
   const [selectedBonus, setSelectedBonus] = useState<CasinoBonus | null>(null);
   const [pendingImages, setPendingImages] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -107,16 +110,7 @@ export default function Bonuses() {
   );
   const [uploadBonusImages] = useUploadBonusImagesMutation();
   const [deleteBonusImage] = useDeleteBonusImageMutation();
-  const { data: bonusesResp, isLoading } = useGetAllBonusesQuery({
-    casino_id: filterCasino,
-    geo: filterGeo,
-    bonus_category: filterBonusCategory,
-    bonus_kind: filterBonusKind,
-    bonus_type: filterBonusType,
-    search: search || undefined,
-    limit: PAGE_SIZE,
-    offset: (page - 1) * PAGE_SIZE,
-  });
+  const { data: bonusesResp, isLoading } = useGetAllBonusesQuery(table.params);
 
   const casinoOptions = useMemo(
     () => (casinos ?? []).map((c) => ({ value: c.id, label: c.name })),
@@ -147,16 +141,16 @@ export default function Bonuses() {
   );
 
   const clearFilters = () => {
-    setSearch('');
-    setFilterCasino(undefined);
-    setFilterGeo(undefined);
-    setFilterBonusCategory(undefined);
-    setFilterBonusKind(undefined);
-    setFilterBonusType(undefined);
-    setPage(1);
+    table.reset();
   };
 
-  const hasFilters = search || filterCasino || filterGeo || filterBonusCategory || filterBonusKind || filterBonusType;
+  const hasFilters =
+    Boolean(table.search) ||
+    Boolean(table.filters.casino_id) ||
+    Boolean(table.filters.geo) ||
+    Boolean(table.filters.bonus_category) ||
+    Boolean(table.filters.bonus_kind) ||
+    Boolean(table.filters.bonus_type);
 
   return (
     <Space direction="vertical" size={24} style={{ width: '100%' }}>
@@ -185,21 +179,15 @@ export default function Bonuses() {
             <Input
               placeholder="Поиск по названию, промокоду, казино..."
               prefix={<SearchOutlined />}
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
+              value={table.search}
+              onChange={(e) => table.setSearch(e.target.value)}
               style={{ width: '100%', maxWidth: 300, minWidth: 200 }}
               allowClear
             />
             <Select
               placeholder="Казино"
-              value={filterCasino}
-              onChange={(v) => {
-                setFilterCasino(v);
-                setPage(1);
-              }}
+              value={table.filters.casino_id}
+              onChange={(v) => table.updateFilter('casino_id', v)}
               options={casinoOptions}
               style={{ width: '100%', maxWidth: 180, minWidth: 150 }}
               allowClear
@@ -210,11 +198,8 @@ export default function Bonuses() {
             />
             <Select
               placeholder="GEO"
-              value={filterGeo}
-              onChange={(v) => {
-                setFilterGeo(v);
-                setPage(1);
-              }}
+              value={table.filters.geo}
+              onChange={(v) => table.updateFilter('geo', v)}
               options={geoOptions}
               style={{ width: '100%', maxWidth: 120, minWidth: 100 }}
               allowClear
@@ -222,11 +207,8 @@ export default function Bonuses() {
             />
             <Select
               placeholder="Категория"
-              value={filterBonusCategory}
-              onChange={(v) => {
-                setFilterBonusCategory(v);
-                setPage(1);
-              }}
+              value={table.filters.bonus_category}
+              onChange={(v) => table.updateFilter('bonus_category', v)}
               options={[
                 { value: 'casino', label: 'Казино' },
                 { value: 'sport', label: 'Спорт' },
@@ -236,22 +218,16 @@ export default function Bonuses() {
             />
             <Select
               placeholder="Вид бонуса"
-              value={filterBonusKind}
-              onChange={(v) => {
-                setFilterBonusKind(v);
-                setPage(1);
-              }}
+              value={table.filters.bonus_kind}
+              onChange={(v) => table.updateFilter('bonus_kind', v)}
               options={bonusKindOptions}
               style={{ width: '100%', maxWidth: 150, minWidth: 130 }}
               allowClear
             />
             <Select
               placeholder="Тип бонуса"
-              value={filterBonusType}
-              onChange={(v) => {
-                setFilterBonusType(v);
-                setPage(1);
-              }}
+              value={table.filters.bonus_type}
+              onChange={(v) => table.updateFilter('bonus_type', v)}
               options={bonusTypeOptions}
               style={{ width: '100%', maxWidth: 130, minWidth: 120 }}
               allowClear
@@ -271,14 +247,10 @@ export default function Bonuses() {
               loading={isLoading}
               dataSource={bonusesResp?.data ?? []}
               pagination={{
-                current: page,
-                total: bonusesResp?.total ?? 0,
-                pageSize: PAGE_SIZE,
-                showSizeChanger: false,
-                showTotal: (total, range) => `${range[0]}-${range[1]} из ${total}`,
-                onChange: (p) => setPage(p),
+                ...table.paginationConfig(bonusesResp?.pagination?.total ?? bonusesResp?.total ?? 0),
                 responsive: true,
               }}
+              onChange={table.handleTableChange}
               scroll={{ x: 'max-content' }}
               onRow={(record) => ({
                 onClick: () => nav(`/casinos/${record.casino_id}`),
@@ -744,3 +716,4 @@ export default function Bonuses() {
     </Space>
   );
 }
+
