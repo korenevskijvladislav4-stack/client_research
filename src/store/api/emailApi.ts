@@ -15,6 +15,8 @@ export interface Email {
   related_casino_id?: number;
   ai_summary?: string;
   screenshot_url?: string;
+  geo?: string;
+  casino_name?: string;
   created_at: string;
 }
 

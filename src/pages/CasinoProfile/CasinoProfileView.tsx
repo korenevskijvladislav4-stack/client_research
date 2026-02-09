@@ -1429,6 +1429,7 @@ export default function CasinoProfileView() {
                         → {email.to_email}
                       </Typography.Text>
                     )}
+                    {email.geo && <Tag color="orange">{email.geo}</Tag>}
                     {!email.is_read ? <Badge status="processing" text="Новое" /> : null}
                   </Space>
                 }
@@ -1557,6 +1558,11 @@ export default function CasinoProfileView() {
                     ? dayjs(selectedEmail.date_received).format('YYYY-MM-DD HH:mm')
                     : '—'}
                 </Descriptions.Item>
+                {selectedEmail.geo && (
+                  <Descriptions.Item label="GEO">
+                    <Tag color="orange">{selectedEmail.geo}</Tag>
+                  </Descriptions.Item>
+                )}
               </Descriptions>
 
               {/* AI Summary */}

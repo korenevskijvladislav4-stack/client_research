@@ -149,7 +149,7 @@ export default function EmailDetailDrawer({
                 ? dayjs(email.date_received).format('YYYY-MM-DD HH:mm')
                 : '—'}
             </Descriptions.Item>
-            <Descriptions.Item label="Казино">
+            <Descriptions.Item label="Проект">
               <Select
                 style={{ width: '100%' }}
                 options={casinoOptions}
@@ -159,6 +159,11 @@ export default function EmailDetailDrawer({
                 placeholder="Связать с казино"
               />
             </Descriptions.Item>
+            {email.geo && (
+              <Descriptions.Item label="GEO">
+                <Tag color="orange">{email.geo}</Tag>
+              </Descriptions.Item>
+            )}
           </Descriptions>
 
           {/* AI Summary */}

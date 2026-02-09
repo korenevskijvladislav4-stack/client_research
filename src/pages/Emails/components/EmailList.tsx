@@ -48,8 +48,13 @@ export default function EmailList({
                     → {email.to_email}
                   </Typography.Text>
                 )}
+                {email.casino_name && (
+                  <Tag color="green">{email.casino_name}</Tag>
+                )}
+                {email.geo && (
+                  <Tag color="orange">{email.geo}</Tag>
+                )}
                 {!email.is_read && <Tag color="blue">Новое</Tag>}
-                {email.related_casino_id ? <Tag color="green">Связано</Tag> : null}
               </Space>
             }
             description={
