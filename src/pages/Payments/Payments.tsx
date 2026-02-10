@@ -31,6 +31,8 @@ import { useGetPaymentMethodsQuery } from '../../store/api/referenceApi';
 import { useColumnSettings, ColumnConfig } from '../../hooks/useColumnSettings';
 import { ColumnSelector } from '../../components/ColumnSelector';
 import { useServerTable } from '../../hooks/useServerTable';
+import { getApiBaseUrl } from '../../config/api';
+import { useAppSelector } from '../../hooks/redux';
 
 const COLUMN_CONFIG: ColumnConfig[] = [
   { key: 'direction', title: 'Направление' },
@@ -61,6 +63,7 @@ const fmtAmount = (value: any, currency?: string | null) => {
 export default function Payments() {
   const nav = useNavigate();
   const columnSettings = useColumnSettings('payments', COLUMN_CONFIG);
+  const token = useAppSelector((s) => s.auth.token);
   const table = useServerTable<{
     casino_id?: number;
     geo?: string;
@@ -124,6 +127,35 @@ export default function Payments() {
     Boolean(table.filters.type) ||
     Boolean(table.filters.method);
 
+  const handleExport = () => {
+    try {
+      const baseUrl = getApiBaseUrl();
+      const params = table.params as any;
+      const urlParams = new URLSearchParams();
+
+      if (params.search) urlParams.set('search', params.search);
+
+      const filters = params.filters || {};
+      if (filters.casino_id != null) urlParams.set('casino_id', String(filters.casino_id));
+      if (filters.geo) urlParams.set('geo', String(filters.geo));
+      if (filters.direction) urlParams.set('direction', String(filters.direction));
+      if (filters.type) urlParams.set('type', String(filters.type));
+      if (filters.method) urlParams.set('method', String(filters.method));
+
+      if (token) {
+        urlParams.set('token', token);
+      }
+
+      const qs = urlParams.toString();
+      const url = `${baseUrl}/payments/export${qs ? `?${qs}` : ''}`;
+      window.open(url, '_blank');
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to export payments', e);
+      message.error('Не удалось выгрузить платёжные решения');
+    }
+  };
+
   return (
     <Space direction="vertical" size={24} style={{ width: '100%' }}>
       <div style={{ 
@@ -141,7 +173,10 @@ export default function Payments() {
             Список всех платёжных решений по всем казино с фильтрами
           </Typography.Text>
         </Space>
-        <ColumnSelector {...columnSettings} />
+        <Space>
+          <Button onClick={handleExport}>Выгрузить XLSX</Button>
+          <ColumnSelector {...columnSettings} />
+        </Space>
       </div>
 
       <Card>

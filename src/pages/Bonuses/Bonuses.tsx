@@ -31,6 +31,8 @@ import { useGetGeosQuery } from '../../store/api/geoApi';
 import { useColumnSettings, ColumnConfig } from '../../hooks/useColumnSettings';
 import { ColumnSelector } from '../../components/ColumnSelector';
 import { useServerTable } from '../../hooks/useServerTable';
+import { getApiBaseUrl } from '../../config/api';
+import { useAppSelector } from '../../hooks/redux';
 
 const COLUMN_CONFIG: ColumnConfig[] = [
   { key: 'casino_name', title: 'Казино' },
@@ -83,6 +85,7 @@ const fmtAmount = (value: any, currency?: string | null) => {
 export default function Bonuses() {
   const nav = useNavigate();
   const columnSettings = useColumnSettings('bonuses', COLUMN_CONFIG);
+  const token = useAppSelector((s) => s.auth.token);
   const table = useServerTable<{
     casino_id?: number;
     geo?: string;
@@ -152,6 +155,36 @@ export default function Bonuses() {
     Boolean(table.filters.bonus_kind) ||
     Boolean(table.filters.bonus_type);
 
+  const handleExport = () => {
+    try {
+      const baseUrl = getApiBaseUrl();
+      const params = table.params as any;
+      const urlParams = new URLSearchParams();
+
+      if (params.search) urlParams.set('search', params.search);
+
+      const filters = params.filters || {};
+      if (filters.casino_id != null) urlParams.set('casino_id', String(filters.casino_id));
+      if (filters.geo) urlParams.set('geo', String(filters.geo));
+      if (filters.bonus_category) urlParams.set('bonus_category', String(filters.bonus_category));
+      if (filters.bonus_kind) urlParams.set('bonus_kind', String(filters.bonus_kind));
+      if (filters.bonus_type) urlParams.set('bonus_type', String(filters.bonus_type));
+      if (filters.status) urlParams.set('status', String(filters.status));
+
+      if (token) {
+        urlParams.set('token', token);
+      }
+
+      const qs = urlParams.toString();
+      const url = `${baseUrl}/bonuses/export${qs ? `?${qs}` : ''}`;
+      window.open(url, '_blank');
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to export bonuses', e);
+      message.error('Не удалось выгрузить бонусы');
+    }
+  };
+
   return (
     <Space direction="vertical" size={24} style={{ width: '100%' }}>
       <div style={{ 
@@ -169,7 +202,10 @@ export default function Bonuses() {
             Список всех бонусов по всем казино с фильтрами
           </Typography.Text>
         </Space>
-        <ColumnSelector {...columnSettings} />
+        <Space>
+          <Button onClick={handleExport}>Выгрузить XLSX</Button>
+          <ColumnSelector {...columnSettings} />
+        </Space>
       </div>
 
       <Card>
