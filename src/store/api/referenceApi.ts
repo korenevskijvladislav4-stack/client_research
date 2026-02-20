@@ -49,6 +49,32 @@ export const referenceApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ['PaymentMethods'],
     }),
+
+    getPromoTypes: builder.query<RefItem[], void>({
+      query: () => '/ref/promo-types',
+      providesTags: ['PromoTypes'],
+    }),
+    createPromoType: builder.mutation<RefItem, { name: string }>({
+      query: (body) => ({
+        url: '/ref/promo-types',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['PromoTypes'],
+    }),
+
+    getProviders: builder.query<RefItem[], void>({
+      query: () => '/ref/providers',
+      providesTags: ['Providers'],
+    }),
+    createProvider: builder.mutation<RefItem, { name: string }>({
+      query: (body) => ({
+        url: '/ref/providers',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['Providers'],
+    }),
   }),
 });
 
@@ -59,4 +85,8 @@ export const {
   useCreatePaymentTypeMutation,
   useGetPaymentMethodsQuery,
   useCreatePaymentMethodMutation,
+  useGetPromoTypesQuery,
+  useCreatePromoTypeMutation,
+  useGetProvidersQuery,
+  useCreateProviderMutation,
 } = referenceApi;

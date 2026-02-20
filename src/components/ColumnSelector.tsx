@@ -52,7 +52,7 @@ export function ColumnSelector({
   );
 
   return (
-    <Dropdown dropdownRender={() => menu} trigger={['click']} placement="bottomRight">
+    <Dropdown popupRender={() => menu} trigger={['click']} placement="bottomRight">
       <Button icon={<SettingOutlined />} size="small">
         Колонки
       </Button>

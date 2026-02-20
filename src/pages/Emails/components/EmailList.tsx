@@ -54,6 +54,9 @@ export default function EmailList({
                 {email.geo && (
                   <Tag color="orange">{email.geo}</Tag>
                 )}
+                {email.topic_name && (
+                  <Tag color="purple">{email.topic_name}</Tag>
+                )}
                 {!email.is_read && <Tag color="blue">Новое</Tag>}
               </Space>
             }

@@ -21,7 +21,9 @@ const Login = () => {
       navigate('/');
     } catch (err: any) {
       if (err?.errorFields) return;
-      message.error(err.response?.data?.error || 'Ошибка входа');
+      const data = err.response?.data;
+      const text = (data && (data.error || data.message)) || 'Ошибка входа';
+      message.error(text);
     } finally {
       setLoading(false);
     }

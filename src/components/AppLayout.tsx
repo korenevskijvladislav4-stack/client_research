@@ -3,7 +3,6 @@ import { Layout, Menu, Button, theme, Switch, Space, Drawer, Typography } from '
 import {
   BankOutlined,
   MailOutlined,
-
   DollarOutlined,
   CreditCardOutlined,
   SettingOutlined,
@@ -16,7 +15,9 @@ import {
   KeyOutlined,
   UserOutlined,
   PictureOutlined,
-
+  HistoryOutlined,
+  TrophyOutlined,
+  ApiOutlined,
 } from '@ant-design/icons';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useAppDispatch } from '../hooks/redux';
@@ -30,7 +31,9 @@ const menuItems = [
   { key: '/casinos/compare', icon: <DiffOutlined />, label: <Link to="/casinos/compare">Сравнение</Link> },
   { key: '/bonuses', icon: <DollarOutlined />, label: <Link to="/bonuses">Бонусы</Link> },
   { key: '/payments', icon: <CreditCardOutlined />, label: <Link to="/payments">Платежи</Link> },
+  { key: '/promos', icon: <TrophyOutlined />, label: <Link to="/promos">Промо</Link> },
   { key: '/accounts', icon: <KeyOutlined />, label: <Link to="/accounts">Аккаунты</Link> },
+  { key: '/accounts/transactions', icon: <HistoryOutlined />, label: <Link to="/accounts/transactions">История транзакций</Link> },
   { key: '/emails', icon: <MailOutlined />, label: <Link to="/emails">Почта</Link> },
   { key: '/screenshots', icon: <PictureOutlined />, label: <Link to="/screenshots">Скриншоты</Link> },
   { type: 'divider' as const },
@@ -41,6 +44,7 @@ const menuItems = [
     children: [
       { key: '/profile-settings-analytics', icon: <BarChartOutlined />, label: <Link to="/profile-settings-analytics">Профиль</Link> },
       { key: '/email-analytics', icon: <MailOutlined />, label: <Link to="/email-analytics">Почта</Link> },
+      { key: '/provider-analytics', icon: <ApiOutlined />, label: <Link to="/provider-analytics">Провайдеры</Link> },
     ],
   },
   {
@@ -50,6 +54,7 @@ const menuItems = [
     children: [
       { key: '/profile-settings', icon: <SettingOutlined />, label: <Link to="/profile-settings">Профиль</Link> },
       { key: '/profile-fields', icon: <SettingOutlined />, label: <Link to="/profile-fields">Поля</Link> },
+      { key: '/email-topics', icon: <MailOutlined />, label: <Link to="/email-topics">Темы писем</Link> },
       { key: '/users', icon: <UserOutlined />, label: <Link to="/users">Пользователи</Link> },
     ],
   },
@@ -94,8 +99,8 @@ export function AppLayout() {
   
   // Determine which submenu should be open
   const getOpenKeys = () => {
-    if (location.pathname === '/profile-settings-analytics') return ['analytics-submenu'];
-    if (location.pathname.startsWith('/profile')) return ['settings-submenu'];
+    if (location.pathname === '/profile-settings-analytics' || location.pathname === '/email-analytics' || location.pathname === '/provider-analytics') return ['analytics-submenu'];
+    if (location.pathname.startsWith('/profile') || location.pathname === '/email-topics' || location.pathname === '/users') return ['settings-submenu'];
     return [];
   };
   const openKeys = getOpenKeys();

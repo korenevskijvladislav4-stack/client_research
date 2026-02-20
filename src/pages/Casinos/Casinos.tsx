@@ -24,6 +24,7 @@ import {
   Casino,
   CasinoFilters,
 } from '../../store/api/casinoApi';
+import { getApiErrorMessage } from '../../store/api/baseApi';
 import { useGetGeosQuery, useCreateGeoMutation } from '../../store/api/geoApi';
 import { useGetTagsQuery, useGetAllCasinoTagsQuery, type Tag as TagType } from '../../store/api/tagApi';
 import {
@@ -158,7 +159,7 @@ export default function Casinos() {
       setEditing(null);
       form.resetFields();
     } catch (e: any) {
-      message.error(e?.data?.error ?? 'Ошибка сохранения казино');
+      message.error(getApiErrorMessage(e, 'Ошибка сохранения казино'));
     }
   };
 
@@ -168,7 +169,7 @@ export default function Casinos() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
         <Space direction="vertical" size={0}>
           <Typography.Title level={4} style={{ margin: 0 }}>Казино</Typography.Title>
-          <Typography.Text type="secondary">
+          <Typography.Text type="secondary" style={{ fontSize: 13 }}>
             Список казино. Нажмите на строку, чтобы открыть профиль.
           </Typography.Text>
         </Space>
@@ -180,7 +181,7 @@ export default function Casinos() {
 
       {/* Filters */}
       <Card size="small">
-        <Space wrap>
+        <Space wrap size={[12, 12]} style={{ width: '100%' }}>
           <Input
             placeholder="Поиск..."
             prefix={<SearchOutlined />}
@@ -343,7 +344,7 @@ export default function Casinos() {
                           await deleteCasino(r.id).unwrap();
                           message.success('Удалено');
                         } catch (e: any) {
-                          message.error(e?.data?.error ?? 'Ошибка удаления');
+                          message.error(getApiErrorMessage(e, 'Ошибка удаления'));
                         }
                       }}
                     />

@@ -15,9 +15,20 @@ export interface Email {
   related_casino_id?: number;
   ai_summary?: string;
   screenshot_url?: string;
+  topic_id?: number | null;
+  topic_name?: string | null;
   geo?: string;
   casino_name?: string;
   created_at: string;
+}
+
+export interface EmailTopic {
+  id: number;
+  name: string;
+  description?: string | null;
+  sort_order: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface EmailsResponse {
@@ -128,6 +139,36 @@ export const emailApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: (_result, _error, id) => [{ type: 'Email', id }, 'Email'],
     }),
+    getEmailTopics: builder.query<EmailTopic[], void>({
+      query: () => '/emails/topics',
+      providesTags: ['EmailTopics'],
+    }),
+    createEmailTopic: builder.mutation<EmailTopic, { name: string; description?: string }>({
+      query: (body) => ({
+        url: '/emails/topics',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['EmailTopics'],
+    }),
+    updateEmailTopic: builder.mutation<
+      EmailTopic,
+      { id: number; name?: string; description?: string; sort_order?: number }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/emails/topics/${id}`,
+        method: 'PUT',
+        body,
+      }),
+      invalidatesTags: ['EmailTopics'],
+    }),
+    deleteEmailTopic: builder.mutation<{ ok: boolean }, number>({
+      query: (id) => ({
+        url: `/emails/topics/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['EmailTopics'],
+    }),
   }),
 });
 
@@ -143,4 +184,8 @@ export const {
   useLinkEmailToCasinoMutation,
   useRequestEmailSummaryMutation,
   useRequestEmailScreenshotMutation,
+  useGetEmailTopicsQuery,
+  useCreateEmailTopicMutation,
+  useUpdateEmailTopicMutation,
+  useDeleteEmailTopicMutation,
 } = emailApi;

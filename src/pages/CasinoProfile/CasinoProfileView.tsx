@@ -52,6 +52,16 @@ import {
   useGetCasinoAccountsQuery,
 } from '../../store/api/casinoAccountApi';
 import {
+  useGetCasinoPromosQuery,
+  useGetPromoImagesQuery,
+  useUploadPromoImagesMutation,
+  CasinoPromo,
+  CasinoPromoImage,
+  PromoCategory,
+  PromoStatus,
+} from '../../store/api/casinoPromoApi';
+import { useGetCasinoProvidersQuery } from '../../store/api/casinoProviderApi';
+import {
   useGetScreenshotsByCasinoQuery,
   useTakeScreenshotMutation,
   SlotScreenshot,
@@ -155,6 +165,11 @@ export default function CasinoProfileView() {
     skip: !casinoId,
   });
 
+  const { data: promos, isLoading: promosLoading } = useGetCasinoPromosQuery(
+    { casinoId },
+    { skip: !casinoId } as any
+  );
+
   const [activeGeo, setActiveGeo] = useState<string | undefined>(undefined);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
@@ -210,6 +225,18 @@ export default function CasinoProfileView() {
   const [reqScreenshot, { isLoading: screenshotLoading }] = useRequestEmailScreenshotMutation();
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
   const [casinoScreenshotVisible, setCasinoScreenshotVisible] = useState(false);
+  const [viewingPromo, setViewingPromo] = useState<CasinoPromo | null>(null);
+  const [pendingPromoImages, setPendingPromoImages] = useState<File[]>([]);
+  const { data: promoImages = [] } = useGetPromoImagesQuery(
+    { casinoId, promoId: viewingPromo?.id ?? 0 },
+    { skip: !casinoId || !viewingPromo?.id }
+  );
+  const [uploadPromoImages] = useUploadPromoImagesMutation();
+  const [activeProviderGeo, setActiveProviderGeo] = useState<string | undefined>(undefined);
+  const { data: casinoProviders = [], isLoading: casinoProvidersLoading } = useGetCasinoProvidersQuery(
+    { casinoId, geo: activeProviderGeo },
+    { skip: !casinoId }
+  );
 
   // Comments & Images (needed for export)
   const { data: comments } = useGetCasinoCommentsQuery(casinoId, {
@@ -777,13 +804,13 @@ export default function CasinoProfileView() {
               render: (v, b) => fmtAmount(v, b.currency),
             },
             {
-              title: 'x',
-              dataIndex: 'wagering_requirement',
-              width: 50,
-              render: (v) => {
-                if (v == null) return '—';
-                const num = Number(v);
-                return isNaN(num) ? v : `x${Number.isInteger(num) ? num : parseFloat(num.toFixed(2))}`;
+              title: 'Вейджер',
+              width: 100,
+              render: (_, b) => {
+                const parts: string[] = [];
+                if (b.wagering_requirement != null) parts.push(`кэш x${fmt(b.wagering_requirement)}`);
+                if (b.wagering_freespin != null) parts.push(`FS x${fmt(b.wagering_freespin)}`);
+                return parts.length > 0 ? parts.join(', ') : '—';
               },
             },
             {
@@ -965,9 +992,17 @@ export default function CasinoProfileView() {
                   {fmtAmount(selectedBonus.min_deposit, selectedBonus.currency)}
                 </Descriptions.Item>
               )}
-              {selectedBonus.wagering_requirement != null && (
+              {(selectedBonus.wagering_requirement != null || selectedBonus.wagering_freespin != null) && (
                 <Descriptions.Item label="Вейджер">
-                  x{fmt(selectedBonus.wagering_requirement)}
+                  {[
+                    selectedBonus.wagering_requirement != null && `кэш x${fmt(selectedBonus.wagering_requirement)}`,
+                    selectedBonus.wagering_freespin != null && `фриспины x${fmt(selectedBonus.wagering_freespin)}`,
+                  ].filter(Boolean).join(', ')}
+                </Descriptions.Item>
+              )}
+              {selectedBonus.wagering_time_limit && (
+                <Descriptions.Item label="Время на отыгрыш">
+                  {selectedBonus.wagering_time_limit}
                 </Descriptions.Item>
               )}
               {selectedBonus.wagering_games && (
@@ -1121,6 +1156,296 @@ export default function CasinoProfileView() {
             </>
           )}
         </Modal>
+      </Card>
+
+      {/* Промо */}
+      <Card title="Промо">
+        <Space wrap style={{ marginBottom: 16 }}>
+          <Typography.Text type="secondary">GEO:</Typography.Text>
+          <Button size="small" type={activeGeo === undefined ? 'primary' : 'default'} onClick={() => setActiveGeo(undefined)}>Все</Button>
+          {casinoGeos.map((g) => (
+            <Button key={g} size="small" type={activeGeo === g ? 'primary' : 'default'} onClick={() => setActiveGeo(g)}>{g}</Button>
+          ))}
+        </Space>
+
+        <Table<CasinoPromo>
+          rowKey="id"
+          size="small"
+          loading={promosLoading}
+          dataSource={(promos ?? []).filter((p) => (activeGeo ? p.geo === activeGeo : true))}
+          pagination={false}
+          scroll={{ x: 1000 }}
+          columns={[
+            { title: 'GEO', dataIndex: 'geo', width: 60 },
+            {
+              title: 'Турнир / Акция',
+              dataIndex: 'promo_category',
+              width: 110,
+              render: (v: PromoCategory) => (
+                <Tag color={v === 'tournament' ? 'blue' : 'purple'}>
+                  {v === 'tournament' ? 'Турнир' : 'Акция'}
+                </Tag>
+              ),
+            },
+            { title: 'Тип турнира', dataIndex: 'promo_type', width: 110, ellipsis: true, render: (v: string) => v || '—' },
+            { title: 'Название турнира', dataIndex: 'name', width: 180, ellipsis: true },
+            {
+              title: 'Период проведения',
+              width: 150,
+              render: (_: any, r: CasinoPromo) => {
+                if (!r.period_start && !r.period_end) return '—';
+                const s = r.period_start ? dayjs(r.period_start).format('DD.MM.YY') : '?';
+                const e = r.period_end ? dayjs(r.period_end).format('DD.MM.YY') : '?';
+                return `${s} – ${e}`;
+              },
+            },
+            { title: 'Провайдер', dataIndex: 'provider', width: 120, ellipsis: true, render: (v: string) => v || '—' },
+            { title: 'Общий ПФ', dataIndex: 'prize_fund', width: 100, ellipsis: true, render: (v: string) => v || '—' },
+            { title: 'Механика', dataIndex: 'mechanics', width: 140, ellipsis: true, render: (v: string) => v || '—' },
+            { title: 'Мин. ставка', dataIndex: 'min_bet', width: 100, render: (v: string) => v || '—' },
+            { title: 'Вейджер на приз', dataIndex: 'wagering_prize', width: 110, render: (v: string) => v || '—' },
+            {
+              title: '',
+              width: 40,
+              align: 'right',
+              render: (_, r: CasinoPromo) => (
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<EyeOutlined />}
+                  onClick={() => setViewingPromo(r)}
+                />
+              ),
+            },
+          ]}
+        />
+      </Card>
+
+      <Modal
+        title={
+          <Space align="center">
+            <Tag color={viewingPromo?.promo_category === 'tournament' ? 'blue' : 'purple'}>
+              {viewingPromo?.promo_category === 'tournament' ? 'Турнир' : 'Акция'}
+            </Tag>
+            <span>{viewingPromo?.name || 'Промо'}</span>
+          </Space>
+        }
+        open={!!viewingPromo}
+        onCancel={() => {
+          setViewingPromo(null);
+          setPendingPromoImages([]);
+        }}
+        footer={null}
+        width={640}
+      >
+        {viewingPromo && (
+          <>
+            <Descriptions column={1} bordered size="small" labelStyle={{ fontWeight: 500, width: 200 }}>
+              <Descriptions.Item label="GEO">
+                <Tag>{viewingPromo.geo}</Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="Конкурент">
+                {casino?.name || '—'}
+              </Descriptions.Item>
+              <Descriptions.Item label="Турнир / Акция">
+                <Tag color={viewingPromo.promo_category === 'tournament' ? 'blue' : 'purple'}>
+                  {viewingPromo.promo_category === 'tournament' ? 'Турнир' : 'Акция'}
+                </Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="Тип турнира">
+                {viewingPromo.promo_type || '—'}
+              </Descriptions.Item>
+              <Descriptions.Item label="Название турнира">
+                {viewingPromo.name}
+              </Descriptions.Item>
+              <Descriptions.Item label="Период проведения">
+                {(viewingPromo.period_start ? dayjs(viewingPromo.period_start).format('DD.MM.YYYY') : '—')}
+                {' – '}
+                {(viewingPromo.period_end ? dayjs(viewingPromo.period_end).format('DD.MM.YYYY') : '—')}
+              </Descriptions.Item>
+              <Descriptions.Item label="Провайдер">
+                {viewingPromo.provider || '—'}
+              </Descriptions.Item>
+              <Descriptions.Item label="Общий ПФ">
+                {viewingPromo.prize_fund || '—'}
+              </Descriptions.Item>
+              <Descriptions.Item label="Механика">
+                {viewingPromo.mechanics || '—'}
+              </Descriptions.Item>
+              <Descriptions.Item label="Мин. ставка для участия">
+                {viewingPromo.min_bet || '—'}
+              </Descriptions.Item>
+              <Descriptions.Item label="Вейджер на приз">
+                {viewingPromo.wagering_prize || '—'}
+              </Descriptions.Item>
+              <Descriptions.Item label="Статус">
+                <Tag color={({ active: 'green', paused: 'orange', expired: 'red', draft: 'default' } as Record<PromoStatus, string>)[viewingPromo.status] ?? 'default'}>
+                  {({ active: 'Активен', paused: 'Пауза', expired: 'Истёк', draft: 'Черновик' } as Record<PromoStatus, string>)[viewingPromo.status] ?? viewingPromo.status}
+                </Tag>
+              </Descriptions.Item>
+            </Descriptions>
+
+            <div style={{ marginTop: 24 }}>
+              <Typography.Title level={5}>Изображения промо</Typography.Title>
+
+              {promoImages && promoImages.length > 0 && (
+                <Image.PreviewGroup>
+                  <Space wrap size={[8, 8]} style={{ marginBottom: 16 }}>
+                    {promoImages.map((img: CasinoPromoImage) => (
+                      <Image
+                        key={img.id}
+                        src={img.url}
+                        alt={img.original_name || 'Promo image'}
+                        width={90}
+                        height={90}
+                        style={{ objectFit: 'cover', borderRadius: 4 }}
+                      />
+                    ))}
+                  </Space>
+                </Image.PreviewGroup>
+              )}
+
+              <div
+                style={{
+                  border: '2px dashed #d9d9d9',
+                  borderRadius: 6,
+                  padding: 12,
+                  textAlign: 'center',
+                  cursor: 'pointer',
+                  marginTop: 4,
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const files = Array.from(e.dataTransfer.files).filter((f) =>
+                    f.type.startsWith('image/')
+                  );
+                  if (files.length > 0) {
+                    setPendingPromoImages((prev) => [...prev, ...files]);
+                    message.info('Изображения добавлены, нажмите «Загрузить»');
+                  }
+                }}
+                onPaste={(e) => {
+                  const items = Array.from(e.clipboardData.items || []);
+                  const files: File[] = [];
+                  for (const item of items) {
+                    if (item.type.startsWith('image/')) {
+                      const file = item.getAsFile();
+                      if (file) files.push(file);
+                    }
+                  }
+                  if (files.length > 0) {
+                    setPendingPromoImages((prev) => [...prev, ...files]);
+                    message.info('Изображения добавлены (Ctrl+V), нажмите «Загрузить»');
+                  }
+                }}
+              >
+                <PictureOutlined style={{ fontSize: 22, color: '#8c8c8c', marginBottom: 6 }} />
+                <div style={{ marginBottom: 8 }}>
+                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                    Перетащите изображения, вставьте (Ctrl+V) или выберите файлы
+                  </Typography.Text>
+                </div>
+                <Upload
+                  multiple
+                  accept="image/*"
+                  showUploadList={false}
+                  beforeUpload={(file) => {
+                    setPendingPromoImages((prev) => [...prev, file]);
+                    return false;
+                  }}
+                >
+                  <Button size="small" icon={<PictureOutlined />}>
+                    Выбрать файлы
+                  </Button>
+                </Upload>
+              </div>
+
+              {pendingPromoImages.length > 0 && (
+                <div style={{ marginTop: 12 }}>
+                  <Typography.Text strong style={{ fontSize: 12 }}>
+                    К загрузке ({pendingPromoImages.length}):
+                  </Typography.Text>
+                  <Space wrap size={[8, 8]} style={{ marginTop: 8 }}>
+                    {pendingPromoImages.map((file, idx) => (
+                      <div key={idx} style={{ position: 'relative' }}>
+                        <img
+                          src={URL.createObjectURL(file)}
+                          alt={file.name}
+                          width={70}
+                          height={70}
+                          style={{ objectFit: 'cover', borderRadius: 4 }}
+                        />
+                        <Button
+                          type="text"
+                          size="small"
+                          danger
+                          icon={<DeleteOutlined />}
+                          style={{ position: 'absolute', top: 0, right: 0 }}
+                          onClick={() => {
+                            setPendingPromoImages((prev) => prev.filter((_, i) => i !== idx));
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </Space>
+                  <Button
+                    type="primary"
+                    size="small"
+                    style={{ marginTop: 8 }}
+                    onClick={async () => {
+                      if (!viewingPromo?.id || pendingPromoImages.length === 0) return;
+                      try {
+                        await uploadPromoImages({
+                          casinoId,
+                          promoId: viewingPromo.id,
+                          files: pendingPromoImages,
+                        }).unwrap();
+                        message.success('Изображения промо загружены');
+                        setPendingPromoImages([]);
+                      } catch (e: any) {
+                        message.error(e?.data?.error ?? 'Ошибка загрузки изображений');
+                      }
+                    }}
+                  >
+                    Загрузить
+                  </Button>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </Modal>
+
+      <Card title="Подключённые провайдеры">
+        <Space wrap style={{ marginBottom: 16 }}>
+          <Typography.Text type="secondary">GEO:</Typography.Text>
+          <Button size="small" type={activeProviderGeo === undefined ? 'primary' : 'default'} onClick={() => setActiveProviderGeo(undefined)}>
+            Все
+          </Button>
+          {casinoGeos.map((g) => (
+            <Button key={g} size="small" type={activeProviderGeo === g ? 'primary' : 'default'} onClick={() => setActiveProviderGeo(g)}>
+              {g}
+            </Button>
+          ))}
+        </Space>
+        {casinoProvidersLoading ? (
+          <Typography.Text type="secondary">Загрузка...</Typography.Text>
+        ) : casinoProviders.length === 0 ? (
+          <Typography.Text type="secondary">
+            {activeProviderGeo ? `Нет провайдеров для GEO «${activeProviderGeo}».` : 'Выберите GEO для просмотра списка провайдеров.'}
+          </Typography.Text>
+        ) : (
+          <Space wrap size={[8, 8]}>
+            {casinoProviders.map((cp) => (
+              <Tag key={cp.id}>{cp.provider_name}</Tag>
+            ))}
+          </Space>
+        )}
       </Card>
 
       <Card title="Платёжные решения">
@@ -1430,6 +1755,7 @@ export default function CasinoProfileView() {
                       </Typography.Text>
                     )}
                     {email.geo && <Tag color="orange">{email.geo}</Tag>}
+                    {email.topic_name && <Tag color="purple">{email.topic_name}</Tag>}
                     {!email.is_read ? <Badge status="processing" text="Новое" /> : null}
                   </Space>
                 }
@@ -1561,6 +1887,11 @@ export default function CasinoProfileView() {
                 {selectedEmail.geo && (
                   <Descriptions.Item label="GEO">
                     <Tag color="orange">{selectedEmail.geo}</Tag>
+                  </Descriptions.Item>
+                )}
+                {selectedEmail.topic_name && (
+                  <Descriptions.Item label="Тема письма">
+                    <Tag color="purple">{selectedEmail.topic_name}</Tag>
                   </Descriptions.Item>
                 )}
               </Descriptions>

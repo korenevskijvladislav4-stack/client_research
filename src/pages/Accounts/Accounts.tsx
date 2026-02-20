@@ -1,11 +1,14 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Button, Card, Input, Select, Space, Table, Typography } from 'antd';
 import dayjs from 'dayjs';
+import { SearchOutlined } from '@ant-design/icons';
+import { Link } from 'react-router-dom';
 import { useGetAllAccountsQuery, CasinoAccount } from '../../store/api/casinoAccountApi';
 import { useGetAllCasinosQuery } from '../../store/api/casinoApi';
 import { useGetGeosQuery } from '../../store/api/geoApi';
 import { useGetUsersQuery } from '../../store/api/userApi';
 import { useServerTable } from '../../hooks/useServerTable';
+import { TransactionModal } from './TransactionModal';
 
 interface AccountFilters {
   casino_id?: number;
@@ -13,7 +16,9 @@ interface AccountFilters {
   owner_id?: number;
 }
 
+
 export default function Accounts() {
+  const [transactionAccount, setTransactionAccount] = useState<CasinoAccount | null>(null);
   const table = useServerTable<AccountFilters>({
     defaultPageSize: 20,
     defaultSortField: 'last_modified_at',
@@ -48,61 +53,74 @@ export default function Accounts() {
   );
 
   return (
-    <Card
-      title={<Typography.Text strong>Аккаунты</Typography.Text>}
-      extra={<Typography.Text type="secondary">{total} записей</Typography.Text>}
-    >
-      <Space style={{ marginBottom: 16 }} wrap>
-        <Input
-          placeholder="Поиск (проект/почта/телефон/пароль/владелец)"
-          value={table.search}
-          onChange={(e) => table.setSearch(e.target.value)}
-          style={{ width: 320 }}
-          allowClear
-        />
+    <>
+    <Space direction="vertical" size={24} style={{ width: '100%' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
+        <Space direction="vertical" size={0} style={{ flex: 1, minWidth: 200 }}>
+          <Typography.Title level={4} style={{ margin: 0 }}>Аккаунты</Typography.Title>
+          <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+            Аккаунты казино. Депозиты и выводы по каждому аккаунту. Всего: {total} записей.
+          </Typography.Text>
+        </Space>
+        <Space wrap>
+          <Link to="/accounts/transactions">
+            <Button>История транзакций</Button>
+          </Link>
+        </Space>
+      </div>
 
-        <Select
-          style={{ minWidth: 220 }}
-          allowClear
-          showSearch
-          placeholder="Проект (казино)"
-          value={table.filters.casino_id}
-          options={casinoOptions}
-          onChange={(val) => table.updateFilter('casino_id', val)}
-          filterOption={(input, option) =>
-            (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
-          }
-        />
+      <Card size="small">
+        <Space wrap size={[12, 12]} style={{ width: '100%' }}>
+          <Input
+            placeholder="Поиск (проект, почта, телефон, пароль, владелец)"
+            prefix={<SearchOutlined />}
+            value={table.search}
+            onChange={(e) => table.setSearch(e.target.value)}
+            style={{ width: 320, minWidth: 260 }}
+            allowClear
+          />
+          <Select
+            style={{ minWidth: 220 }}
+            allowClear
+            showSearch
+            placeholder="Проект (казино)"
+            value={table.filters.casino_id}
+            options={casinoOptions}
+            onChange={(val) => table.updateFilter('casino_id', val)}
+            filterOption={(input, option) =>
+              (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+            }
+          />
+          <Select
+            style={{ minWidth: 180 }}
+            allowClear
+            showSearch
+            placeholder="GEO"
+            value={table.filters.geo}
+            options={geoOptions}
+            onChange={(val) => table.updateFilter('geo', val)}
+            filterOption={(input, option) =>
+              (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+            }
+          />
+          <Select
+            style={{ minWidth: 220 }}
+            allowClear
+            showSearch
+            placeholder="Владелец"
+            value={table.filters.owner_id}
+            options={userOptions}
+            onChange={(val) => table.updateFilter('owner_id', val)}
+            filterOption={(input, option) =>
+              (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+            }
+          />
+          <Button onClick={() => table.reset()}>Сбросить</Button>
+        </Space>
+      </Card>
 
-        <Select
-          style={{ minWidth: 180 }}
-          allowClear
-          showSearch
-          placeholder="GEO"
-          value={table.filters.geo}
-          options={geoOptions}
-          onChange={(val) => table.updateFilter('geo', val)}
-          filterOption={(input, option) =>
-            (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
-          }
-        />
-
-        <Select
-          style={{ minWidth: 220 }}
-          allowClear
-          showSearch
-          placeholder="Владелец"
-          value={table.filters.owner_id}
-          options={userOptions}
-          onChange={(val) => table.updateFilter('owner_id', val)}
-          filterOption={(input, option) =>
-            (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
-          }
-        />
-
-        <Button onClick={() => table.reset()}>Сбросить</Button>
-      </Space>
-
+      <Card>
+        <div style={{ overflowX: 'auto', width: '100%' }}>
       <Table<CasinoAccount>
         rowKey="id"
         size="small"
@@ -152,6 +170,20 @@ export default function Accounts() {
             ),
           },
           {
+            title: 'Депозиты',
+            key: 'deposit_count',
+            width: 100,
+            align: 'right',
+            render: (_: any, r: CasinoAccount) => r.deposit_count ?? 0,
+          },
+          {
+            title: 'Выводы',
+            key: 'withdrawal_count',
+            width: 100,
+            align: 'right',
+            render: (_: any, r: CasinoAccount) => r.withdrawal_count ?? 0,
+          },
+          {
             title: 'Владелец',
             dataIndex: 'owner_username',
             key: 'owner_username',
@@ -167,8 +199,27 @@ export default function Accounts() {
             sorter: true,
             render: (date: string) => (date ? dayjs(date).format('YYYY-MM-DD HH:mm') : '-'),
           },
+          {
+            title: '',
+            key: 'tx',
+            width: 100,
+            render: (_: any, record: CasinoAccount) => (
+              <Button type="link" size="small" onClick={() => setTransactionAccount(record)}>
+                Деп / Вывод
+              </Button>
+            ),
+          },
         ]}
       />
-    </Card>
+        </div>
+      </Card>
+    </Space>
+    <TransactionModal
+      open={!!transactionAccount}
+      onClose={() => setTransactionAccount(null)}
+      account={transactionAccount}
+      onSuccess={() => setTransactionAccount(null)}
+    />
+    </>
   );
 }

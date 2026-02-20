@@ -47,24 +47,23 @@ export function useColumnSettings(tableKey: string, allColumns: ColumnConfig[]) 
 
   // Состояние видимых колонок
   const [visibleKeys, setVisibleKeys] = useState<string[]>(() => {
-    // Если есть сохранённые настройки - используем их
     if (savedFromCookie) {
-      return savedFromCookie;
+      const validKeys = allColumns.length > 0
+        ? savedFromCookie.filter((k) => allColumns.some((c) => c.key === k))
+        : savedFromCookie;
+      if (validKeys.length > 0) return validKeys;
     }
-    // Иначе - дефолтные
     return getDefaultVisible(allColumns);
   });
 
   // Когда allColumns меняется (например, загрузились profileFields)
-  // НЕ сбрасываем настройки, просто убеждаемся что сохранённые ключи валидны
+  // Валидируем сохранённые ключи, сбрасываем на дефолтные если ни один не совпал
   useEffect(() => {
     if (allColumns.length === 0) return;
 
     setVisibleKeys((prev) => {
-      // Если текущий список пуст — инициализируем
       if (prev.length === 0) {
         if (savedFromCookie && savedFromCookie.length > 0) {
-          // Фильтруем только существующие ключи
           const valid = savedFromCookie.filter((k) =>
             allColumns.some((c) => c.key === k)
           );
@@ -73,8 +72,13 @@ export function useColumnSettings(tableKey: string, allColumns: ColumnConfig[]) 
         return getDefaultVisible(allColumns);
       }
 
-      // Если уже есть настройки — не трогаем
-      // (даже если появились новые колонки, не добавляем их автоматически)
+      const validPrev = prev.filter((k) => allColumns.some((c) => c.key === k));
+      if (validPrev.length === 0) {
+        return getDefaultVisible(allColumns);
+      }
+      if (validPrev.length !== prev.length) {
+        return validPrev;
+      }
       return prev;
     });
   }, [allColumns, savedFromCookie, getDefaultVisible]);

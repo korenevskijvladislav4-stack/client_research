@@ -103,7 +103,7 @@ const HISTORY_PAGE_SIZE = 50;
 
 export default function CasinoActivity({ casinoId }: CasinoActivityProps) {
   const { token: themeToken } = theme.useToken();
-  const [tab, setTab] = useState<ActivityTab>('all');
+  const [tab, setTab] = useState<ActivityTab>('comments');
   const [historyPage, setHistoryPage] = useState(1);
 
   // ---- Data fetching ----

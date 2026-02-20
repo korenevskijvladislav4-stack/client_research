@@ -15,7 +15,7 @@ import {
   Upload,
   message,
 } from 'antd';
-import { SearchOutlined, FilterOutlined, EyeOutlined, PictureOutlined, DeleteOutlined } from '@ant-design/icons';
+import { SearchOutlined, EyeOutlined, PictureOutlined, DeleteOutlined } from '@ant-design/icons';
 import {
   useGetAllPaymentsQuery,
   CasinoPayment,
@@ -158,31 +158,21 @@ export default function Payments() {
 
   return (
     <Space direction="vertical" size={24} style={{ width: '100%' }}>
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'flex-start',
-        flexWrap: 'wrap',
-        gap: 16
-      }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
         <Space direction="vertical" size={0} style={{ flex: 1, minWidth: 200 }}>
-          <Typography.Title level={4} style={{ margin: 0 }}>
-            Все платёжные решения
-          </Typography.Title>
+          <Typography.Title level={4} style={{ margin: 0 }}>Платежи</Typography.Title>
           <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-            Список всех платёжных решений по всем казино с фильтрами
+            Платёжные решения по казино. Нажмите на строку, чтобы открыть казино.
           </Typography.Text>
         </Space>
-        <Space>
+        <Space wrap>
           <Button onClick={handleExport}>Выгрузить XLSX</Button>
           <ColumnSelector {...columnSettings} />
         </Space>
       </div>
 
-      <Card>
-        <Space direction="vertical" size={16} style={{ width: '100%' }}>
-          {/* Filters */}
-          <Space wrap size={[12, 12]} style={{ width: '100%' }}>
+      <Card size="small">
+        <Space wrap size={[12, 12]} style={{ width: '100%' }}>
             <Input
               placeholder="Поиск по типу, методу, казино..."
               prefix={<SearchOutlined />}
@@ -248,13 +238,12 @@ export default function Payments() {
               }
             />
             {hasFilters && (
-              <Button icon={<FilterOutlined />} onClick={clearFilters}>
-                Сбросить
-              </Button>
+              <Button onClick={clearFilters}>Сбросить</Button>
             )}
-          </Space>
+        </Space>
+      </Card>
 
-        {/* Table */}
+      <Card>
         <div style={{ overflowX: 'auto', width: '100%' }}>
           <Table<(CasinoPayment & { casino_name?: string })>
             rowKey="id"
@@ -338,10 +327,11 @@ export default function Payments() {
               },
             ].filter(Boolean) as any}
             />
-          </div>
+        </div>
+      </Card>
 
-          {/* Модальное окно с подробностями платежа */}
-          <Modal
+      {/* Модальное окно с подробностями платежа */}
+      <Modal
             title="Информация о платёжном решении"
             open={!!selectedPayment}
             onCancel={() => {
@@ -550,9 +540,7 @@ export default function Payments() {
                 </div>
               </>
             )}
-          </Modal>
-        </Space>
-      </Card>
+      </Modal>
     </Space>
   );
 }

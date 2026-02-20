@@ -5,6 +5,7 @@ import Emails from './pages/Emails/Emails';
 import ImapAccounts from './pages/Emails/ImapAccounts';
 import Bonuses from './pages/Bonuses/Bonuses';
 import Payments from './pages/Payments/Payments';
+import Promos from './pages/Promos/Promos';
 import Login from './pages/Login/Login';
 import { useAppSelector } from './hooks/redux';
 import { AppLayout } from './components/AppLayout';
@@ -16,9 +17,12 @@ import ProfileSettingsAnalytics from './pages/ProfileSettingsAnalytics/ProfileSe
 import CasinoCompare from './pages/CasinoCompare/CasinoCompare';
 import Users from './pages/Users/Users';
 import Accounts from './pages/Accounts/Accounts';
+import TransactionHistory from './pages/Accounts/TransactionHistory';
 import ScreenshotsGallery from './pages/ScreenshotsGallery/ScreenshotsGallery';
 
 import EmailAnalytics from './pages/EmailAnalytics/EmailAnalytics';
+import ProviderAnalytics from './pages/ProviderAnalytics/ProviderAnalytics';
+import EmailTopics from './pages/EmailTopics/EmailTopics';
 
 function App() {
   const { token } = useAppSelector((state) => state.auth);
@@ -38,14 +42,18 @@ function App() {
 
         <Route path="bonuses" element={<Bonuses />} />
         <Route path="payments" element={<Payments />} />
+        <Route path="promos" element={<Promos />} />
         <Route path="accounts" element={<Accounts />} />
+        <Route path="accounts/transactions" element={<TransactionHistory />} />
         <Route path="emails" element={<Emails />} />
         <Route path="emails/imap-accounts" element={<ImapAccounts />} />
         <Route path="profile-fields" element={<ProfileFields />} />
         <Route path="profile-settings" element={<ProfileSettings />} />
         <Route path="profile-settings-analytics" element={<ProfileSettingsAnalytics />} />
         <Route path="email-analytics" element={<EmailAnalytics />} />
+        <Route path="provider-analytics" element={<ProviderAnalytics />} />
 
+        <Route path="email-topics" element={<EmailTopics />} />
         <Route path="users" element={<Users />} />
         <Route path="screenshots" element={<ScreenshotsGallery />} />
       </Route>

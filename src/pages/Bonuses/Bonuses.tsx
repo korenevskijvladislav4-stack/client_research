@@ -15,7 +15,7 @@ import {
   Upload,
   message,
 } from 'antd';
-import { SearchOutlined, FilterOutlined, EyeOutlined, PictureOutlined, DeleteOutlined } from '@ant-design/icons';
+import { SearchOutlined, EyeOutlined, PictureOutlined, DeleteOutlined } from '@ant-design/icons';
 import {
   useGetAllBonusesQuery,
   CasinoBonus,
@@ -187,31 +187,21 @@ export default function Bonuses() {
 
   return (
     <Space direction="vertical" size={24} style={{ width: '100%' }}>
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'flex-start',
-        flexWrap: 'wrap',
-        gap: 16
-      }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
         <Space direction="vertical" size={0} style={{ flex: 1, minWidth: 200 }}>
-          <Typography.Title level={4} style={{ margin: 0 }}>
-            Все бонусы
-          </Typography.Title>
+          <Typography.Title level={4} style={{ margin: 0 }}>Бонусы</Typography.Title>
           <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-            Список всех бонусов по всем казино с фильтрами
+            Список бонусов по казино. Нажмите на строку, чтобы открыть казино.
           </Typography.Text>
         </Space>
-        <Space>
+        <Space wrap>
           <Button onClick={handleExport}>Выгрузить XLSX</Button>
           <ColumnSelector {...columnSettings} />
         </Space>
       </div>
 
-      <Card>
-        <Space direction="vertical" size={16} style={{ width: '100%' }}>
-          {/* Filters */}
-          <Space wrap size={[12, 12]} style={{ width: '100%' }}>
+      <Card size="small">
+        <Space wrap size={[12, 12]} style={{ width: '100%' }}>
             <Input
               placeholder="Поиск по названию, промокоду, казино..."
               prefix={<SearchOutlined />}
@@ -269,14 +259,13 @@ export default function Bonuses() {
               allowClear
             />
             {hasFilters && (
-              <Button icon={<FilterOutlined />} onClick={clearFilters}>
-                Сбросить
-              </Button>
+              <Button onClick={clearFilters}>Сбросить</Button>
             )}
           </Space>
+      </Card>
 
-          {/* Table */}
-          <div style={{ overflowX: 'auto', width: '100%' }}>
+      <Card>
+        <div style={{ overflowX: 'auto', width: '100%' }}>
             <Table<CasinoBonus>
               rowKey="id"
               size="small"
@@ -377,12 +366,13 @@ export default function Bonuses() {
                 render: (_: any, b: CasinoBonus) => fmtAmount(b.min_deposit, b.currency),
               },
               columnSettings.isVisible('wagering') && {
-                title: 'x',
-                dataIndex: 'wagering_requirement',
-                width: 50,
-                render: (v: number) => {
-                  if (v == null) return '—';
-                  return `x${fmt(v)}`;
+                title: 'Вейджер',
+                width: 100,
+                render: (_: any, b: CasinoBonus) => {
+                  const parts: string[] = [];
+                  if (b.wagering_requirement != null) parts.push(`кэш x${fmt(b.wagering_requirement)}`);
+                  if (b.wagering_freespin != null) parts.push(`FS x${fmt(b.wagering_freespin)}`);
+                  return parts.length > 0 ? parts.join(', ') : '—';
                 },
               },
               columnSettings.isVisible('actions') && {
@@ -403,10 +393,11 @@ export default function Bonuses() {
               },
             ].filter(Boolean) as any}
             />
-          </div>
+        </div>
+      </Card>
 
-          {/* Модальное окно с подробностями бонуса */}
-          <Modal
+      {/* Модальное окно с подробностями бонуса */}
+      <Modal
             title={selectedBonus?.name || 'Информация о бонусе'}
             open={!!selectedBonus}
             onCancel={() => {
@@ -572,9 +563,17 @@ export default function Bonuses() {
                     {fmtAmount(selectedBonus.min_deposit, selectedBonus.currency)}
                   </Descriptions.Item>
                 )}
-                {selectedBonus.wagering_requirement != null && (
+                {(selectedBonus.wagering_requirement != null || selectedBonus.wagering_freespin != null) && (
                   <Descriptions.Item label="Вейджер">
-                    x{fmt(selectedBonus.wagering_requirement)}
+                    {[
+                      selectedBonus.wagering_requirement != null && `кэш x${fmt(selectedBonus.wagering_requirement)}`,
+                      selectedBonus.wagering_freespin != null && `фриспины x${fmt(selectedBonus.wagering_freespin)}`,
+                    ].filter(Boolean).join(', ')}
+                  </Descriptions.Item>
+                )}
+                {selectedBonus.wagering_time_limit && (
+                  <Descriptions.Item label="Время на отыгрыш">
+                    {selectedBonus.wagering_time_limit}
                   </Descriptions.Item>
                 )}
                 {selectedBonus.wagering_games && (
@@ -746,9 +745,7 @@ export default function Bonuses() {
               </div>
               </>
             )}
-          </Modal>
-        </Space>
-      </Card>
+      </Modal>
     </Space>
   );
 }

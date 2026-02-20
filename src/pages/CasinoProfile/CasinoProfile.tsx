@@ -26,6 +26,7 @@ import {
   Upload,
   Image,
   Pagination,
+  DatePicker,
   // Modal,
 } from 'antd';
 import {
@@ -40,6 +41,7 @@ import {
 } from '@ant-design/icons';
 import { ProfileSettingsTable } from '../../components/ProfileSettingsTable';
 import { AccountsTable } from '../../components/AccountsTable';
+import { TransactionModal } from '../Accounts/TransactionModal';
 import { useGetCasinoByIdQuery } from '../../store/api/casinoApi';
 import {
   useGetCasinoProfileHistoryQuery,
@@ -82,6 +84,18 @@ import {
   CreateCasinoAccountDto,
 } from '../../store/api/casinoAccountApi';
 import {
+  useGetCasinoPromosQuery,
+  useCreateCasinoPromoMutation,
+  useUpdateCasinoPromoMutation,
+  useDeleteCasinoPromoMutation,
+  useGetPromoImagesQuery,
+  useUploadPromoImagesMutation,
+  useDeletePromoImageMutation,
+  CasinoPromo,
+  CasinoPromoImage,
+  PromoCategory,
+} from '../../store/api/casinoPromoApi';
+import {
   useGetSelectorsByCasinoQuery,
   useCreateSelectorMutation,
   useUpdateSelectorMutation,
@@ -108,7 +122,16 @@ import {
   useCreatePaymentTypeMutation,
   useGetPaymentMethodsQuery,
   useCreatePaymentMethodMutation,
+  useGetPromoTypesQuery,
+  useCreatePromoTypeMutation,
+  useGetProvidersQuery,
 } from '../../store/api/referenceApi';
+import {
+  useGetCasinoProvidersQuery,
+  useAddProviderToCasinoMutation,
+  useRemoveProviderFromCasinoMutation,
+  useExtractAndAddProvidersMutation,
+} from '../../store/api/casinoProviderApi';
 import { useSelector } from 'react-redux';
 import {
   useGetEmailsForCasinoByNameQuery,
@@ -198,6 +221,9 @@ export default function CasinoProfile() {
   const [createPaymentType] = useCreatePaymentTypeMutation();
   const { data: paymentMethods } = useGetPaymentMethodsQuery();
   const [createPaymentMethod] = useCreatePaymentMethodMutation();
+  const { data: promoTypes } = useGetPromoTypesQuery();
+  const [createPromoType] = useCreatePromoTypeMutation();
+  const { data: providers } = useGetProvidersQuery();
 
   // Bonuses (per GEO)
   const { data: bonuses, isLoading: bonusesLoading } = useGetCasinoBonusesQuery(
@@ -208,6 +234,7 @@ export default function CasinoProfile() {
   const [updateBonus] = useUpdateCasinoBonusMutation();
   const [deleteBonus] = useDeleteCasinoBonusMutation();
   const [activeGeo, setActiveGeo] = useState<string | undefined>(undefined);
+  const [activeProviderGeo, setActiveProviderGeo] = useState<string | undefined>(undefined);
   const [activeDirection, setActiveDirection] = useState<'deposit' | 'withdrawal' | undefined>(undefined);
   const [imagesPage, setImagesPage] = useState(1);
   const IMAGES_PAGE_SIZE = 12;
@@ -249,6 +276,26 @@ export default function CasinoProfile() {
   const [uploadPaymentImages] = useUploadPaymentImagesMutation();
   const [deletePaymentImage] = useDeletePaymentImageMutation();
 
+  // Promos
+  const { data: promos, isLoading: promosLoading } = useGetCasinoPromosQuery(
+    { casinoId },
+    { skip: !casinoId } as any
+  );
+  const [createPromo] = useCreateCasinoPromoMutation();
+  const [updatePromo] = useUpdateCasinoPromoMutation();
+  const [deletePromo] = useDeleteCasinoPromoMutation();
+  const [promoDrawerOpen, setPromoDrawerOpen] = useState(false);
+  const [editingPromo, setEditingPromo] = useState<CasinoPromo | null>(null);
+  const [promoForm] = Form.useForm();
+  const [pendingPromoImages, setPendingPromoImages] = useState<File[]>([]);
+  const [uploadingPromoImages, setUploadingPromoImages] = useState(false);
+  const { data: promoImages = [] } = useGetPromoImagesQuery(
+    { casinoId, promoId: editingPromo?.id ?? 0 },
+    { skip: !editingPromo?.id || !casinoId }
+  );
+  const [uploadPromoImages] = useUploadPromoImagesMutation();
+  const [deletePromoImage] = useDeletePromoImageMutation();
+
   // Slot Selectors & Screenshots
   const { data: selectors = [] } = useGetSelectorsByCasinoQuery(casinoId, {
     skip: !casinoId,
@@ -275,6 +322,7 @@ export default function CasinoProfile() {
   const [deleteAccount] = useDeleteCasinoAccountMutation();
   const [accountDrawerOpen, setAccountDrawerOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<CasinoAccount | null>(null);
+  const [transactionAccount, setTransactionAccount] = useState<CasinoAccount | null>(null);
   const [accountForm] = Form.useForm();
   const { data: usersResp } = useGetUsersQuery({
     page: 1,
@@ -306,6 +354,26 @@ export default function CasinoProfile() {
     () => (paymentMethods ?? []).map((m) => ({ value: m.name, label: m.name })),
     [paymentMethods]
   );
+
+  const promoTypeOptions = useMemo(
+    () => (promoTypes ?? []).map((t) => ({ value: t.name, label: t.name })),
+    [promoTypes]
+  );
+
+  const providerOptions = useMemo(
+    () => (providers ?? []).map((p) => ({ value: p.id, label: p.name })),
+    [providers]
+  );
+
+  const { data: casinoProviders = [], isLoading: casinoProvidersLoading } = useGetCasinoProvidersQuery(
+    { casinoId, geo: activeProviderGeo },
+    { skip: !casinoId }
+  );
+  const [addProviderToCasino] = useAddProviderToCasinoMutation();
+  const [removeProviderFromCasino] = useRemoveProviderFromCasinoMutation();
+  const [extractAndAddProviders, { isLoading: extractingProviders }] = useExtractAndAddProvidersMutation();
+  const [providerAiText, setProviderAiText] = useState('');
+  const [newProviderInput, setNewProviderInput] = useState<number | string | null>(null);
 
   // const accountGeos = useMemo(
   //   () => Array.from(new Set((accounts ?? []).map((a) => a.geo).filter(Boolean))) as string[],
@@ -650,6 +718,7 @@ export default function CasinoProfile() {
         <AccountsTable
           accounts={(accounts ?? []).filter((a) => (activeGeo ? a.geo === activeGeo : true))}
           isLoading={accountsLoading}
+          onAddTransaction={(account) => setTransactionAccount(account)}
           onEdit={(account) => {
             setEditingAccount(account);
             accountForm.resetFields();
@@ -958,12 +1027,13 @@ export default function CasinoProfile() {
               render: (_, b) => fmtAmount(b.min_deposit, b.currency),
             },
             {
-              title: 'x',
-              dataIndex: 'wagering_requirement',
-              width: 50,
-              render: (v) => {
-                if (v == null) return '—';
-                return `x${fmt(v)}`;
+              title: 'Вейджер',
+              width: 100,
+              render: (_, b) => {
+                const parts: string[] = [];
+                if (b.wagering_requirement != null) parts.push(`кэш x${fmt(b.wagering_requirement)}`);
+                if (b.wagering_freespin != null) parts.push(`FS x${fmt(b.wagering_freespin)}`);
+                return parts.length > 0 ? parts.join(', ') : '—';
               },
             },
             {
@@ -1305,6 +1375,9 @@ export default function CasinoProfile() {
                     </Col>
                   </Row>
                 )}
+                <Form.Item name="wagering_requirement" label="Вейджер на кэш (x)">
+                  <InputNumber style={{ width: '100%' }} placeholder="40" />
+                </Form.Item>
               </Card>
             )}
 
@@ -1347,6 +1420,9 @@ export default function CasinoProfile() {
                     </Form.Item>
                   </Col>
                 </Row>
+                <Form.Item name="wagering_freespin" label="Вейджер на фриспины (x)">
+                  <InputNumber style={{ width: '100%' }} placeholder="40" />
+                </Form.Item>
               </Card>
             )}
 
@@ -1533,11 +1609,11 @@ export default function CasinoProfile() {
               </Form.Item>
             )}
 
-            {/* Вейджер (только для казино, для спорта уже включен в карточку wagering) */}
+            {/* Время на отыгрыш и игры (казино) */}
             {bonusCategory === 'casino' && selectedBonusType && (
               <>
-                <Form.Item name="wagering_requirement" label="Вейджер (x)">
-                  <InputNumber style={{ width: '100%' }} placeholder="40" />
+                <Form.Item name="wagering_time_limit" label="Время на отыгрыш">
+                  <Input placeholder="Например: 7 дней, 30 дней" />
                 </Form.Item>
                 <Form.Item name="wagering_games" label="Игры для отыгрыша">
                   <Input placeholder="Например: только слоты, исключая джекпоты" />
@@ -1703,16 +1779,594 @@ export default function CasinoProfile() {
         </Drawer>
       </Card>
 
+      {/* Промо (турниры и акции) */}
+      <Card
+        title={
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+            <Typography.Text strong>Промо</Typography.Text>
+            <Button
+              type="primary"
+              onClick={() => {
+                setEditingPromo(null);
+                promoForm.resetFields();
+                if (activeGeo) promoForm.setFieldsValue({ geo: [activeGeo] });
+                setPendingPromoImages([]);
+                setPromoDrawerOpen(true);
+              }}
+            >
+              Добавить промо
+            </Button>
+          </div>
+        }
+      >
+        <Space style={{ marginBottom: 16 }} wrap>
+          <Typography.Text type="secondary">GEO:</Typography.Text>
+          <Select
+            style={{ minWidth: 120 }}
+            placeholder="Все"
+            allowClear
+            value={activeGeo}
+            onChange={setActiveGeo}
+            options={geoOptions}
+          />
+        </Space>
+
+        <Table<CasinoPromo>
+          rowKey="id"
+          size="small"
+          loading={promosLoading}
+          dataSource={(promos ?? []).filter((p) => (activeGeo ? p.geo === activeGeo : true))}
+          pagination={false}
+          scroll={{ x: 1000 }}
+          columns={[
+            { title: 'GEO', dataIndex: 'geo', width: 60 },
+            {
+              title: 'Турнир / Акция',
+              dataIndex: 'promo_category',
+              width: 110,
+              render: (v: PromoCategory) => (
+                <Tag color={v === 'tournament' ? 'blue' : 'purple'}>
+                  {v === 'tournament' ? 'Турнир' : 'Акция'}
+                </Tag>
+              ),
+            },
+            { title: 'Тип турнира', dataIndex: 'promo_type', width: 110, ellipsis: true, render: (v: string) => v || '—' },
+            { title: 'Название турнира', dataIndex: 'name', width: 180, ellipsis: true },
+            {
+              title: 'Период проведения',
+              width: 150,
+              render: (_: any, r: CasinoPromo) => {
+                if (!r.period_start && !r.period_end) return '—';
+                const s = r.period_start ? dayjs(r.period_start).format('DD.MM.YY') : '?';
+                const e = r.period_end ? dayjs(r.period_end).format('DD.MM.YY') : '?';
+                return `${s} – ${e}`;
+              },
+            },
+            { title: 'Провайдер', dataIndex: 'provider', width: 120, ellipsis: true, render: (v: string) => v || '—' },
+            { title: 'Общий ПФ', dataIndex: 'prize_fund', width: 100, ellipsis: true, render: (v: string) => v || '—' },
+            { title: 'Мин. ставка', dataIndex: 'min_bet', width: 100, render: (v: string) => v || '—' },
+            { title: 'Вейджер на приз', dataIndex: 'wagering_prize', width: 110, render: (v: string) => v || '—' },
+            {
+              title: '',
+              width: 100,
+              align: 'right',
+              render: (_: any, r: CasinoPromo) => (
+                <Space>
+                  <Button
+                    type="link"
+                    size="small"
+                    icon={<EditOutlined />}
+                    onClick={() => {
+                      setEditingPromo(r);
+                      promoForm.setFieldsValue({
+                        ...r,
+                        geo: [r.geo],
+                        promo_type: r.promo_type ? [r.promo_type] : undefined,
+                        period: r.period_start && r.period_end
+                          ? [dayjs(r.period_start), dayjs(r.period_end)]
+                          : undefined,
+                      });
+                      setPendingPromoImages([]);
+                      setPromoDrawerOpen(true);
+                    }}
+                  />
+                  <Button
+                    type="link"
+                    size="small"
+                    danger
+                    icon={<DeleteOutlined />}
+                    onClick={async () => {
+                      try {
+                        await deletePromo({ casinoId, id: r.id! }).unwrap();
+                        message.success('Промо удалено');
+                      } catch (e: any) {
+                        message.error(e?.data?.error ?? 'Ошибка удаления');
+                      }
+                    }}
+                  />
+                </Space>
+              ),
+            },
+          ]}
+        />
+
+        <Drawer
+          title={editingPromo ? 'Редактировать промо' : 'Добавить промо'}
+          width={520}
+          open={promoDrawerOpen}
+          onClose={() => {
+            setPromoDrawerOpen(false);
+            setEditingPromo(null);
+            setPendingPromoImages([]);
+          }}
+        >
+          <Form
+            form={promoForm}
+            layout="vertical"
+            onFinish={async (values: any) => {
+              try {
+                const geoArr: string[] = values.geo ?? [];
+                const [periodStart, periodEnd] = values.period ?? [null, null];
+                const promoTypeValue = Array.isArray(values.promo_type)
+                  ? (values.promo_type[0] ?? null)
+                  : (values.promo_type ?? null);
+                const base = {
+                  promo_category: values.promo_category ?? 'tournament',
+                  name: values.name,
+                  promo_type: promoTypeValue,
+                  period_start: periodStart ? dayjs(periodStart).format('YYYY-MM-DD') : null,
+                  period_end: periodEnd ? dayjs(periodEnd).format('YYYY-MM-DD') : null,
+                  provider: values.provider ?? null,
+                  prize_fund: values.prize_fund ?? null,
+                  mechanics: values.mechanics ?? null,
+                  min_bet: values.min_bet ?? null,
+                  wagering_prize: values.wagering_prize ?? null,
+                  status: values.status ?? 'active',
+                };
+
+                const savedPromos: CasinoPromo[] = [];
+
+                if (editingPromo) {
+                  const updated = await updatePromo({
+                    casinoId,
+                    id: editingPromo.id!,
+                    patch: { ...base, geo: geoArr[0] },
+                  }).unwrap();
+                  savedPromos.push(updated);
+                  message.success('Промо обновлено');
+                } else {
+                  for (const g of geoArr) {
+                    const created = await createPromo({ casinoId, ...base, geo: g }).unwrap();
+                    savedPromos.push(created);
+                  }
+                  message.success('Промо добавлено');
+                }
+
+                if (pendingPromoImages.length > 0) {
+                  for (const promo of savedPromos) {
+                    if (!promo.id) continue;
+                    try {
+                      await uploadPromoImages({
+                        casinoId,
+                        promoId: promo.id,
+                        files: pendingPromoImages,
+                      }).unwrap();
+                    } catch (e: any) {
+                      message.error(e?.data?.error ?? 'Ошибка загрузки изображений промо');
+                    }
+                  }
+                  setPendingPromoImages([]);
+                }
+                setPromoDrawerOpen(false);
+                setEditingPromo(null);
+                promoForm.resetFields();
+              } catch (e: any) {
+                message.error(e?.data?.error ?? 'Ошибка сохранения промо');
+              }
+            }}
+          >
+            <Form.Item name="geo" label="GEO" rules={[{ required: true, message: 'Выберите GEO' }]}>
+              <Select
+                mode="tags"
+                placeholder="Выберите GEO"
+                options={geoOptions}
+                maxCount={editingPromo ? 1 : undefined}
+              />
+            </Form.Item>
+
+            <Form.Item name="promo_category" label="Турнир / Акция" initialValue="tournament">
+              <Select
+                options={[
+                  { value: 'tournament', label: 'Турнир' },
+                  { value: 'promotion', label: 'Акция' },
+                ]}
+              />
+            </Form.Item>
+
+            <Form.Item name="promo_type" label="Тип турнира">
+              <Select
+                mode="tags"
+                maxCount={1}
+                placeholder="Выберите или введите тип турнира"
+                options={promoTypeOptions}
+                onChange={async (values: string[]) => {
+                  if (!values || values.length === 0) return;
+                  const existingNames = (promoTypes ?? []).map((t) => t.name);
+                  const newNames = values.filter((v) => v && !existingNames.includes(v));
+                  for (const name of newNames) {
+                    try {
+                      await createPromoType({ name }).unwrap();
+                    } catch (e) {
+                      console.error('Failed to create promo type:', e);
+                    }
+                  }
+                }}
+              />
+            </Form.Item>
+
+            <Form.Item name="name" label="Название турнира" rules={[{ required: true, message: 'Введите название' }]}>
+              <Input placeholder="Название турнира" />
+            </Form.Item>
+
+            <Form.Item name="period" label="Период проведения">
+              <DatePicker.RangePicker style={{ width: '100%' }} />
+            </Form.Item>
+
+            <Form.Item name="provider" label="Провайдер">
+              <Input placeholder="Провайдер" />
+            </Form.Item>
+
+            <Row gutter={12}>
+              <Col span={12}>
+                <Form.Item name="prize_fund" label="Общий ПФ">
+                  <Input placeholder="напр. 100 000 EUR" />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item name="min_bet" label="Мин. ставка для участия">
+                  <Input placeholder="напр. 0.5 EUR" />
+                </Form.Item>
+              </Col>
+            </Row>
+
+            <Form.Item name="mechanics" label="Механика">
+              <Input.TextArea rows={3} placeholder="Описание механики" />
+            </Form.Item>
+
+            <Form.Item name="wagering_prize" label="Вейджер на приз">
+              <Input placeholder="напр. x30" />
+            </Form.Item>
+
+            <Form.Item name="status" label="Статус" initialValue="active">
+              <Select
+                options={[
+                  { value: 'active', label: 'Активен' },
+                  { value: 'paused', label: 'Пауза' },
+                  { value: 'expired', label: 'Истёк' },
+                  { value: 'draft', label: 'Черновик' },
+                ]}
+              />
+            </Form.Item>
+
+            <div style={{ marginBottom: 16 }}>
+              <Typography.Title level={5}>Изображения</Typography.Title>
+
+              {editingPromo && promoImages.length > 0 && (
+                <Image.PreviewGroup>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+                    {promoImages.map((img: CasinoPromoImage) => (
+                      <div key={img.id} style={{ position: 'relative' }}>
+                        <Image
+                          src={img.url}
+                          alt={img.original_name || 'Promo image'}
+                          width={100}
+                          height={100}
+                          style={{ objectFit: 'cover', borderRadius: 4 }}
+                        />
+                        <Button
+                          type="text"
+                          danger
+                          size="small"
+                          icon={<DeleteOutlined />}
+                          style={{ position: 'absolute', top: 4, right: 4 }}
+                          onClick={async () => {
+                            if (!editingPromo?.id) return;
+                            try {
+                              await deletePromoImage({
+                                casinoId,
+                                promoId: editingPromo.id,
+                                imageId: img.id,
+                              }).unwrap();
+                              message.success('Изображение удалено');
+                            } catch (e: any) {
+                              message.error(e?.data?.error ?? 'Ошибка удаления');
+                            }
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </Image.PreviewGroup>
+              )}
+
+              <div
+                style={{
+                  border: '2px dashed #d9d9d9',
+                  borderRadius: 4,
+                  padding: 14,
+                  textAlign: 'center',
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const files = Array.from(e.dataTransfer.files).filter((f) =>
+                    f.type.startsWith('image/')
+                  );
+                  if (files.length > 0) {
+                    setPendingPromoImages((prev) => [...prev, ...files]);
+                  }
+                }}
+                onPaste={(e) => {
+                  const items = e.clipboardData.items;
+                  const files: File[] = [];
+                  for (let i = 0; i < items.length; i++) {
+                    const item = items[i];
+                    if (item.type.startsWith('image/')) {
+                      const file = item.getAsFile();
+                      if (file) files.push(file);
+                    }
+                  }
+                  if (files.length > 0) {
+                    setPendingPromoImages((prev) => [...prev, ...files]);
+                  }
+                }}
+              >
+                <PictureOutlined style={{ fontSize: 22, color: '#8c8c8c', marginBottom: 8 }} />
+                <div style={{ marginBottom: 8 }}>
+                  <Typography.Text type="secondary">
+                    Перетащите изображения сюда или вставьте (Ctrl+V)
+                  </Typography.Text>
+                </div>
+                <Upload
+                  multiple
+                  accept="image/*"
+                  showUploadList={false}
+                  beforeUpload={(file) => {
+                    setPendingPromoImages((prev) => [...prev, file]);
+                    return false;
+                  }}
+                >
+                  <Button icon={<PictureOutlined />}>Выбрать файлы</Button>
+                </Upload>
+              </div>
+
+              {pendingPromoImages.length > 0 && (
+                <div style={{ marginTop: 10 }}>
+                  <Typography.Text strong>К загрузке ({pendingPromoImages.length}):</Typography.Text>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+                    {pendingPromoImages.map((file, idx) => (
+                      <div key={idx} style={{ position: 'relative' }}>
+                        <img
+                          src={URL.createObjectURL(file)}
+                          alt={file.name}
+                          width={80}
+                          height={80}
+                          style={{ objectFit: 'cover', borderRadius: 4 }}
+                        />
+                        <Button
+                          type="text"
+                          danger
+                          size="small"
+                          icon={<DeleteOutlined />}
+                          style={{ position: 'absolute', top: 0, right: 0 }}
+                          onClick={() => setPendingPromoImages((prev) => prev.filter((_, i) => i !== idx))}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  {editingPromo?.id && (
+                    <Button
+                      style={{ marginTop: 10 }}
+                      loading={uploadingPromoImages}
+                      onClick={async () => {
+                        if (!editingPromo?.id || pendingPromoImages.length === 0) return;
+                        setUploadingPromoImages(true);
+                        try {
+                          await uploadPromoImages({
+                            casinoId,
+                            promoId: editingPromo.id,
+                            files: pendingPromoImages,
+                          }).unwrap();
+                          setPendingPromoImages([]);
+                          message.success('Изображения загружены');
+                        } catch (e: any) {
+                          message.error(e?.data?.error ?? 'Ошибка загрузки изображений');
+                        } finally {
+                          setUploadingPromoImages(false);
+                        }
+                      }}
+                    >
+                      Загрузить изображения сейчас
+                    </Button>
+                  )}
+                  {!editingPromo?.id && (
+                    <Typography.Text type="secondary" style={{ display: 'block', marginTop: 8 }}>
+                      Для нового промо изображения будут загружены после сохранения.
+                    </Typography.Text>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <Space>
+              <Button type="primary" htmlType="submit">
+                {editingPromo ? 'Сохранить' : 'Создать'}
+              </Button>
+              <Button onClick={() => {
+                setPromoDrawerOpen(false);
+                setEditingPromo(null);
+                setPendingPromoImages([]);
+              }}>
+                Отмена
+              </Button>
+            </Space>
+          </Form>
+        </Drawer>
+      </Card>
+
+      {/* Подключенные провайдеры (в срезе GEO) */}
+      <Card title={<Typography.Text strong>Подключённые провайдеры</Typography.Text>}>
+        <Space style={{ marginBottom: 16 }} wrap align="center">
+          <Typography.Text type="secondary">GEO:</Typography.Text>
+          <Select
+            style={{ minWidth: 120 }}
+            placeholder="Выберите GEO"
+            allowClear
+            value={activeProviderGeo}
+            onChange={setActiveProviderGeo}
+            options={geoOptions}
+          />
+        </Space>
+
+        {activeProviderGeo && (
+          <>
+            <div style={{ marginBottom: 16, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+              <Typography.Text type="secondary">Добавить провайдера:</Typography.Text>
+              <Select
+                style={{ minWidth: 240 }}
+                placeholder="Выберите или введите название"
+                options={providerOptions}
+                mode="tags"
+                maxCount={1}
+                value={newProviderInput != null ? [newProviderInput] : undefined}
+                onChange={(val) => {
+                  const v = Array.isArray(val) && val.length > 0 ? val[0] : null;
+                  setNewProviderInput(v ?? null);
+                }}
+                onBlur={() => {}}
+                notFoundContent={null}
+                dropdownStyle={{ maxHeight: 300 }}
+                showSearch
+                filterOption={(input, option) =>
+                  (option?.label ?? '').toString().toLowerCase().includes(input.toLowerCase())
+                }
+              />
+              <Button
+                type="primary"
+                onClick={async () => {
+                  if (newProviderInput == null || newProviderInput === '') {
+                    message.warning('Выберите или введите провайдера');
+                    return;
+                  }
+                  try {
+                    const isId = typeof newProviderInput === 'number' || (typeof newProviderInput === 'string' && /^\d+$/.test(newProviderInput));
+                    if (isId) {
+                      await addProviderToCasino({
+                        casinoId,
+                        provider_id: typeof newProviderInput === 'number' ? newProviderInput : Number(newProviderInput),
+                        geo: activeProviderGeo,
+                      }).unwrap();
+                    } else {
+                      await addProviderToCasino({
+                        casinoId,
+                        provider_name: String(newProviderInput).trim(),
+                        geo: activeProviderGeo,
+                      }).unwrap();
+                    }
+                    message.success('Провайдер добавлен');
+                    setNewProviderInput(null);
+                  } catch (e: any) {
+                    message.error(e?.data?.error ?? 'Ошибка добавления');
+                  }
+                }}
+              >
+                Добавить
+              </Button>
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>
+                Или вставьте текст (HTML / JSON) и извлеките провайдеров через ИИ:
+              </Typography.Text>
+              <Input.TextArea
+                rows={4}
+                placeholder="Вставьте HTML-разметку страницы, JSON или список провайдеров..."
+                value={providerAiText}
+                onChange={(e) => setProviderAiText(e.target.value)}
+                style={{ marginBottom: 8 }}
+              />
+              <Button
+                type="primary"
+                loading={extractingProviders}
+                onClick={async () => {
+                  if (!providerAiText.trim()) {
+                    message.warning('Введите текст для извлечения');
+                    return;
+                  }
+                  try {
+                    const result = await extractAndAddProviders({
+                      casinoId,
+                      text: providerAiText,
+                      geo: activeProviderGeo,
+                    }).unwrap();
+                    message.success(`Извлечено: ${result.names.length}, добавлено в список: ${result.added}`);
+                    setProviderAiText('');
+                  } catch (e: any) {
+                    message.error(e?.data?.error ?? 'Ошибка извлечения');
+                  }
+                }}
+              >
+                Извлечь через ИИ
+              </Button>
+            </div>
+
+            <div>
+              <Typography.Text strong style={{ display: 'block', marginBottom: 8 }}>
+                Список по GEO «{activeProviderGeo}»:
+              </Typography.Text>
+              {casinoProvidersLoading ? (
+                <Typography.Text type="secondary">Загрузка...</Typography.Text>
+              ) : casinoProviders.length === 0 ? (
+                <Typography.Text type="secondary">Нет провайдеров для этого GEO. Добавьте вручную или через ИИ.</Typography.Text>
+              ) : (
+                <Space wrap size={[8, 8]}>
+                  {casinoProviders.map((cp) => (
+                    <Tag
+                      key={cp.id}
+                      closable
+                      onClose={async () => {
+                        try {
+                          await removeProviderFromCasino({
+                            casinoId,
+                            providerId: cp.provider_id,
+                            geo: activeProviderGeo,
+                          }).unwrap();
+                          message.success('Провайдер отвязан');
+                        } catch (e: any) {
+                          message.error(e?.data?.error ?? 'Ошибка удаления');
+                        }
+                      }}
+                    >
+                      {cp.provider_name}
+                    </Tag>
+                  ))}
+                </Space>
+              )}
+            </div>
+          </>
+        )}
+        {!activeProviderGeo && (
+          <Typography.Text type="secondary">Выберите GEO, чтобы просматривать и редактировать список провайдеров.</Typography.Text>
+        )}
+      </Card>
+
       {/* Платежные решения */}
       <Card
         title={
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: 12
-          }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
             <Typography.Text strong>Платёжные решения</Typography.Text>
             <Button
               type="primary"
@@ -2241,6 +2895,13 @@ export default function CasinoProfile() {
           </Form.Item>
         </Form>
       </Drawer>
+
+      <TransactionModal
+        open={!!transactionAccount}
+        onClose={() => setTransactionAccount(null)}
+        account={transactionAccount}
+        onSuccess={() => setTransactionAccount(null)}
+      />
 
       <Card size="small" title="Почта">
         <List

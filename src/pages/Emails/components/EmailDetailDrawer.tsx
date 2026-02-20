@@ -164,6 +164,11 @@ export default function EmailDetailDrawer({
                 <Tag color="orange">{email.geo}</Tag>
               </Descriptions.Item>
             )}
+            {email.topic_name && (
+              <Descriptions.Item label="Тема письма">
+                <Tag color="purple">{email.topic_name}</Tag>
+              </Descriptions.Item>
+            )}
           </Descriptions>
 
           {/* AI Summary */}

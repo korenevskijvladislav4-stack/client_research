@@ -3,15 +3,17 @@ import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { CasinoAccount } from '../store/api/casinoAccountApi';
 import dayjs from 'dayjs';
 
+
 interface AccountsTableProps {
   accounts: CasinoAccount[];
   isLoading?: boolean;
   onEdit?: (account: CasinoAccount) => void;
   onDelete?: (id: number) => void;
+  onAddTransaction?: (account: CasinoAccount) => void;
   readOnly?: boolean;
 }
 
-export function AccountsTable({ accounts, isLoading, onEdit, onDelete, readOnly = false }: AccountsTableProps) {
+export function AccountsTable({ accounts, isLoading, onEdit, onDelete, onAddTransaction, readOnly = false }: AccountsTableProps) {
 
   return (
     <Table
@@ -61,6 +63,20 @@ export function AccountsTable({ accounts, isLoading, onEdit, onDelete, readOnly 
           ),
         },
         {
+          title: 'Депозиты',
+          key: 'deposit_count',
+          width: 100,
+          align: 'right',
+          render: (_: any, r: CasinoAccount) => r.deposit_count ?? 0,
+        },
+        {
+          title: 'Выводы',
+          key: 'withdrawal_count',
+          width: 100,
+          align: 'right',
+          render: (_: any, r: CasinoAccount) => r.withdrawal_count ?? 0,
+        },
+        {
           title: 'Владелец',
           dataIndex: 'owner_username',
           key: 'owner_username',
@@ -74,6 +90,18 @@ export function AccountsTable({ accounts, isLoading, onEdit, onDelete, readOnly 
           render: (date: string) =>
             date ? dayjs(date).format('YYYY-MM-DD HH:mm') : '—',
         },
+        ...(!readOnly && onAddTransaction
+          ? [{
+              title: '',
+              key: 'tx',
+              width: 90,
+              render: (_: any, record: CasinoAccount) => (
+                <Button type="link" size="small" onClick={() => onAddTransaction(record)}>
+                  Деп / Вывод
+                </Button>
+              ),
+            }]
+          : []),
         ...(!readOnly && onEdit && onDelete
           ? [
               {

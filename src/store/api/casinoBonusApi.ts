@@ -49,7 +49,9 @@ export interface CasinoBonus {
   /** Максвин для процентной части: тип — фикс. сумма или коэффициент */
   max_win_percent_unit?: 'fixed' | 'coefficient' | null;
   wagering_requirement?: number;
+  wagering_freespin?: number | null;
   wagering_games?: string;
+  wagering_time_limit?: string | null;
   promo_code?: string;
   valid_from?: string;
   valid_to?: string;
