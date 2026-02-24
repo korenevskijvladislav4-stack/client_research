@@ -198,18 +198,13 @@ export default function ProviderAnalytics() {
                     borderTop: `1px solid ${token.colorBorderSecondary}`,
                   }}
                 >
-                  <Table.Summary.Cell index={0} align="center" style={{ width: 220, minWidth: 220 }}>
+                  <Table.Summary.Cell index={0} align="center">
                     <Typography.Text strong style={{ color: token.colorText }}>
                       На проектах
                     </Typography.Text>
                   </Table.Summary.Cell>
                   {(resp?.providers ?? []).map((p, i) => (
-                    <Table.Summary.Cell
-                      key={p.id}
-                      index={i + 1}
-                      align="center"
-                      style={{ width: 80, minWidth: 80 }}
-                    >
+                    <Table.Summary.Cell key={p.id} index={i + 1} align="center">
                       <Typography.Text
                         strong={providerCounts[p.id] > 0}
                         type={providerCounts[p.id] === 0 ? 'secondary' : undefined}
