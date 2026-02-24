@@ -224,6 +224,29 @@ export const casinoBonusApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: (_result, _error, { casinoId }) => [{ type: 'CasinoComment', id: casinoId }],
     }),
+    analyzeBonusImage: builder.mutation<
+      Partial<CasinoBonus>,
+      { casinoId: number; geo?: string; file: File }
+    >({
+      query: ({ casinoId, geo, file }) => {
+        const formData = new FormData();
+        formData.append('image', file);
+        if (geo) {
+          formData.append('geo', geo);
+        }
+        return {
+          url: `/casinos/${casinoId}/bonuses/ai-from-image`,
+          method: 'POST',
+          body: formData,
+        };
+      },
+      transformResponse: (response: any): Partial<CasinoBonus> => {
+        if (response && typeof response === 'object' && response.suggestions) {
+          return response.suggestions as Partial<CasinoBonus>;
+        }
+        return {};
+      },
+    }),
   }),
 });
 
@@ -236,4 +259,5 @@ export const {
   useGetBonusImagesQuery,
   useUploadBonusImagesMutation,
   useDeleteBonusImageMutation,
+  useAnalyzeBonusImageMutation,
 } = casinoBonusApi;

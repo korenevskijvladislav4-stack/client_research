@@ -38,6 +38,7 @@ import {
   PlusOutlined,
   PictureOutlined,
   EditOutlined,
+  RobotOutlined,
 } from '@ant-design/icons';
 import { ProfileSettingsTable } from '../../components/ProfileSettingsTable';
 import { AccountsTable } from '../../components/AccountsTable';
@@ -58,6 +59,7 @@ import {
   useGetBonusImagesQuery,
   useUploadBonusImagesMutation,
   useDeleteBonusImageMutation,
+  useAnalyzeBonusImageMutation,
   CasinoBonus,
   BonusCategory,
   BonusKind,
@@ -245,6 +247,7 @@ export default function CasinoProfile() {
   const [selectedBonusKind, setSelectedBonusKind] = useState<BonusKind | undefined>(undefined);
   const [selectedBonusType, setSelectedBonusType] = useState<BonusType | undefined>(undefined);
   const [pendingBonusImages, setPendingBonusImages] = useState<File[]>([]);
+  const [analyzeBonusImage, { isLoading: analyzingBonusImage }] = useAnalyzeBonusImageMutation();
 
   // Bonus images (when editing existing бонуса)
   const { data: bonusImages = [] } = useGetBonusImagesQuery(
@@ -1174,6 +1177,339 @@ export default function CasinoProfile() {
                   }
                 }}
               />
+            </Form.Item>
+            <Form.Item label="Быстро заполнить по картинке">
+              <div
+                style={{
+                  border: '1px dashed #d9d9d9',
+                  borderRadius: 6,
+                  padding: 12,
+                  marginBottom: 12,
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                onDrop={async (e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const files = Array.from(e.dataTransfer.files).filter((f) =>
+                    f.type.startsWith('image/')
+                  );
+                  if (files.length === 0) return;
+
+                  // Все файлы сразу считаем прикреплёнными к бонусу
+                  setPendingBonusImages((prev) => [...prev, ...files]);
+
+                  // Для авто-заполнения анализируем первый
+                  const file = files[0];
+                  const currentGeo = bonusForm.getFieldValue('geo');
+                  const geoVal = Array.isArray(currentGeo)
+                    ? currentGeo[currentGeo.length - 1] || currentGeo[0]
+                    : currentGeo;
+                  try {
+                    const suggestions = await analyzeBonusImage({
+                      casinoId,
+                      geo: typeof geoVal === 'string' ? geoVal : undefined,
+                      file,
+                    }).unwrap();
+
+                    if (!suggestions || Object.keys(suggestions).length === 0) {
+                      message.info('Не удалось распознать данные бонуса с картинки');
+                      return;
+                    }
+
+                    const currentValues = bonusForm.getFieldsValue();
+                    const patch: any = {};
+
+                    const isEmpty = (val: any) =>
+                      val === undefined ||
+                      val === null ||
+                      (typeof val === 'string' && val.trim() === '') ||
+                      (Array.isArray(val) && val.length === 0);
+
+                    if (suggestions.name && isEmpty(currentValues.name)) {
+                      patch.name = [suggestions.name as any];
+                    }
+
+                    const simpleKeys: (keyof CasinoBonus)[] = [
+                      'bonus_category',
+                      'bonus_kind',
+                      'bonus_type',
+                      'bonus_value',
+                      'bonus_unit',
+                      'currency',
+                      'freespins_count',
+                      'freespin_value',
+                      'freespin_game',
+                      'cashback_percent',
+                      'cashback_period',
+                      'min_deposit',
+                      'max_bonus',
+                      'max_cashout',
+                      'max_win_cash_value',
+                      'max_win_cash_unit',
+                      'max_win_freespin_value',
+                      'max_win_freespin_unit',
+                      'max_win_percent_value',
+                      'max_win_percent_unit',
+                      'wagering_requirement',
+                      'wagering_freespin',
+                      'wagering_games',
+                      'wagering_time_limit',
+                      'promo_code',
+                      'valid_from',
+                      'valid_to',
+                      'notes',
+                    ];
+
+                    simpleKeys.forEach((key) => {
+                      const value = (suggestions as any)[key];
+                      if (value === undefined || value === null) return;
+                      const current = (currentValues as any)[key];
+                      if (isEmpty(current)) {
+                        patch[key] = value;
+                      }
+                    });
+
+                    if (Object.keys(patch).length > 0) {
+                      bonusForm.setFieldsValue(patch);
+                    }
+
+                    if (suggestions.bonus_category) {
+                      setBonusCategory(suggestions.bonus_category as BonusCategory);
+                    }
+                    if (suggestions.bonus_kind) {
+                      setSelectedBonusKind(suggestions.bonus_kind as BonusKind);
+                    }
+                    if (suggestions.bonus_type) {
+                      setSelectedBonusType(suggestions.bonus_type as BonusType);
+                    }
+
+                    message.success('Поля бонуса заполнены по картинке');
+                  } catch (e: any) {
+                    message.error(
+                      e?.data?.error ?? 'Не удалось распознать бонус по картинке'
+                    );
+                  }
+                }}
+                onPaste={async (e) => {
+                  const items = Array.from(e.clipboardData.items || []);
+                  const files: File[] = [];
+                  for (const item of items) {
+                    if (item.type.startsWith('image/')) {
+                      const file = item.getAsFile();
+                      if (file) files.push(file);
+                    }
+                  }
+                  if (files.length === 0) return;
+
+                  setPendingBonusImages((prev) => [...prev, ...files]);
+
+                  const file = files[0];
+                  const currentGeo = bonusForm.getFieldValue('geo');
+                  const geoVal = Array.isArray(currentGeo)
+                    ? currentGeo[currentGeo.length - 1] || currentGeo[0]
+                    : currentGeo;
+                  try {
+                    const suggestions = await analyzeBonusImage({
+                      casinoId,
+                      geo: typeof geoVal === 'string' ? geoVal : undefined,
+                      file,
+                    }).unwrap();
+
+                    if (!suggestions || Object.keys(suggestions).length === 0) {
+                      message.info('Не удалось распознать данные бонуса с картинки');
+                      return;
+                    }
+
+                    const currentValues = bonusForm.getFieldsValue();
+                    const patch: any = {};
+
+                    const isEmpty = (val: any) =>
+                      val === undefined ||
+                      val === null ||
+                      (typeof val === 'string' && val.trim() === '') ||
+                      (Array.isArray(val) && val.length === 0);
+
+                    if (suggestions.name && isEmpty(currentValues.name)) {
+                      patch.name = [suggestions.name as any];
+                    }
+
+                    const simpleKeys: (keyof CasinoBonus)[] = [
+                      'bonus_category',
+                      'bonus_kind',
+                      'bonus_type',
+                      'bonus_value',
+                      'bonus_unit',
+                      'currency',
+                      'freespins_count',
+                      'freespin_value',
+                      'freespin_game',
+                      'cashback_percent',
+                      'cashback_period',
+                      'min_deposit',
+                      'max_bonus',
+                      'max_cashout',
+                      'max_win_cash_value',
+                      'max_win_cash_unit',
+                      'max_win_freespin_value',
+                      'max_win_freespin_unit',
+                      'max_win_percent_value',
+                      'max_win_percent_unit',
+                      'wagering_requirement',
+                      'wagering_freespin',
+                      'wagering_games',
+                      'wagering_time_limit',
+                      'promo_code',
+                      'valid_from',
+                      'valid_to',
+                      'notes',
+                    ];
+
+                    simpleKeys.forEach((key) => {
+                      const value = (suggestions as any)[key];
+                      if (value === undefined || value === null) return;
+                      const current = (currentValues as any)[key];
+                      if (isEmpty(current)) {
+                        patch[key] = value;
+                      }
+                    });
+
+                    if (Object.keys(patch).length > 0) {
+                      bonusForm.setFieldsValue(patch);
+                    }
+
+                    if (suggestions.bonus_category) {
+                      setBonusCategory(suggestions.bonus_category as BonusCategory);
+                    }
+                    if (suggestions.bonus_kind) {
+                      setSelectedBonusKind(suggestions.bonus_kind as BonusKind);
+                    }
+                    if (suggestions.bonus_type) {
+                      setSelectedBonusType(suggestions.bonus_type as BonusType);
+                    }
+
+                    message.success('Поля бонуса заполнены по картинке');
+                  } catch (e: any) {
+                    message.error(
+                      e?.data?.error ?? 'Не удалось распознать бонус по картинке'
+                    );
+                  }
+                }}
+              >
+                <Space direction="vertical" size={8} style={{ width: '100%' }}>
+                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                    Загрузите промо-картинку бонуса (drag&drop, Ctrl+V или выбор файла) — AI
+                    попробует автоматически заполнить поля формы. Все картинки будут прикреплены
+                    к бонусу.
+                  </Typography.Text>
+                  <Upload
+                    accept="image/*"
+                    showUploadList={false}
+                    beforeUpload={async (file) => {
+                      // сразу считаем картинку прикреплённой к бонусу
+                      setPendingBonusImages((prev) => [...prev, file]);
+
+                      const currentGeo = bonusForm.getFieldValue('geo');
+                      const geoVal = Array.isArray(currentGeo)
+                        ? currentGeo[currentGeo.length - 1] || currentGeo[0]
+                        : currentGeo;
+                      try {
+                        const suggestions = await analyzeBonusImage({
+                          casinoId,
+                          geo: typeof geoVal === 'string' ? geoVal : undefined,
+                          file,
+                        }).unwrap();
+
+                        if (!suggestions || Object.keys(suggestions).length === 0) {
+                          message.info('Не удалось распознать данные бонуса с картинки');
+                          return false;
+                        }
+
+                        const currentValues = bonusForm.getFieldsValue();
+                        const patch: any = {};
+
+                        const isEmpty = (val: any) =>
+                          val === undefined ||
+                          val === null ||
+                          (typeof val === 'string' && val.trim() === '') ||
+                          (Array.isArray(val) && val.length === 0);
+
+                        if (suggestions.name && isEmpty(currentValues.name)) {
+                          patch.name = [suggestions.name as any];
+                        }
+
+                        const simpleKeys: (keyof CasinoBonus)[] = [
+                          'bonus_category',
+                          'bonus_kind',
+                          'bonus_type',
+                          'bonus_value',
+                          'bonus_unit',
+                          'currency',
+                          'freespins_count',
+                          'freespin_value',
+                          'freespin_game',
+                          'cashback_percent',
+                          'cashback_period',
+                          'min_deposit',
+                          'max_bonus',
+                          'max_cashout',
+                          'max_win_cash_value',
+                          'max_win_cash_unit',
+                          'max_win_freespin_value',
+                          'max_win_freespin_unit',
+                          'max_win_percent_value',
+                          'max_win_percent_unit',
+                          'wagering_requirement',
+                          'wagering_freespin',
+                          'wagering_games',
+                          'wagering_time_limit',
+                          'promo_code',
+                          'valid_from',
+                          'valid_to',
+                          'notes',
+                        ];
+
+                        simpleKeys.forEach((key) => {
+                          const value = (suggestions as any)[key];
+                          if (value === undefined || value === null) return;
+                          const current = (currentValues as any)[key];
+                          if (isEmpty(current)) {
+                            patch[key] = value;
+                          }
+                        });
+
+                        if (Object.keys(patch).length > 0) {
+                          bonusForm.setFieldsValue(patch);
+                        }
+
+                        if (suggestions.bonus_category) {
+                          setBonusCategory(suggestions.bonus_category as BonusCategory);
+                        }
+                        if (suggestions.bonus_kind) {
+                          setSelectedBonusKind(suggestions.bonus_kind as BonusKind);
+                        }
+                        if (suggestions.bonus_type) {
+                          setSelectedBonusType(suggestions.bonus_type as BonusType);
+                        }
+
+                        message.success('Поля бонуса заполнены по картинке');
+                      } catch (e: any) {
+                        message.error(
+                          e?.data?.error ?? 'Не удалось распознать бонус по картинке'
+                        );
+                      }
+
+                      return false;
+                    }}
+                  >
+                    <Button icon={<RobotOutlined />} loading={analyzingBonusImage}>
+                      Загрузить картинку для авто-заполнения
+                    </Button>
+                  </Upload>
+                </Space>
+              </div>
             </Form.Item>
             <Form.Item
               name="name"
