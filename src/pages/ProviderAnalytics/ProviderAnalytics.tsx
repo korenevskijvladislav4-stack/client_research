@@ -124,7 +124,7 @@ export default function ProviderAnalytics() {
 
       <Card size="small">
         <Space wrap size={16}>
-          <Space align="start">
+          <Space align="center">
             <Typography.Text type="secondary">Казино:</Typography.Text>
             <Select
               mode="multiple"
@@ -141,7 +141,7 @@ export default function ProviderAnalytics() {
               maxTagCount="responsive"
             />
           </Space>
-          <Space align="start">
+          <Space align="center">
             <Typography.Text type="secondary">GEO:</Typography.Text>
             <Select
               mode="multiple"
@@ -158,7 +158,7 @@ export default function ProviderAnalytics() {
               maxTagCount="responsive"
             />
           </Space>
-          <Space align="start">
+          <Space align="center">
             <Typography.Text type="secondary">Провайдер:</Typography.Text>
             <Select
               mode="multiple"
