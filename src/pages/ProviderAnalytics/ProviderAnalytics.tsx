@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, Select, Space, Table, Typography, theme } from 'antd';
-import { CheckOutlined, ApiOutlined } from '@ant-design/icons';
+import { Button, Card, Select, Space, Table, Typography, theme, message } from 'antd';
+import { CheckOutlined, ApiOutlined, DownloadOutlined } from '@ant-design/icons';
 import { useGetProviderAnalyticsQuery } from '../../store/api/casinoProviderApi';
+import { getApiBaseUrl } from '../../config/api';
+import { useAppSelector } from '../../hooks/redux';
 import { useGetAllCasinosQuery } from '../../store/api/casinoApi';
 import { useGetGeosQuery } from '../../store/api/geoApi';
 import { useGetProvidersQuery } from '../../store/api/referenceApi';
@@ -16,6 +18,7 @@ interface AnalyticsRow {
 export default function ProviderAnalytics() {
   const nav = useNavigate();
   const { token } = theme.useToken();
+  const authToken = useAppSelector((s) => s.auth.token);
   const [filterGeos, setFilterGeos] = useState<string[]>([]);
   const [filterCasinoIds, setFilterCasinoIds] = useState<number[]>([]);
   const [filterProviderIds, setFilterProviderIds] = useState<number[]>([]);
@@ -108,6 +111,26 @@ export default function ProviderAnalytics() {
     return counts;
   }, [resp?.providers, rows]);
 
+  const handleExport = () => {
+    try {
+      const baseUrl = getApiBaseUrl();
+      const params = new URLSearchParams();
+      filterGeos.forEach((g) => params.append('geo', g));
+      filterCasinoIds.forEach((id) => params.append('casino_id', String(id)));
+      filterProviderIds.forEach((id) => params.append('provider_id', String(id)));
+      if (authToken) {
+        params.set('token', authToken);
+      }
+      const qs = params.toString();
+      const url = `${baseUrl}/providers/analytics/export${qs ? `?${qs}` : ''}`;
+      window.open(url, '_blank');
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to export provider analytics', e);
+      message.error('Не удалось выгрузить аналитику провайдеров');
+    }
+  };
+
   return (
     <Space direction="vertical" size={24} style={{ width: '100%' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
@@ -119,6 +142,11 @@ export default function ProviderAnalytics() {
           <Typography.Text type="secondary">
             Строки — казино, столбцы — провайдеры. Галочка — подключено для выбранного GEO, прочерк — нет.
           </Typography.Text>
+        </Space>
+        <Space wrap>
+          <Button icon={<DownloadOutlined />} onClick={handleExport}>
+            Выгрузить XLSX
+          </Button>
         </Space>
       </div>
 
