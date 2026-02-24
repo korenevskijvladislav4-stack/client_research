@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button, Card, DatePicker, Select, Space, Table, Tag, Tooltip, Typography, message, theme } from 'antd';
 import { DownloadOutlined, LinkOutlined, MailOutlined } from '@ant-design/icons';
 import dayjs, { Dayjs } from 'dayjs';
-import { useGetEmailAnalyticsQuery, useGetRecipientsQuery, useRelinkEmailsMutation } from '../../store/api/emailApi';
+import { useGetEmailAnalyticsQuery, useGetRecipientsQuery, useRelinkEmailsMutation, useGetEmailTopicsQuery } from '../../store/api/emailApi';
 import { useGetGeosQuery } from '../../store/api/geoApi';
 import { getApiBaseUrl } from '../../config/api';
 
@@ -36,17 +36,20 @@ export default function EmailAnalytics() {
   ]);
   const [toEmail, setToEmail] = useState<string | undefined>(undefined);
   const [filterGeo, setFilterGeo] = useState<string | undefined>(undefined);
+  const [filterTopicId, setFilterTopicId] = useState<number | undefined>(undefined);
 
   const dateFrom = range[0].format('YYYY-MM-DD');
   const dateTo = range[1].format('YYYY-MM-DD');
 
   const { data: accountEmails = [] } = useGetRecipientsQuery();
   const { data: geos = [] } = useGetGeosQuery();
+  const { data: topics = [] } = useGetEmailTopicsQuery();
   const { data: resp, isLoading, refetch } = useGetEmailAnalyticsQuery({
     date_from: dateFrom,
     date_to: dateTo,
     to_email: toEmail,
     geo: filterGeo,
+    topic_id: filterTopicId,
   });
 
   const [relinkEmails, { isLoading: relinking }] = useRelinkEmailsMutation();
@@ -75,12 +78,18 @@ export default function EmailAnalytics() {
     [geos],
   );
 
+  const topicOptions = useMemo(
+    () => topics.map((t) => ({ value: t.id, label: t.name })),
+    [topics],
+  );
+
   const handleExport = useCallback(() => {
     const p = new URLSearchParams();
     p.set('date_from', dateFrom);
     p.set('date_to', dateTo);
     if (toEmail) p.set('to_email', toEmail);
     if (filterGeo) p.set('geo', filterGeo);
+    if (filterTopicId) p.set('topic_id', String(filterTopicId));
 
     const baseUrl = getApiBaseUrl().replace(/\/+$/, '');
     const token = localStorage.getItem('token') || '';
@@ -332,6 +341,21 @@ export default function EmailAnalytics() {
               value={filterGeo}
               onChange={(v) => setFilterGeo(v || undefined)}
               options={geoOptions}
+              filterOption={(input, option) =>
+                (option?.label ?? '').toString().toLowerCase().includes(input.toLowerCase())
+              }
+            />
+          </Space>
+          <Space>
+            <Text type="secondary">Тематика:</Text>
+            <Select
+              style={{ minWidth: 200 }}
+              placeholder="Все тематики"
+              allowClear
+              showSearch
+              value={filterTopicId}
+              onChange={(v) => setFilterTopicId(v || undefined)}
+              options={topicOptions}
               filterOption={(input, option) =>
                 (option?.label ?? '').toString().toLowerCase().includes(input.toLowerCase())
               }

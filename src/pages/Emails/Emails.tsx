@@ -14,6 +14,7 @@ import {
   useGetEmailsQuery,
   useGetRecipientsQuery,
   useSyncEmailsMutation,
+  useGetEmailTopicsQuery,
   type Email,
 } from '../../store/api/emailApi';
 import { useGetAllCasinosQuery } from '../../store/api/casinoApi';
@@ -39,6 +40,7 @@ export default function Emails() {
   });
   const [filterToEmail, setFilterToEmail] = useState<string | undefined>();
   const [filterGeo, setFilterGeo] = useState<string | undefined>();
+  const [filterTopicId, setFilterTopicId] = useState<number | undefined>();
   const [readFilter, setReadFilter] = useState<ReadFilter>('all');
   const [filterDateFrom, setFilterDateFrom] = useState<string | undefined>(() =>
     searchParams.get('date_from') || undefined,
@@ -60,11 +62,13 @@ export default function Emails() {
     ...(filterGeo ? { geo: filterGeo } : {}),
     ...(filterDateFrom ? { date_from: filterDateFrom } : {}),
     ...(filterDateTo ? { date_to: filterDateTo } : {}),
+    ...(filterTopicId ? { topic_id: filterTopicId } : {}),
   });
 
   const { data: accountEmails = [] } = useGetRecipientsQuery();
   const { data: casinos } = useGetAllCasinosQuery();
   const { data: geos = [] } = useGetGeosQuery();
+  const { data: topics = [] } = useGetEmailTopicsQuery();
   const [syncEmails] = useSyncEmailsMutation();
 
   // -------------------------------------------------------------------------
@@ -82,6 +86,11 @@ export default function Emails() {
   const geoOptions = useMemo(
     () => geos.map((g) => ({ value: g.code, label: `${g.code} — ${g.name}` })),
     [geos],
+  );
+
+  const topicOptions = useMemo(
+    () => topics.map((t) => ({ value: t.id, label: t.name })),
+    [topics],
   );
 
   // -------------------------------------------------------------------------
@@ -155,6 +164,11 @@ export default function Emails() {
     setCurrentPage(1);
   }, []);
 
+  const handleTopicChange = useCallback((v: number | undefined) => {
+    setFilterTopicId(v);
+    setCurrentPage(1);
+  }, []);
+
   const handleReadFilterChange = useCallback((v: ReadFilter) => {
     setReadFilter(v);
     setCurrentPage(1);
@@ -174,6 +188,7 @@ export default function Emails() {
     setFilterCasinoId(undefined);
     setFilterToEmail(undefined);
     setFilterGeo(undefined);
+    setFilterTopicId(undefined);
     setReadFilter('all');
     setFilterDateFrom(undefined);
     setFilterDateTo(undefined);
@@ -228,15 +243,18 @@ export default function Emails() {
           casinoOptions={casinoOptions}
           accountEmails={accountEmails}
           geoOptions={geoOptions}
+          topicOptions={topicOptions}
           filterCasinoId={filterCasinoId}
           filterToEmail={filterToEmail}
           filterGeo={filterGeo}
+           filterTopicId={filterTopicId}
           readFilter={readFilter}
           dateFrom={filterDateFrom}
           dateTo={filterDateTo}
           onCasinoChange={handleCasinoChange}
           onRecipientChange={handleRecipientChange}
           onGeoChange={handleGeoChange}
+          onTopicChange={handleTopicChange}
           onReadFilterChange={handleReadFilterChange}
           onDateFromChange={handleDateFromChange}
           onDateToChange={handleDateToChange}

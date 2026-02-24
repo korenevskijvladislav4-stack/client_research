@@ -17,6 +17,11 @@ interface GeoOption {
   label: string;
 }
 
+interface TopicOption {
+  value: number;
+  label: string;
+}
+
 export interface AccountEmail {
   email: string;
   geo: string;
@@ -26,15 +31,18 @@ interface EmailFiltersProps {
   casinoOptions: CasinoOption[];
   accountEmails: AccountEmail[];
   geoOptions: GeoOption[];
+  topicOptions: TopicOption[];
   filterCasinoId: number | undefined;
   filterToEmail: string | undefined;
   filterGeo: string | undefined;
+  filterTopicId: number | undefined;
   readFilter: ReadFilter;
   dateFrom: string | undefined;
   dateTo: string | undefined;
   onCasinoChange: (value: number | undefined) => void;
   onRecipientChange: (value: string | undefined) => void;
   onGeoChange: (value: string | undefined) => void;
+  onTopicChange: (value: number | undefined) => void;
   onReadFilterChange: (value: ReadFilter) => void;
   onDateFromChange: (value: string | undefined) => void;
   onDateToChange: (value: string | undefined) => void;
@@ -49,22 +57,31 @@ export default function EmailFilters({
   casinoOptions,
   accountEmails,
   geoOptions,
+  topicOptions,
   filterCasinoId,
   filterToEmail,
   filterGeo,
+  filterTopicId,
   readFilter,
   dateFrom,
   dateTo,
   onCasinoChange,
   onRecipientChange,
   onGeoChange,
+  onTopicChange,
   onReadFilterChange,
   onDateFromChange,
   onDateToChange,
   onReset,
 }: EmailFiltersProps) {
   const hasFilters =
-    filterCasinoId || filterToEmail || filterGeo || readFilter !== 'all' || dateFrom || dateTo;
+    filterCasinoId ||
+    filterToEmail ||
+    filterGeo ||
+    filterTopicId ||
+    readFilter !== 'all' ||
+    dateFrom ||
+    dateTo;
 
   // Unique emails from accounts
   const emailOptions = Array.from(
@@ -113,6 +130,18 @@ export default function EmailFilters({
         options={geoOptions}
         value={filterGeo}
         onChange={onGeoChange}
+        filterOption={(input, option) =>
+          (option?.label ?? '').toString().toLowerCase().includes(input.toLowerCase())
+        }
+      />
+      <Select
+        allowClear
+        showSearch
+        placeholder="Тематика"
+        style={{ minWidth: 200 }}
+        options={topicOptions}
+        value={filterTopicId}
+        onChange={onTopicChange}
         filterOption={(input, option) =>
           (option?.label ?? '').toString().toLowerCase().includes(input.toLowerCase())
         }

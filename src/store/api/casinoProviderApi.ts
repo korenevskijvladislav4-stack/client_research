@@ -1,9 +1,9 @@
 import { baseApi } from './baseApi';
 
 export interface ProviderAnalyticsParams {
-  geo?: string;
-  casino_id?: number;
-  provider_id?: number;
+  geo?: string[];
+  casino_id?: number[];
+  provider_id?: number[];
 }
 
 export interface ProviderAnalyticsResponse {
@@ -32,9 +32,9 @@ export const casinoProviderApi = baseApi.injectEndpoints({
     getProviderAnalytics: builder.query<ProviderAnalyticsResponse, ProviderAnalyticsParams | void>({
       query: (params = {}) => {
         const p = new URLSearchParams();
-        if (params?.geo) p.set('geo', params.geo);
-        if (params?.casino_id != null) p.set('casino_id', String(params.casino_id));
-        if (params?.provider_id != null) p.set('provider_id', String(params.provider_id));
+        params?.geo?.forEach((g) => p.append('geo', g));
+        params?.casino_id?.forEach((id) => p.append('casino_id', String(id)));
+        params?.provider_id?.forEach((id) => p.append('provider_id', String(id)));
         const qs = p.toString();
         return `/providers/analytics${qs ? `?${qs}` : ''}`;
       },

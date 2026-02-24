@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, Select, Space, Table, Typography } from 'antd';
+import { Card, Select, Space, Table, Typography, theme } from 'antd';
 import { CheckOutlined, ApiOutlined } from '@ant-design/icons';
 import { useGetProviderAnalyticsQuery } from '../../store/api/casinoProviderApi';
 import { useGetAllCasinosQuery } from '../../store/api/casinoApi';
@@ -15,17 +15,18 @@ interface AnalyticsRow {
 
 export default function ProviderAnalytics() {
   const nav = useNavigate();
-  const [filterGeo, setFilterGeo] = useState<string | undefined>(undefined);
-  const [filterCasinoId, setFilterCasinoId] = useState<number | undefined>(undefined);
-  const [filterProviderId, setFilterProviderId] = useState<number | undefined>(undefined);
+  const { token } = theme.useToken();
+  const [filterGeos, setFilterGeos] = useState<string[]>([]);
+  const [filterCasinoIds, setFilterCasinoIds] = useState<number[]>([]);
+  const [filterProviderIds, setFilterProviderIds] = useState<number[]>([]);
 
   const { data: casinos = [] } = useGetAllCasinosQuery();
   const { data: geos = [] } = useGetGeosQuery();
   const { data: providersList = [] } = useGetProvidersQuery();
   const { data: resp, isLoading } = useGetProviderAnalyticsQuery({
-    geo: filterGeo,
-    casino_id: filterCasinoId,
-    provider_id: filterProviderId,
+    geo: filterGeos.length > 0 ? filterGeos : undefined,
+    casino_id: filterCasinoIds.length > 0 ? filterCasinoIds : undefined,
+    provider_id: filterProviderIds.length > 0 ? filterProviderIds : undefined,
   });
 
   const connectionSet = useMemo(() => {
@@ -99,6 +100,14 @@ export default function ProviderAnalytics() {
 
   const scrollX = 220 + (resp?.providers?.length ?? 0) * 80;
 
+  const providerCounts = useMemo(() => {
+    const counts: Record<number, number> = {};
+    for (const p of resp?.providers ?? []) {
+      counts[p.id] = rows.filter((r) => r.hasProvider[p.id]).length;
+    }
+    return counts;
+  }, [resp?.providers, rows]);
+
   return (
     <Space direction="vertical" size={24} style={{ width: '100%' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
@@ -115,49 +124,55 @@ export default function ProviderAnalytics() {
 
       <Card size="small">
         <Space wrap size={16}>
-          <Space>
+          <Space align="start">
             <Typography.Text type="secondary">Казино:</Typography.Text>
             <Select
-              style={{ minWidth: 200 }}
+              mode="multiple"
+              style={{ minWidth: 260 }}
               placeholder="Все казино"
               allowClear
               showSearch
-              value={filterCasinoId}
-              onChange={(v) => setFilterCasinoId(v ?? undefined)}
+              value={filterCasinoIds}
+              onChange={(v) => setFilterCasinoIds(v ?? [])}
               options={casinoOptions}
               filterOption={(input, option) =>
                 (option?.label ?? '').toString().toLowerCase().includes(input.toLowerCase())
               }
+              maxTagCount="responsive"
             />
           </Space>
-          <Space>
+          <Space align="start">
             <Typography.Text type="secondary">GEO:</Typography.Text>
             <Select
-              style={{ minWidth: 160 }}
+              mode="multiple"
+              style={{ minWidth: 220 }}
               placeholder="Все GEO"
               allowClear
               showSearch
-              value={filterGeo}
-              onChange={(v) => setFilterGeo(v ?? undefined)}
+              value={filterGeos}
+              onChange={(v) => setFilterGeos(v ?? [])}
               options={geoOptions}
               filterOption={(input, option) =>
                 (option?.label ?? '').toString().toLowerCase().includes(input.toLowerCase())
               }
+              maxTagCount="responsive"
             />
           </Space>
-          <Space>
+          <Space align="start">
             <Typography.Text type="secondary">Провайдер:</Typography.Text>
             <Select
-              style={{ minWidth: 200 }}
+              mode="multiple"
+              style={{ minWidth: 260 }}
               placeholder="Все провайдеры"
               allowClear
               showSearch
-              value={filterProviderId}
-              onChange={(v) => setFilterProviderId(v ?? undefined)}
+              value={filterProviderIds}
+              onChange={(v) => setFilterProviderIds(v ?? [])}
               options={providerOptions}
               filterOption={(input, option) =>
                 (option?.label ?? '').toString().toLowerCase().includes(input.toLowerCase())
               }
+              maxTagCount="responsive"
             />
           </Space>
         </Space>
@@ -173,6 +188,40 @@ export default function ProviderAnalytics() {
           pagination={false}
           scroll={{ x: scrollX }}
           locale={{ emptyText: 'Нет данных. Измените фильтры или добавьте провайдеров в анкетах казино.' }}
+          summary={() => {
+            if ((resp?.providers ?? []).length === 0) return null;
+            return (
+              <Table.Summary fixed>
+                <Table.Summary.Row
+                  style={{
+                    background: token.colorFillQuaternary,
+                    borderTop: `1px solid ${token.colorBorderSecondary}`,
+                  }}
+                >
+                  <Table.Summary.Cell index={0} align="center" style={{ width: 220, minWidth: 220 }}>
+                    <Typography.Text strong style={{ color: token.colorText }}>
+                      На проектах
+                    </Typography.Text>
+                  </Table.Summary.Cell>
+                  {(resp?.providers ?? []).map((p, i) => (
+                    <Table.Summary.Cell
+                      key={p.id}
+                      index={i + 1}
+                      align="center"
+                      style={{ width: 80, minWidth: 80 }}
+                    >
+                      <Typography.Text
+                        strong={providerCounts[p.id] > 0}
+                        type={providerCounts[p.id] === 0 ? 'secondary' : undefined}
+                      >
+                        {providerCounts[p.id] ?? 0}
+                      </Typography.Text>
+                    </Table.Summary.Cell>
+                  ))}
+                </Table.Summary.Row>
+              </Table.Summary>
+            );
+          }}
         />
       </Card>
     </Space>
