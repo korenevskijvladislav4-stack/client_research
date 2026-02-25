@@ -23,34 +23,42 @@ import {
   useCreateChatSessionMutation,
   useGetChatSessionQuery,
   useDeleteChatSessionMutation,
-  useSendChatMessageMutation,
   type ChatSession,
   type ChatMessage,
 } from '../../store/api/chatApi';
 import dayjs from 'dayjs';
+import { useAppDispatch, useAppSelector } from '../../hooks/redux';
+import { chatApi, type ChatSessionWithMessages } from '../../store/api/chatApi';
 
 const SIDEBAR_WIDTH = 280;
 
 export default function Chat() {
   const { token } = theme.useToken();
+  const dispatch = useAppDispatch();
+  const authToken = useAppSelector((s) => s.auth.token);
 
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [inputValue, setInputValue] = useState('');
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [streamedText, setStreamedText] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const { data: sessions = [], isLoading: sessionsLoading } = useGetChatSessionsQuery();
   const [createSession, { isLoading: creating }] = useCreateChatSessionMutation();
-  const { data: currentSession, isLoading: sessionLoading } = useGetChatSessionQuery(selectedId!, {
+  const {
+    data: currentSession,
+    isLoading: sessionLoading,
+    refetch: refetchSession,
+  } = useGetChatSessionQuery(selectedId!, {
     skip: selectedId == null,
   });
   const [deleteSession] = useDeleteChatSessionMutation();
-  const [sendMessage, { isLoading: sending }] = useSendChatMessageMutation();
 
   const messages = currentSession?.chat_messages ?? [];
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages.length]);
+  }, [messages.length, streamedText]);
 
   const handleNewChat = async () => {
     try {
@@ -79,20 +87,77 @@ export default function Chat() {
 
   const handleSend = async () => {
     const content = inputValue.trim();
-    if (!content || selectedId == null) return;
+    if (!content || selectedId == null || isStreaming) return;
     setInputValue('');
+    setStreamedText('');
+    setIsStreaming(true);
+
+    // Оптимистично добавляем пользовательское сообщение в локальный кэш чата,
+    // чтобы оно сразу появилось в интерфейсе.
+    if (selectedId != null) {
+      const tempId = Date.now();
+      dispatch(
+        chatApi.util.updateQueryData(
+          'getChatSession',
+          selectedId,
+          (draft: ChatSessionWithMessages | undefined) => {
+            if (!draft) return;
+            draft.chat_messages.push({
+              id: tempId,
+              role: 'user',
+              content,
+              created_at: new Date().toISOString(),
+            });
+          },
+        ),
+      );
+    }
+
     try {
-      await sendMessage({ sessionId: selectedId, content }).unwrap();
+      const response = await fetch(`/api/chat/sessions/${selectedId}/messages/stream`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+        },
+        credentials: 'include',
+        body: JSON.stringify({ content }),
+      });
+
+      if (!response.ok || !response.body) {
+        throw new Error('Streaming request failed');
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        if (chunk) {
+          setStreamedText((prev) => prev + chunk);
+        }
+      }
+
+      // После окончания стрима синхронизируемся с сервером.
+      if (selectedId != null) {
+        await refetchSession();
+      }
     } catch (e: any) {
-      antMessage.error(e?.data?.error ?? 'Не удалось отправить сообщение');
+      console.error(e);
+      antMessage.error(e?.message ?? 'Не удалось отправить сообщение');
       setInputValue(content);
+    } finally {
+      setIsStreaming(false);
+      setStreamedText('');
     }
   };
 
   const titleDisplay = (s: ChatSession) =>
     s.title || `Чат ${s.created_at ? dayjs(s.created_at).format('DD.MM.YY HH:mm') : s.id}`;
 
-  const canSend = !!inputValue.trim() && selectedId != null && !sending;
+  const canSend = !!inputValue.trim() && selectedId != null && !isStreaming;
 
   return (
     <div
@@ -419,6 +484,94 @@ export default function Chat() {
                       </div>
                     );
                   })}
+
+                  {isStreaming && streamedText && (
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'row',
+                        alignItems: 'flex-start',
+                        gap: 10,
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 34,
+                          height: 34,
+                          borderRadius: '50%',
+                          background: token.colorSuccess,
+                          color: '#fff',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                          fontSize: 18,
+                        }}
+                      >
+                        <RobotOutlined />
+                      </div>
+                      <div
+                        style={{
+                          maxWidth: '75%',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'flex-start',
+                          gap: 4,
+                        }}
+                      >
+                        <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+                          ИИ · сейчас отвечает...
+                        </Typography.Text>
+                        <div
+                          style={{
+                            padding: '10px 14px',
+                            borderRadius: 16,
+                            background: token.colorBgLayout,
+                            color: token.colorText,
+                            wordBreak: 'break-word',
+                            boxShadow: '0 8px 24px rgba(15, 23, 42, 0.35)',
+                            fontSize: 13,
+                            lineHeight: 1.6,
+                          }}
+                        >
+                          <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
+                            components={{
+                              p: ({ node, ...props }) => (
+                                <Typography.Paragraph style={{ marginBottom: 8 }} {...props} />
+                              ),
+                              ul: ({ node, ...props }) => (
+                                <ul
+                                  style={{
+                                    paddingLeft: 20,
+                                    marginBottom: 8,
+                                    marginTop: 0,
+                                  }}
+                                  {...props}
+                                />
+                              ),
+                              ol: ({ node, ...props }) => (
+                                <ol
+                                  style={{
+                                    paddingLeft: 20,
+                                    marginBottom: 8,
+                                    marginTop: 0,
+                                  }}
+                                  {...props}
+                                />
+                              ),
+                              li: ({ node, ...props }) => <li {...props} />,
+                              strong: ({ node, ...props }) => (
+                                <Typography.Text strong {...props} />
+                              ),
+                            }}
+                          >
+                            {streamedText}
+                          </ReactMarkdown>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   <div ref={messagesEndRef} />
                 </>
               )}
@@ -450,13 +603,13 @@ export default function Chat() {
                     }
                   }}
                   autoSize={{ minRows: 2, maxRows: 5 }}
-                  disabled={sending || selectedId == null}
+                  disabled={isStreaming || selectedId == null}
                   style={{ resize: 'none', borderRadius: 12 }}
                 />
                 <Button
                   type="primary"
                   icon={<SendOutlined />}
-                  loading={sending}
+                  loading={isStreaming}
                   onClick={handleSend}
                   disabled={!canSend}
                   style={{ alignSelf: 'stretch', borderRadius: 999 }}
