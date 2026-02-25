@@ -2246,12 +2246,21 @@ export default function CasinoProfile() {
                 const promoTypeValue = Array.isArray(values.promo_type)
                   ? (values.promo_type[0] ?? null)
                   : (values.promo_type ?? null);
+                const periodType = values.period_type ?? 'fixed';
                 const base = {
                   promo_category: values.promo_category ?? 'tournament',
                   name: values.name,
                   promo_type: promoTypeValue,
-                  period_start: periodStart ? dayjs(periodStart).format('YYYY-MM-DD') : null,
-                  period_end: periodEnd ? dayjs(periodEnd).format('YYYY-MM-DD') : null,
+                  period_type: periodType,
+                  period_start:
+                    periodType === 'fixed' && periodStart
+                      ? dayjs(periodStart).format('YYYY-MM-DD')
+                      : null,
+                  period_end:
+                    periodType === 'fixed' && periodEnd
+                      ? dayjs(periodEnd).format('YYYY-MM-DD')
+                      : null,
+                  has_participation_button: Boolean(values.has_participation_button),
                   provider: values.provider ?? null,
                   prize_fund: values.prize_fund ?? null,
                   mechanics: values.mechanics ?? null,
@@ -2344,8 +2353,25 @@ export default function CasinoProfile() {
               <Input placeholder="Название турнира" />
             </Form.Item>
 
-            <Form.Item name="period" label="Период проведения">
-              <DatePicker.RangePicker style={{ width: '100%' }} />
+            <Form.Item name="period_type" label="Тип периода" initialValue="fixed">
+              <Select
+                options={[
+                  { value: 'daily', label: 'Ежедневный' },
+                  { value: 'weekly', label: 'Еженедельный' },
+                  { value: 'monthly', label: 'Ежемесячный' },
+                  { value: 'fixed', label: 'Фиксированные даты' },
+                ]}
+              />
+            </Form.Item>
+
+            <Form.Item shouldUpdate={(prev, next) => prev.period_type !== next.period_type}>
+              {({ getFieldValue }) =>
+                getFieldValue('period_type') === 'fixed' && (
+                  <Form.Item name="period" label="Период проведения">
+                    <DatePicker.RangePicker style={{ width: '100%' }} />
+                  </Form.Item>
+                )
+              }
             </Form.Item>
 
             <Form.Item name="provider" label="Провайдер">
@@ -2382,6 +2408,14 @@ export default function CasinoProfile() {
                   { value: 'draft', label: 'Черновик' },
                 ]}
               />
+            </Form.Item>
+
+            <Form.Item
+              name="has_participation_button"
+              label="Кнопка для участия"
+              valuePropName="checked"
+            >
+              <Switch />
             </Form.Item>
 
             <div style={{ marginBottom: 16 }}>

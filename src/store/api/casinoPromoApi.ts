@@ -14,6 +14,8 @@ export interface CasinoPromo {
   promo_type?: string | null;
   period_start?: string | null;
   period_end?: string | null;
+  period_type?: 'fixed' | 'daily' | 'weekly' | 'monthly' | null;
+  has_participation_button?: boolean | null;
   provider?: string | null;
   prize_fund?: string | null;
   mechanics?: string | null;
