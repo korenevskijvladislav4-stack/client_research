@@ -27,7 +27,6 @@ import {
   Image,
   Pagination,
   DatePicker,
-  // Modal,
 } from 'antd';
 import {
   ArrowLeftOutlined,
@@ -1096,6 +1095,7 @@ export default function CasinoProfile() {
           }}
           width={580}
           destroyOnClose
+          bodyStyle={{ maxHeight: '100vh', overflowY: 'auto' }}
         >
           <Form
             layout="vertical"
@@ -1152,32 +1152,46 @@ export default function CasinoProfile() {
               }
             }}
           >
-            <Form.Item
-              name="geo"
-              label="GEO"
-              rules={[{ required: true, message: 'Укажите GEO' }]}
+            <Space
+              direction="vertical"
+              size={16}
+              style={{ width: '100%', paddingRight: 8 }}
             >
-              <Select
-                mode="tags"
-                placeholder="Например: RU, DE, BR или выберите из списка"
-                tokenSeparators={[',', ';', ' ']}
-                options={geoOptions}
-                onChange={async (values: string[]) => {
-                  if (!values || values.length === 0) return;
-                  const geoCodes = (geos ?? []).map((g) => g.code);
-                  const newGeos = values
-                    .map((v) => v.toUpperCase().trim())
-                    .filter((v) => v && !geoCodes.includes(v));
-                  for (const code of newGeos) {
-                    try {
-                      await createGeo({ code, name: code }).unwrap();
-                    } catch (e) {
-                      console.error('Failed to create geo:', e);
+            <Card size="small" style={{ marginBottom: 16 }} title="Основные параметры">
+              <Form.Item
+                name="geo"
+                label="GEO"
+                rules={[{ required: true, message: 'Укажите GEO' }]}
+              >
+                <Select
+                  mode="tags"
+                  placeholder="Например: RU, DE, BR или выберите из списка"
+                  tokenSeparators={[',', ';', ' ']}
+                  options={geoOptions}
+                  onChange={async (values: string[]) => {
+                    if (!values || values.length === 0) return;
+                    const geoCodes = (geos ?? []).map((g) => g.code);
+                    const newGeos = values
+                      .map((v) => v.toUpperCase().trim())
+                      .filter((v) => v && !geoCodes.includes(v));
+                    for (const code of newGeos) {
+                      try {
+                        await createGeo({ code, name: code }).unwrap();
+                      } catch (e) {
+                        console.error('Failed to create geo:', e);
+                      }
                     }
-                  }
-                }}
-              />
-            </Form.Item>
+                  }}
+                />
+              </Form.Item>
+              <Form.Item
+                name="currency"
+                label="Валюта"
+                rules={[{ required: false }]}
+              >
+                <Input placeholder="Например: EUR" />
+              </Form.Item>
+            </Card>
             <Form.Item label="Быстро заполнить по картинке">
               <div
                 style={{
@@ -1511,106 +1525,108 @@ export default function CasinoProfile() {
                 </Space>
               </div>
             </Form.Item>
-            <Form.Item
-              name="name"
-              label="Название бонуса"
-              rules={[{ required: true }]}
-            >
-              <Select
-                mode="tags"
-                placeholder="Выберите или введите название"
-                maxCount={1}
-                options={bonusNameOptions}
-                onChange={async (values: string[]) => {
-                  if (!values || values.length === 0) return;
-                  const existingNames = (bonusNames ?? []).map((b) => b.name);
-                  const newNames = values.filter((v) => v && !existingNames.includes(v));
-                  for (const name of newNames) {
-                    try {
-                      await createBonusName({ name }).unwrap();
-                    } catch (e) {
-                      console.error('Failed to create bonus name:', e);
+            <Card size="small" style={{ marginBottom: 16 }} title="Тип и название бонуса">
+              <Form.Item
+                name="name"
+                label="Название бонуса"
+                rules={[{ required: true }]}
+              >
+                <Select
+                  mode="tags"
+                  placeholder="Выберите или введите название"
+                  maxCount={1}
+                  options={bonusNameOptions}
+                  onChange={async (values: string[]) => {
+                    if (!values || values.length === 0) return;
+                    const existingNames = (bonusNames ?? []).map((b) => b.name);
+                    const newNames = values.filter((v) => v && !existingNames.includes(v));
+                    for (const name of newNames) {
+                      try {
+                        await createBonusName({ name }).unwrap();
+                      } catch (e) {
+                        console.error('Failed to create bonus name:', e);
+                      }
                     }
-                  }
-                }}
-              />
-            </Form.Item>
+                  }}
+                />
+              </Form.Item>
 
-            {/* Категория бонуса */}
-            <Form.Item
-              name="bonus_category"
-              label="Категория"
-              initialValue="casino"
-              rules={[{ required: true, message: 'Выберите категорию' }]}
-            >
-              <Switch
-                checked={bonusCategory === 'sport'}
-                onChange={(checked) => {
-                  const newCategory = checked ? 'sport' : 'casino';
-                  setBonusCategory(newCategory);
-                  bonusForm.setFieldsValue({ bonus_category: newCategory });
-                  // Сброс вида и типа при смене категории
-                  setSelectedBonusKind(undefined);
-                  setSelectedBonusType(undefined);
-                  bonusForm.setFieldsValue({ bonus_kind: undefined, bonus_type: undefined });
-                }}
-                checkedChildren="Спорт"
-                unCheckedChildren="Казино"
-              />
-            </Form.Item>
+              {/* Категория бонуса */}
+              <Form.Item
+                name="bonus_category"
+                label="Категория"
+                initialValue="casino"
+                rules={[{ required: true, message: 'Выберите категорию' }]}
+              >
+                <Switch
+                  checked={bonusCategory === 'sport'}
+                  onChange={(checked) => {
+                    const newCategory = checked ? 'sport' : 'casino';
+                    setBonusCategory(newCategory);
+                    bonusForm.setFieldsValue({ bonus_category: newCategory });
+                    // Сброс вида и типа при смене категории
+                    setSelectedBonusKind(undefined);
+                    setSelectedBonusType(undefined);
+                    bonusForm.setFieldsValue({ bonus_kind: undefined, bonus_type: undefined });
+                  }}
+                  checkedChildren="Спорт"
+                  unCheckedChildren="Казино"
+                />
+              </Form.Item>
 
-            {/* Вид и Тип бонуса */}
-            <Row gutter={16}>
-              <Col span={12}>
-                <Form.Item
-                  name="bonus_kind"
-                  label="Вид бонуса"
-                  rules={[{ required: true, message: 'Выберите вид бонуса' }]}
-                >
-                  <Select
-                    placeholder="Выберите вид"
-                    onChange={(val: BonusKind) => setSelectedBonusKind(val)}
-                    options={[
-                      { value: 'deposit', label: 'Депозитный' },
-                      { value: 'nodeposit', label: 'Бездепозитный' },
-                      { value: 'cashback', label: 'Кешбек' },
-                      { value: 'rakeback', label: 'Рейкбек' },
-                    ]}
-                  />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item
-                  name="bonus_type"
-                  label="Тип бонуса"
-                  rules={[{ required: true, message: 'Выберите тип бонуса' }]}
-                >
-                  <Select
-                    placeholder="Выберите тип"
-                    onChange={(val: BonusType) => setSelectedBonusType(val)}
-                    options={
-                      bonusCategory === 'casino'
-                        ? [
-                            { value: 'cash', label: 'Кэш-бонус' },
-                            { value: 'freespin', label: 'Фриспин-бонус' },
-                            { value: 'combo', label: 'Комбинированный' },
-                          ]
-                        : [
-                            { value: 'freebet', label: 'Фрибет' },
-                            { value: 'wagering', label: 'Вейджеринг' },
-                            { value: 'insurance', label: 'Страховка' },
-                            { value: 'accumulator', label: 'Аккумулятор' },
-                            { value: 'odds_boost', label: 'Повышение коэффициентов' },
-                          ]
-                    }
-                  />
-                </Form.Item>
-              </Col>
-            </Row>
+              {/* Вид и Тип бонуса */}
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item
+                    name="bonus_kind"
+                    label="Вид бонуса"
+                    rules={[{ required: true, message: 'Выберите вид бонуса' }]}
+                  >
+                    <Select
+                      placeholder="Выберите вид"
+                      onChange={(val: BonusKind) => setSelectedBonusKind(val)}
+                      options={[
+                        { value: 'deposit', label: 'Депозитный' },
+                        { value: 'nodeposit', label: 'Бездепозитный' },
+                        { value: 'cashback', label: 'Кешбек' },
+                        { value: 'rakeback', label: 'Рейкбек' },
+                      ]}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item
+                    name="bonus_type"
+                    label="Тип бонуса"
+                    rules={[{ required: true, message: 'Выберите тип бонуса' }]}
+                  >
+                    <Select
+                      placeholder="Выберите тип"
+                      onChange={(val: BonusType) => setSelectedBonusType(val)}
+                      options={
+                        bonusCategory === 'casino'
+                          ? [
+                              { value: 'cash', label: 'Кэш-бонус' },
+                              { value: 'freespin', label: 'Фриспин-бонус' },
+                              { value: 'combo', label: 'Комбинированный' },
+                            ]
+                          : [
+                              { value: 'freebet', label: 'Фрибет' },
+                              { value: 'wagering', label: 'Вейджеринг' },
+                              { value: 'insurance', label: 'Страховка' },
+                              { value: 'accumulator', label: 'Аккумулятор' },
+                              { value: 'odds_boost', label: 'Повышение коэффициентов' },
+                            ]
+                      }
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+            </Card>
 
             {/* Поля для Кешбека/Рейкбека */}
             {(selectedBonusKind === 'cashback' || selectedBonusKind === 'rakeback') && (
-              <Card size="small" style={{ marginBottom: 16 }} title="Параметры возврата">
+              <Card size="small" style={{ marginBottom: 16 }} title="Параметры кешбека / рейкбека">
                 <Row gutter={16}>
                   <Col span={12}>
                     <Form.Item name="cashback_percent" label="Процент возврата">
@@ -1643,12 +1659,12 @@ export default function CasinoProfile() {
             {bonusCategory === 'casino' && (selectedBonusType === 'cash' || selectedBonusType === 'combo') && (
               <Card size="small" style={{ marginBottom: 16 }} title="Кэш-бонус">
                 <Row gutter={16}>
-                  <Col span={8}>
+                  <Col span={12}>
                     <Form.Item name="bonus_value" label="Размер">
                       <InputNumber style={{ width: '100%' }} placeholder="100" />
                     </Form.Item>
                   </Col>
-                  <Col span={8}>
+                  <Col span={12}>
                     <Form.Item name="bonus_unit" label="Единица">
                       <Select
                         placeholder="Тип"
@@ -1657,11 +1673,6 @@ export default function CasinoProfile() {
                           { value: 'amount', label: 'Фикс. сумма' },
                         ]}
                       />
-                    </Form.Item>
-                  </Col>
-                  <Col span={8}>
-                    <Form.Item name="currency" label="Валюта">
-                      <Input placeholder="EUR" />
                     </Form.Item>
                   </Col>
                 </Row>
@@ -1782,11 +1793,6 @@ export default function CasinoProfile() {
                       />
                     </Form.Item>
                   </Col>
-                  <Col span={8}>
-                    <Form.Item name="currency" label="Валюта">
-                      <Input placeholder="EUR" />
-                    </Form.Item>
-                  </Col>
                 </Row>
                 <Row gutter={16}>
                   <Col span={12}>
@@ -1825,8 +1831,8 @@ export default function CasinoProfile() {
                     </Form.Item>
                   </Col>
                   <Col span={12}>
-                    <Form.Item name="currency" label="Валюта">
-                      <Input placeholder="EUR" />
+                    <Form.Item shouldUpdate noStyle>
+                      {() => null}
                     </Form.Item>
                   </Col>
                 </Row>
@@ -1861,8 +1867,8 @@ export default function CasinoProfile() {
                     </Form.Item>
                   </Col>
                   <Col span={12}>
-                    <Form.Item name="currency" label="Валюта">
-                      <Input placeholder="EUR" />
+                    <Form.Item shouldUpdate noStyle>
+                      {() => null}
                     </Form.Item>
                   </Col>
                 </Row>
@@ -1885,8 +1891,8 @@ export default function CasinoProfile() {
                     </Form.Item>
                   </Col>
                   <Col span={12}>
-                    <Form.Item name="currency" label="Валюта">
-                      <Input placeholder="EUR" />
+                    <Form.Item shouldUpdate noStyle>
+                      {() => null}
                     </Form.Item>
                   </Col>
                 </Row>
@@ -2096,8 +2102,9 @@ export default function CasinoProfile() {
                 </div>
               )}
             </Card>
+            </Space>
 
-            <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
+            <Space style={{ width: '100%', justifyContent: 'flex-end', marginTop: 16 }}>
               <Button type="primary" htmlType="submit">
                 {editingBonus ? 'Сохранить' : 'Создать'}
               </Button>
