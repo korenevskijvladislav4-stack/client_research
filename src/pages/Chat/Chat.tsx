@@ -65,11 +65,13 @@ export default function Chat() {
   const handleDelete = async (e: MouseEvent<HTMLElement>, id: number) => {
     e.stopPropagation();
     try {
-      await deleteSession(id).unwrap();
+      // Сразу переключаемся на соседний чат, чтобы не держать выделенным удалённый.
       if (selectedId === id) {
         const remaining = sessions.filter((s) => s.id !== id);
         setSelectedId(remaining[0]?.id ?? null);
       }
+
+      await deleteSession(id).unwrap();
     } catch (e: any) {
       antMessage.error(e?.data?.error ?? 'Не удалось удалить чат');
     }
@@ -90,15 +92,22 @@ export default function Chat() {
   const titleDisplay = (s: ChatSession) =>
     s.title || `Чат ${s.created_at ? dayjs(s.created_at).format('DD.MM.YY HH:mm') : s.id}`;
 
+  const canSend = !!inputValue.trim() && selectedId != null && !sending;
+
   return (
     <div
       style={{
-        height: 'calc(100vh - 120px)',
+        height: '100vh',
+        padding: 16,
+        boxSizing: 'border-box',
         display: 'flex',
         alignItems: 'stretch',
         justifyContent: 'flex-start',
         gap: 20,
-        overflow: 'hidden',
+        background: `
+          radial-gradient(circle at 0 0, ${token.colorPrimary}22, transparent 55%),
+          radial-gradient(circle at 100% 100%, ${token.colorSuccess}22, transparent 55%)
+        `,
       }}
     >
       {/* Сайдбар с чатами */}
@@ -225,7 +234,7 @@ export default function Chat() {
           flex: 1,
           borderRadius: token.borderRadiusLG,
           border: `1px solid ${token.colorBorderSecondary}`,
-          background: token.colorBgContainer,
+          background: `linear-gradient(135deg, ${token.colorBgContainer}, ${token.colorBgLayout})`,
           display: 'flex',
           flexDirection: 'column',
           minWidth: 0,
@@ -251,6 +260,29 @@ export default function Chat() {
           </div>
         ) : (
           <>
+            {/* Шапка текущего чата (фиксирована вверху секции) */}
+            <div
+              style={{
+                marginBottom: 14,
+                paddingBottom: 12,
+                borderBottom: `1px solid ${token.colorBorderSecondary}`,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'flex-start',
+                gap: 12,
+              }}
+            >
+              <div>
+                <Typography.Title level={4} style={{ margin: 0, fontSize: 18 }}>
+                  {currentSession ? titleDisplay(currentSession as ChatSession) : 'Чат с ИИ'}
+                </Typography.Title>
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                  Ответы строятся только на данных CRM (казино, бонусы, платежи, промо и т.д.)
+                </Typography.Text>
+              </div>
+            </div>
+
+            {/* Лента сообщений */}
             <div
               style={{
                 flex: 1,
@@ -391,6 +423,8 @@ export default function Chat() {
                 </>
               )}
             </div>
+
+            {/* Футер с полем ввода */}
             <div
               style={{
                 borderTop: `1px solid ${token.colorBorderSecondary}`,
@@ -416,7 +450,7 @@ export default function Chat() {
                     }
                   }}
                   autoSize={{ minRows: 2, maxRows: 5 }}
-                  disabled={sending}
+                  disabled={sending || selectedId == null}
                   style={{ resize: 'none', borderRadius: 12 }}
                 />
                 <Button
@@ -424,9 +458,16 @@ export default function Chat() {
                   icon={<SendOutlined />}
                   loading={sending}
                   onClick={handleSend}
+                  disabled={!canSend}
                   style={{ alignSelf: 'stretch', borderRadius: 999 }}
                 />
               </div>
+              <Typography.Text
+                type="secondary"
+                style={{ fontSize: 11, marginTop: 6, display: 'block' }}
+              >
+                Enter — отправить, Shift + Enter — перенос строки
+              </Typography.Text>
             </div>
           </>
         )}
