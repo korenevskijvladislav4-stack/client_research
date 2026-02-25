@@ -225,14 +225,6 @@ export default function Promos() {
       render: (v: string) => v || '—',
     },
     {
-      key: 'mechanics',
-      title: 'Механика',
-      dataIndex: 'mechanics',
-      width: 160,
-      ellipsis: true,
-      render: (v: string) => v || '—',
-    },
-    {
       key: 'min_bet',
       title: 'Мин. ставка для участия',
       dataIndex: 'min_bet',
@@ -419,9 +411,20 @@ export default function Promos() {
               <Descriptions.Item label="Название турнира">
                 {selectedPromo.name}
               </Descriptions.Item>
-              <Descriptions.Item label="Период проведения">
-                {fmtDate(selectedPromo.period_start)} – {fmtDate(selectedPromo.period_end)}
+              <Descriptions.Item label="Тип периода">
+                {selectedPromo.period_type === 'daily'
+                  ? 'Ежедневный'
+                  : selectedPromo.period_type === 'weekly'
+                  ? 'Еженедельный'
+                  : selectedPromo.period_type === 'monthly'
+                  ? 'Ежемесячный'
+                  : 'Фиксированные даты'}
               </Descriptions.Item>
+              {(selectedPromo.period_start || selectedPromo.period_end) && (
+                <Descriptions.Item label="Период проведения">
+                  {fmtDate(selectedPromo.period_start)} – {fmtDate(selectedPromo.period_end)}
+                </Descriptions.Item>
+              )}
               <Descriptions.Item label="Провайдер">
                 {selectedPromo.provider || '—'}
               </Descriptions.Item>
@@ -436,6 +439,9 @@ export default function Promos() {
               </Descriptions.Item>
               <Descriptions.Item label="Вейджер на приз">
                 {selectedPromo.wagering_prize || '—'}
+              </Descriptions.Item>
+              <Descriptions.Item label="Кнопка участия">
+                {selectedPromo.has_participation_button ? 'Да' : 'Нет'}
               </Descriptions.Item>
               <Descriptions.Item label="Статус">
                 <Tag color={statusColors[selectedPromo.status]}>
