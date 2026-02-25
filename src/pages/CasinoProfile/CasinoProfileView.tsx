@@ -1190,10 +1190,21 @@ export default function CasinoProfileView() {
             { title: 'Тип турнира', dataIndex: 'promo_type', width: 110, ellipsis: true, render: (v: string) => v || '—' },
             { title: 'Название турнира', dataIndex: 'name', width: 180, ellipsis: true },
             {
+              title: 'Тип периода',
+              width: 120,
+              render: (_: any, r: CasinoPromo) => {
+                const t = r.period_type ?? 'fixed';
+                if (t === 'daily') return 'Ежедневный';
+                if (t === 'weekly') return 'Еженедельный';
+                if (t === 'monthly') return 'Ежемесячный';
+                return 'Фикс. даты';
+              },
+            },
+            {
               title: 'Период проведения',
               width: 150,
               render: (_: any, r: CasinoPromo) => {
-                if (!r.period_start && !r.period_end) return '—';
+                if (!r.period_start && !r.period_end) return '';
                 const s = r.period_start ? dayjs(r.period_start).format('DD.MM.YY') : '?';
                 const e = r.period_end ? dayjs(r.period_end).format('DD.MM.YY') : '?';
                 return `${s} – ${e}`;
@@ -1258,11 +1269,26 @@ export default function CasinoProfileView() {
               <Descriptions.Item label="Название турнира">
                 {viewingPromo.name}
               </Descriptions.Item>
-              <Descriptions.Item label="Период проведения">
-                {(viewingPromo.period_start ? dayjs(viewingPromo.period_start).format('DD.MM.YYYY') : '—')}
-                {' – '}
-                {(viewingPromo.period_end ? dayjs(viewingPromo.period_end).format('DD.MM.YYYY') : '—')}
+              <Descriptions.Item label="Тип периода">
+                {viewingPromo.period_type === 'daily'
+                  ? 'Ежедневный'
+                  : viewingPromo.period_type === 'weekly'
+                  ? 'Еженедельный'
+                  : viewingPromo.period_type === 'monthly'
+                  ? 'Ежемесячный'
+                  : 'Фиксированные даты'}
               </Descriptions.Item>
+              {(viewingPromo.period_start || viewingPromo.period_end) && (
+                <Descriptions.Item label="Период проведения">
+                  {viewingPromo.period_start
+                    ? dayjs(viewingPromo.period_start).format('DD.MM.YYYY')
+                    : '—'}
+                  {' – '}
+                  {viewingPromo.period_end
+                    ? dayjs(viewingPromo.period_end).format('DD.MM.YYYY')
+                    : '—'}
+                </Descriptions.Item>
+              )}
               <Descriptions.Item label="Провайдер">
                 {viewingPromo.provider || '—'}
               </Descriptions.Item>
@@ -1277,6 +1303,9 @@ export default function CasinoProfileView() {
               </Descriptions.Item>
               <Descriptions.Item label="Вейджер на приз">
                 {viewingPromo.wagering_prize || '—'}
+              </Descriptions.Item>
+              <Descriptions.Item label="Кнопка участия">
+                {viewingPromo.has_participation_button ? 'Да' : 'Нет'}
               </Descriptions.Item>
               <Descriptions.Item label="Статус">
                 <Tag color={({ active: 'green', paused: 'orange', expired: 'red', draft: 'default' } as Record<PromoStatus, string>)[viewingPromo.status] ?? 'default'}>

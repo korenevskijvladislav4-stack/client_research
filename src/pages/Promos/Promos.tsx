@@ -188,11 +188,23 @@ export default function Promos() {
       ellipsis: true,
     },
     {
+      key: 'period_type',
+      title: 'Тип периода',
+      width: 130,
+      render: (_: any, r: any) => {
+        const t = r.period_type ?? 'fixed';
+        if (t === 'daily') return 'Ежедневный';
+        if (t === 'weekly') return 'Еженедельный';
+        if (t === 'monthly') return 'Ежемесячный';
+        return 'Фикс. даты';
+      },
+    },
+    {
       key: 'period',
       title: 'Период проведения',
       width: 160,
       render: (_: any, r: any) => {
-        if (!r.period_start && !r.period_end) return '—';
+        if (!r.period_start && !r.period_end) return '';
         return `${fmtDate(r.period_start)} – ${fmtDate(r.period_end)}`;
       },
     },
