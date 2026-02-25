@@ -19,6 +19,7 @@ import Users from './pages/Users/Users';
 import Accounts from './pages/Accounts/Accounts';
 import TransactionHistory from './pages/Accounts/TransactionHistory';
 import ScreenshotsGallery from './pages/ScreenshotsGallery/ScreenshotsGallery';
+import Chat from './pages/Chat/Chat';
 
 import EmailAnalytics from './pages/EmailAnalytics/EmailAnalytics';
 import ProviderAnalytics from './pages/ProviderAnalytics/ProviderAnalytics';
@@ -56,6 +57,7 @@ function App() {
         <Route path="email-topics" element={<EmailTopics />} />
         <Route path="users" element={<Users />} />
         <Route path="screenshots" element={<ScreenshotsGallery />} />
+        <Route path="chat" element={<Chat />} />
       </Route>
     </Routes>
   );
