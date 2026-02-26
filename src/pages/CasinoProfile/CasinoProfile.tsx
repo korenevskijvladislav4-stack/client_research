@@ -2164,12 +2164,24 @@ export default function CasinoProfile() {
           columns={[
             { title: 'GEO', dataIndex: 'geo', width: 60 },
             {
-              title: 'Турнир / Акция',
+              title: 'Категория',
               dataIndex: 'promo_category',
               width: 110,
               render: (v: PromoCategory) => (
-                <Tag color={v === 'tournament' ? 'blue' : 'purple'}>
-                  {v === 'tournament' ? 'Турнир' : 'Акция'}
+                <Tag
+                  color={
+                    v === 'tournament'
+                      ? 'blue'
+                      : v === 'promotion'
+                      ? 'purple'
+                      : 'gold'
+                  }
+                >
+                  {v === 'tournament'
+                    ? 'Турнир'
+                    : v === 'promotion'
+                    ? 'Акция'
+                    : 'Лотерея'}
                 </Tag>
               ),
             },
@@ -2326,11 +2338,12 @@ export default function CasinoProfile() {
               />
             </Form.Item>
 
-            <Form.Item name="promo_category" label="Турнир / Акция" initialValue="tournament">
+            <Form.Item name="promo_category" label="Категория" initialValue="tournament">
               <Select
                 options={[
                   { value: 'tournament', label: 'Турнир' },
                   { value: 'promotion', label: 'Акция' },
+                  { value: 'lottery', label: 'Лотерея' },
                 ]}
               />
             </Form.Item>

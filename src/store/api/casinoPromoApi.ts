@@ -1,7 +1,7 @@
 import { baseApi } from './baseApi';
 import { PaginationInfo, QueryParams, buildQueryString } from '../../types/api.types';
 
-export type PromoCategory = 'tournament' | 'promotion';
+export type PromoCategory = 'tournament' | 'promotion' | 'lottery';
 export type PromoStatus = 'active' | 'paused' | 'expired' | 'draft';
 
 export interface CasinoPromo {

@@ -1178,12 +1178,24 @@ export default function CasinoProfileView() {
           columns={[
             { title: 'GEO', dataIndex: 'geo', width: 60 },
             {
-              title: 'Турнир / Акция',
+              title: 'Категория',
               dataIndex: 'promo_category',
               width: 110,
               render: (v: PromoCategory) => (
-                <Tag color={v === 'tournament' ? 'blue' : 'purple'}>
-                  {v === 'tournament' ? 'Турнир' : 'Акция'}
+                <Tag
+                  color={
+                    v === 'tournament'
+                      ? 'blue'
+                      : v === 'promotion'
+                      ? 'purple'
+                      : 'gold'
+                  }
+                >
+                  {v === 'tournament'
+                    ? 'Турнир'
+                    : v === 'promotion'
+                    ? 'Акция'
+                    : 'Лотерея'}
                 </Tag>
               ),
             },
@@ -1234,9 +1246,21 @@ export default function CasinoProfileView() {
 
       <Modal
         title={
-          <Space align="center">
-            <Tag color={viewingPromo?.promo_category === 'tournament' ? 'blue' : 'purple'}>
-              {viewingPromo?.promo_category === 'tournament' ? 'Турнир' : 'Акция'}
+              <Space align="center">
+            <Tag
+              color={
+                viewingPromo?.promo_category === 'tournament'
+                  ? 'blue'
+                  : viewingPromo?.promo_category === 'promotion'
+                  ? 'purple'
+                  : 'gold'
+              }
+            >
+              {viewingPromo?.promo_category === 'tournament'
+                ? 'Турнир'
+                : viewingPromo?.promo_category === 'promotion'
+                ? 'Акция'
+                : 'Лотерея'}
             </Tag>
             <span>{viewingPromo?.name || 'Промо'}</span>
           </Space>
@@ -1258,9 +1282,21 @@ export default function CasinoProfileView() {
               <Descriptions.Item label="Конкурент">
                 {casino?.name || '—'}
               </Descriptions.Item>
-              <Descriptions.Item label="Турнир / Акция">
-                <Tag color={viewingPromo.promo_category === 'tournament' ? 'blue' : 'purple'}>
-                  {viewingPromo.promo_category === 'tournament' ? 'Турнир' : 'Акция'}
+              <Descriptions.Item label="Категория">
+                <Tag
+                  color={
+                    viewingPromo.promo_category === 'tournament'
+                      ? 'blue'
+                      : viewingPromo.promo_category === 'promotion'
+                      ? 'purple'
+                      : 'gold'
+                  }
+                >
+                  {viewingPromo.promo_category === 'tournament'
+                    ? 'Турнир'
+                    : viewingPromo.promo_category === 'promotion'
+                    ? 'Акция'
+                    : 'Лотерея'}
                 </Tag>
               </Descriptions.Item>
               <Descriptions.Item label="Тип турнира">

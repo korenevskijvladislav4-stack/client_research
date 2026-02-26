@@ -5,10 +5,8 @@ import {
   Card,
   Image,
   Input,
-  Pagination,
   Popconfirm,
   Space,
-  Tag,
   Timeline,
   Typography,
   Upload,
@@ -18,8 +16,6 @@ import {
 import {
   CommentOutlined,
   DeleteOutlined,
-  EditOutlined,
-  HistoryOutlined,
   PictureOutlined,
   PlusOutlined,
   UnorderedListOutlined,
@@ -35,46 +31,14 @@ import {
   useUploadCommentImageMutation,
   CasinoCommentImage,
 } from '../../../store/api/casinoCommentApi';
-import {
-  useGetCasinoHistoryQuery,
-  type HistoryEntry,
-} from '../../../store/api/casinoHistoryApi';
-
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-type ActivityTab = 'all' | 'comments' | 'history';
+type ActivityTab = 'all' | 'comments';
 
 interface CasinoActivityProps {
   casinoId: number;
-}
-
-// ---------------------------------------------------------------------------
-// History helpers
-// ---------------------------------------------------------------------------
-
-const ACTION_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
-  set_value:     { label: 'изменил(а)', color: 'blue',    icon: <EditOutlined /> },
-  clear_value:   { label: 'очистил(а)', color: 'default', icon: <DeleteOutlined /> },
-  create_field:  { label: 'создал(а) поле', color: 'green', icon: <PlusOutlined /> },
-  update_field:  { label: 'обновил(а) поле', color: 'orange', icon: <EditOutlined /> },
-  delete_field:  { label: 'удалил(а) поле', color: 'red',  icon: <DeleteOutlined /> },
-};
-
-function formatValue(val: any): string {
-  if (val == null) return '—';
-  if (typeof val === 'boolean') return val ? 'Да' : 'Нет';
-  if (typeof val === 'object') {
-    try {
-      const str = JSON.stringify(val);
-      return str.length > 80 ? str.slice(0, 80) + '…' : str;
-    } catch {
-      return String(val);
-    }
-  }
-  const str = String(val);
-  return str.length > 80 ? str.slice(0, 80) + '…' : str;
 }
 
 // ---------------------------------------------------------------------------
@@ -83,7 +47,7 @@ function formatValue(val: any): string {
 
 interface TimelineItem {
   id: string;
-  type: 'comment' | 'history';
+  type: 'comment';
   date: string;
   // comment fields
   commentId?: number;
@@ -91,11 +55,7 @@ interface TimelineItem {
   username?: string;
   text?: string;
   images?: CasinoCommentImage[];
-  // history fields
-  entry?: HistoryEntry;
 }
-
-const HISTORY_PAGE_SIZE = 50;
 
 // ---------------------------------------------------------------------------
 // Component
@@ -104,7 +64,6 @@ const HISTORY_PAGE_SIZE = 50;
 export default function CasinoActivity({ casinoId }: CasinoActivityProps) {
   const { token: themeToken } = theme.useToken();
   const [tab, setTab] = useState<ActivityTab>('comments');
-  const [historyPage, setHistoryPage] = useState(1);
 
   // ---- Data fetching ----
   const { data: comments, isLoading: commentsLoading } = useGetCasinoCommentsQuery(casinoId, {
@@ -113,10 +72,6 @@ export default function CasinoActivity({ casinoId }: CasinoActivityProps) {
   const { data: allImages = [] } = useGetCasinoImagesQuery(casinoId, {
     skip: !casinoId,
   } as any);
-  const { data: historyResp, isLoading: historyLoading } = useGetCasinoHistoryQuery(
-    { casinoId, limit: HISTORY_PAGE_SIZE, offset: (historyPage - 1) * HISTORY_PAGE_SIZE },
-    { skip: !casinoId },
-  );
 
   // ---- Mutations ----
   const [createComment, { isLoading: creatingComment }] = useCreateCommentMutation();
@@ -129,9 +84,6 @@ export default function CasinoActivity({ casinoId }: CasinoActivityProps) {
   const currentUser = useSelector((state: any) => state.auth.user);
 
   // ---- Derived ----
-  const entries = historyResp?.data ?? [];
-  const historyTotal = historyResp?.total ?? 0;
-
   const imagesByCommentId = useMemo(() => {
     const map = new Map<number, CasinoCommentImage[]>();
     for (const img of allImages) {
@@ -160,18 +112,9 @@ export default function CasinoActivity({ casinoId }: CasinoActivityProps) {
       });
     }
 
-    for (const h of entries) {
-      items.push({
-        id: `h-${h.id}`,
-        type: 'history',
-        date: h.created_at,
-        entry: h,
-      });
-    }
-
     items.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     return items;
-  }, [comments, entries, imagesByCommentId]);
+  }, [comments, imagesByCommentId]);
 
   // ---- Handlers ----
   const handleAddComment = async () => {
@@ -217,7 +160,6 @@ export default function CasinoActivity({ casinoId }: CasinoActivityProps) {
   const tabs: { key: ActivityTab; label: string; icon: React.ReactNode }[] = [
     { key: 'all', label: 'Все', icon: <UnorderedListOutlined /> },
     { key: 'comments', label: `Комментарии${comments?.length ? ` (${comments.length})` : ''}`, icon: <CommentOutlined /> },
-    { key: 'history', label: `История${historyTotal ? ` (${historyTotal})` : ''}`, icon: <HistoryOutlined /> },
   ];
 
   // ---- Renderers ----
@@ -352,70 +294,8 @@ export default function CasinoActivity({ casinoId }: CasinoActivityProps) {
     </div>
   );
 
-  const renderHistoryItem = (h: HistoryEntry) => {
-    const cfg = ACTION_CONFIG[h.action] || { label: h.action, color: 'default', icon: <EditOutlined /> };
-    const fieldName = h.field_label || h.field_key || '';
-
-    return (
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-        <Avatar size={28} icon={<UserOutlined />} style={{ flexShrink: 0 }} />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-            <Typography.Text strong style={{ fontSize: 13 }}>
-              {h.actor_username || 'Система'}
-            </Typography.Text>
-            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-              {cfg.label}
-            </Typography.Text>
-            {fieldName && (
-              <Tag color={cfg.color} style={{ margin: 0, fontSize: 11 }}>
-                {fieldName}
-              </Tag>
-            )}
-            <Typography.Text type="secondary" style={{ fontSize: 11, marginLeft: 'auto', flexShrink: 0 }}>
-              {dayjs(h.created_at).format('DD.MM.YYYY HH:mm')}
-            </Typography.Text>
-          </div>
-          {(h.old_value_json != null || h.new_value_json != null) && (
-            <div
-              style={{
-                marginTop: 4,
-                padding: '4px 8px',
-                borderRadius: 4,
-                background: themeToken.colorFillQuaternary,
-                fontSize: 12,
-                display: 'flex',
-                gap: 8,
-                flexWrap: 'wrap',
-              }}
-            >
-              {h.old_value_json != null && (
-                <span>
-                  <Typography.Text type="secondary" style={{ fontSize: 11 }}>Было: </Typography.Text>
-                  <Typography.Text delete type="secondary" style={{ fontSize: 12 }}>
-                    {formatValue(h.old_value_json)}
-                  </Typography.Text>
-                </span>
-              )}
-              {h.new_value_json != null && (
-                <span>
-                  <Typography.Text type="secondary" style={{ fontSize: 11 }}>Стало: </Typography.Text>
-                  <Typography.Text style={{ fontSize: 12 }}>
-                    {formatValue(h.new_value_json)}
-                  </Typography.Text>
-                </span>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
-
   // ---- Which items to show ----
   const visibleItems = useMemo(() => {
-    if (tab === 'comments') return mergedItems.filter((i) => i.type === 'comment');
-    if (tab === 'history') return mergedItems.filter((i) => i.type === 'history');
     return mergedItems;
   }, [tab, mergedItems]);
 
@@ -426,7 +306,7 @@ export default function CasinoActivity({ casinoId }: CasinoActivityProps) {
           Активность
         </Typography.Title>
       }
-      loading={commentsLoading || historyLoading}
+      loading={commentsLoading}
     >
       {/* Tab switcher (Jira-style pill buttons) */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 16 }}>
@@ -448,42 +328,23 @@ export default function CasinoActivity({ casinoId }: CasinoActivityProps) {
         ))}
       </div>
 
-      {/* Comment form — show on "all" and "comments" tabs */}
-      {tab !== 'history' && renderCommentForm()}
+      {/* Comment form */}
+      {renderCommentForm()}
 
       {/* Activity feed */}
       {visibleItems.length === 0 ? (
         <Typography.Text type="secondary" style={{ display: 'block', textAlign: 'center', padding: '24px 0' }}>
-          {tab === 'comments' ? 'Нет комментариев' : tab === 'history' ? 'Нет записей в истории' : 'Нет активности'}
+          {tab === 'comments' ? 'Нет комментариев' : 'Нет активности'}
         </Typography.Text>
       ) : (
         <Timeline
           items={visibleItems.map((item) => ({
             key: item.id,
-            color: item.type === 'comment' ? themeToken.colorPrimary : themeToken.colorTextQuaternary,
-            dot: item.type === 'comment'
-              ? <CommentOutlined style={{ fontSize: 14 }} />
-              : <HistoryOutlined style={{ fontSize: 14 }} />,
-            children: item.type === 'comment'
-              ? renderCommentItem(item)
-              : renderHistoryItem(item.entry!),
+            color: themeToken.colorPrimary,
+            dot: <CommentOutlined style={{ fontSize: 14 }} />,
+            children: renderCommentItem(item),
           }))}
         />
-      )}
-
-      {/* History pagination (only when enough entries) */}
-      {tab !== 'comments' && historyTotal > HISTORY_PAGE_SIZE && (
-        <div style={{ textAlign: 'right', marginTop: 8 }}>
-          <Pagination
-            size="small"
-            current={historyPage}
-            total={historyTotal}
-            pageSize={HISTORY_PAGE_SIZE}
-            showSizeChanger={false}
-            showTotal={(t, r) => `${r[0]}-${r[1]} из ${t}`}
-            onChange={setHistoryPage}
-          />
-        </div>
       )}
     </Card>
   );

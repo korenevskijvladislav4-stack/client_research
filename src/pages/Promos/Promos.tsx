@@ -56,6 +56,7 @@ const COLUMN_CONFIG: ColumnConfig[] = [
 const categoryLabels: Record<PromoCategory, string> = {
   tournament: 'Турнир',
   promotion: 'Акция',
+  lottery: 'Лотерея',
 };
 
 const statusLabels: Record<PromoStatus, string> = {
@@ -163,11 +164,19 @@ export default function Promos() {
     },
     {
       key: 'promo_category',
-      title: 'Турнир / Акция',
+      title: 'Категория',
       dataIndex: 'promo_category',
       width: 120,
       render: (v: PromoCategory) => (
-        <Tag color={v === 'tournament' ? 'blue' : 'purple'}>
+        <Tag
+          color={
+            v === 'tournament'
+              ? 'blue'
+              : v === 'promotion'
+              ? 'purple'
+              : 'gold'
+          }
+        >
           {categoryLabels[v] || v}
         </Tag>
       ),
@@ -317,6 +326,7 @@ export default function Promos() {
             options={[
               { value: 'tournament', label: 'Турнир' },
               { value: 'promotion', label: 'Акция' },
+              { value: 'lottery', label: 'Лотерея' },
             ]}
             style={{ width: '100%', maxWidth: 130, minWidth: 110 }}
             allowClear
@@ -377,7 +387,15 @@ export default function Promos() {
       <Modal
         title={
           <Space align="center">
-            <Tag color={selectedPromo?.promo_category === 'tournament' ? 'blue' : 'purple'}>
+            <Tag
+              color={
+                selectedPromo?.promo_category === 'tournament'
+                  ? 'blue'
+                  : selectedPromo?.promo_category === 'promotion'
+                  ? 'purple'
+                  : 'gold'
+              }
+            >
               {selectedPromo ? categoryLabels[selectedPromo.promo_category] : ''}
             </Tag>
             <span>{selectedPromo?.name || 'Промо'}</span>

@@ -46,42 +46,14 @@ export function useColumnSettings(tableKey: string, allColumns: ColumnConfig[]) 
   }, [cookieKey]);
 
   // Состояние видимых колонок
+  // На старте берём всё, что лежит в cookie (даже если каких‑то колонок ещё нет —
+  // они могут подгрузиться позже, например, динамические поля профиля казино).
   const [visibleKeys, setVisibleKeys] = useState<string[]>(() => {
-    if (savedFromCookie) {
-      const validKeys = allColumns.length > 0
-        ? savedFromCookie.filter((k) => allColumns.some((c) => c.key === k))
-        : savedFromCookie;
-      if (validKeys.length > 0) return validKeys;
+    if (savedFromCookie && savedFromCookie.length > 0) {
+      return savedFromCookie;
     }
     return getDefaultVisible(allColumns);
   });
-
-  // Когда allColumns меняется (например, загрузились profileFields)
-  // Валидируем сохранённые ключи, сбрасываем на дефолтные если ни один не совпал
-  useEffect(() => {
-    if (allColumns.length === 0) return;
-
-    setVisibleKeys((prev) => {
-      if (prev.length === 0) {
-        if (savedFromCookie && savedFromCookie.length > 0) {
-          const valid = savedFromCookie.filter((k) =>
-            allColumns.some((c) => c.key === k)
-          );
-          if (valid.length > 0) return valid;
-        }
-        return getDefaultVisible(allColumns);
-      }
-
-      const validPrev = prev.filter((k) => allColumns.some((c) => c.key === k));
-      if (validPrev.length === 0) {
-        return getDefaultVisible(allColumns);
-      }
-      if (validPrev.length !== prev.length) {
-        return validPrev;
-      }
-      return prev;
-    });
-  }, [allColumns, savedFromCookie, getDefaultVisible]);
 
   // Сохраняем в cookie при изменении
   useEffect(() => {
