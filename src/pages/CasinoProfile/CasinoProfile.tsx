@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Avatar,
@@ -8,6 +8,7 @@ import {
   Col,
   Descriptions,
   Drawer,
+  Dropdown,
   Form,
   Input,
   InputNumber,
@@ -203,9 +204,25 @@ export default function CasinoProfile() {
   const nav = useNavigate();
 
   const { data: casino, isLoading: casinoLoading } = useGetCasinoByIdQuery(casinoId);
-  const { data: profileResp, isLoading: profileLoading } = useGetCasinoProfileQuery(casinoId, {
-    skip: !casinoId,
-  } as any);
+
+  const casinoGeos = useMemo(() => casino?.geo ?? [], [casino?.geo]);
+  const [activeGeo, setActiveGeo] = useState<string | undefined>(() =>
+    Array.isArray(casinoGeos) && casinoGeos.length > 0 ? casinoGeos[0] : undefined,
+  );
+
+  // Когда данные казино подгружаются/обновляются, берем первым GEO по умолчанию
+  useEffect(() => {
+    if (!activeGeo && Array.isArray(casinoGeos) && casinoGeos.length > 0) {
+      setActiveGeo(casinoGeos[0]);
+    }
+  }, [casinoGeos, activeGeo]);
+
+  const { data: profileResp, isLoading: profileLoading } = useGetCasinoProfileQuery(
+    { casinoId, geo: activeGeo },
+    {
+      skip: !casinoId,
+    } as any,
+  );
   useGetCasinoProfileHistoryQuery(
     { casinoId, limit: 200 },
     { skip: !casinoId } as any
@@ -228,13 +245,12 @@ export default function CasinoProfile() {
 
   // Bonuses (per GEO)
   const { data: bonuses, isLoading: bonusesLoading } = useGetCasinoBonusesQuery(
-    { casinoId },
+    { casinoId, geo: activeGeo },
     { skip: !casinoId } as any
   );
   const [createBonus] = useCreateCasinoBonusMutation();
   const [updateBonus] = useUpdateCasinoBonusMutation();
   const [deleteBonus] = useDeleteCasinoBonusMutation();
-  const [activeGeo, setActiveGeo] = useState<string | undefined>(undefined);
   const [activeProviderGeo, setActiveProviderGeo] = useState<string | undefined>(undefined);
   const [activeDirection, setActiveDirection] = useState<'deposit' | 'withdrawal' | undefined>(undefined);
   const [imagesPage, setImagesPage] = useState(1);
@@ -259,7 +275,7 @@ export default function CasinoProfile() {
 
   // Payments (per GEO)
   const { data: payments, isLoading: paymentsLoading } = useGetCasinoPaymentsQuery(
-    { casinoId },
+    { casinoId, geo: activeGeo },
     { skip: !casinoId } as any
   );
   const [createPayment] = useCreateCasinoPaymentMutation();
@@ -280,7 +296,7 @@ export default function CasinoProfile() {
 
   // Promos
   const { data: promos, isLoading: promosLoading } = useGetCasinoPromosQuery(
-    { casinoId },
+    { casinoId, geo: activeGeo },
     { skip: !casinoId } as any
   );
   const [createPromo] = useCreateCasinoPromoMutation();
@@ -368,7 +384,7 @@ export default function CasinoProfile() {
   );
 
   const { data: casinoProviders = [], isLoading: casinoProvidersLoading } = useGetCasinoProvidersQuery(
-    { casinoId, geo: activeProviderGeo },
+    { casinoId, geo: activeProviderGeo ?? activeGeo },
     { skip: !casinoId }
   );
   const [addProviderToCasino] = useAddProviderToCasinoMutation();
@@ -495,6 +511,63 @@ export default function CasinoProfile() {
 
   return (
     <Space orientation="vertical" size={24} style={{ width: '100%' }}>
+      {casinoGeos.length > 0 && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 96,
+            right: 32,
+            zIndex: 50,
+          }}
+        >
+          <Dropdown
+            trigger={['click']}
+            menu={{
+              items: casinoGeos.map((g) => ({
+                key: g || 'ALL',
+                label: g || 'ALL',
+                onClick: () => setActiveGeo(g),
+              })),
+            }}
+          >
+            <Button
+              size="small"
+              type="default"
+              style={{
+                borderRadius: 999,
+                boxShadow: '0 8px 20px rgba(15, 23, 42, 0.35)',
+                paddingInline: 14,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                borderColor: 'rgba(148, 163, 184, 0.7)',
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 10,
+                  textTransform: 'uppercase',
+                  letterSpacing: 0.6,
+                  opacity: 0.7,
+                }}
+              >
+                GEO
+              </span>
+              <Tag
+                color="blue"
+                style={{
+                  margin: 0,
+                  borderRadius: 999,
+                  paddingInline: 8,
+                  fontSize: 11,
+                }}
+              >
+                {activeGeo || 'ALL'}
+              </Tag>
+            </Button>
+          </Dropdown>
+        </div>
+      )}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Space>
           <Button icon={<ArrowLeftOutlined />} onClick={() => nav('/casinos')} />
@@ -518,7 +591,7 @@ export default function CasinoProfile() {
                 field_id: it.field.id,
                 value_json: serializeValue(it.field, values[`f_${it.field.id}`]),
               }));
-              await updateProfile({ casinoId, items: payloadItems }).unwrap();
+              await updateProfile({ casinoId, items: payloadItems, geo: activeGeo }).unwrap();
               message.success('Профиль сохранён');
               // Перенаправление на страницу просмотра
               nav(`/casinos/${casinoId}`);
@@ -532,7 +605,23 @@ export default function CasinoProfile() {
         </Button>
       </div>
 
-      <Card>
+      <Card
+        title={
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: 12,
+              flexWrap: 'wrap',
+            }}
+          >
+            <Typography.Title level={5} style={{ margin: 0 }}>
+              Анкета казино
+            </Typography.Title>
+          </div>
+        }
+      >
         <Form form={form} layout="vertical" initialValues={initialValues} key={casinoId}>
           <Space orientation="vertical" size={24} style={{ width: '100%' }}>
             <div>
@@ -579,7 +668,7 @@ export default function CasinoProfile() {
             {items.length > 0 && (
               <div>
                 <Typography.Title level={5} style={{ margin: '24px 0 16px' }}>
-                  Дополнительные поля
+                  Дополнительные поля{activeGeo ? ` (${activeGeo})` : ''}
                 </Typography.Title>
                 <Descriptions
                   column={1}
@@ -706,17 +795,6 @@ export default function CasinoProfile() {
           </div>
         }
       >
-        <Space style={{ marginBottom: 16 }}>
-          <Typography.Text type="secondary">Фильтр по GEO:</Typography.Text>
-          <Select
-            style={{ minWidth: 200 }}
-            allowClear
-            placeholder="Фильтр GEO"
-            value={activeGeo}
-            options={geoOptions}
-            onChange={(val) => setActiveGeo(val)}
-          />
-        </Space>
         <AccountsTable
           accounts={(accounts ?? []).filter((a) => (activeGeo ? a.geo === activeGeo : true))}
           isLoading={accountsLoading}
@@ -772,17 +850,6 @@ export default function CasinoProfile() {
           </div>
         }
       >
-        <Space style={{ marginBottom: 16 }}>
-          <Typography.Text type="secondary">Фильтр по GEO:</Typography.Text>
-          <Select
-            style={{ minWidth: 200 }}
-            allowClear
-            placeholder="Фильтр GEO"
-            value={activeGeo}
-            options={geoOptions}
-            onChange={(val) => setActiveGeo(val)}
-          />
-        </Space>
         <Table<SlotScreenshot>
           rowKey="selector_id"
           size="small"
@@ -910,7 +977,7 @@ export default function CasinoProfile() {
           </Typography.Title>
         }
       >
-        <ProfileSettingsTable casinoId={casinoId} activeGeo={activeGeo} onGeoChange={setActiveGeo} readOnly={false} casinoGeoCodes={casino?.geo} />
+        <ProfileSettingsTable casinoId={casinoId} activeGeo={activeGeo} readOnly={false} casinoGeoCodes={casino?.geo} />
       </Card>
 
       <Card
@@ -937,22 +1004,11 @@ export default function CasinoProfile() {
           </div>
         }
       >
-        <Space style={{ marginBottom: 16 }}>
-          <Typography.Text type="secondary">Фильтр по GEO:</Typography.Text>
-          <Select
-            style={{ minWidth: 200 }}
-            allowClear
-            placeholder="Фильтр GEO"
-            value={activeGeo}
-            options={geoOptions}
-            onChange={(val) => setActiveGeo(val)}
-          />
-        </Space>
         <Table<CasinoBonus>
           rowKey="id"
           size="small"
           loading={bonusesLoading}
-          dataSource={(bonuses ?? []).filter((b) => (activeGeo ? b.geo === activeGeo : true))}
+          dataSource={bonuses ?? []}
           pagination={false}
           scroll={{ x: 800 }}
           columns={[
@@ -1017,7 +1073,17 @@ export default function CasinoProfile() {
                 if (b.freespins_count) {
                   parts.push(`${fmt(b.freespins_count)} FS`);
                 }
-                if (b.cashback_percent) {
+                if (b.cashback_percent_min != null || b.cashback_percent_max != null) {
+                  const from = b.cashback_percent_min != null ? fmt(b.cashback_percent_min) : null;
+                  const to = b.cashback_percent_max != null ? fmt(b.cashback_percent_max) : null;
+                  if (from != null && to != null) {
+                    parts.push(`${from}–${to}%`);
+                  } else if (from != null) {
+                    parts.push(`${from}%`);
+                  } else if (to != null) {
+                    parts.push(`${to}%`);
+                  }
+                } else if (b.cashback_percent != null) {
                   parts.push(`${fmt(b.cashback_percent)}%`);
                 }
                 return parts.length > 0 ? parts.join('+') : '—';
@@ -1598,7 +1664,19 @@ export default function CasinoProfile() {
                   <Form.Item
                     name="bonus_type"
                     label="Тип бонуса"
-                    rules={[{ required: true, message: 'Выберите тип бонуса' }]}
+                    rules={[
+                      {
+                        validator: (_, value) => {
+                          if (selectedBonusKind === 'cashback' || selectedBonusKind === 'rakeback') {
+                            return Promise.resolve();
+                          }
+                          if (!value) {
+                            return Promise.reject(new Error('Выберите тип бонуса'));
+                          }
+                          return Promise.resolve();
+                        },
+                      },
+                    ]}
                   >
                     <Select
                       placeholder="Выберите тип"
@@ -1629,7 +1707,7 @@ export default function CasinoProfile() {
               <Card size="small" style={{ marginBottom: 16 }} title="Параметры кешбека / рейкбека">
                 <Row gutter={16}>
                   <Col span={12}>
-                    <Form.Item name="cashback_percent" label="Процент возврата">
+                    <Form.Item name="cashback_percent_min" label="Мин. процент возврата">
                       <InputNumber
                         style={{ width: '100%' }}
                         min={0}
@@ -1639,6 +1717,19 @@ export default function CasinoProfile() {
                       />
                     </Form.Item>
                   </Col>
+                  <Col span={12}>
+                    <Form.Item name="cashback_percent_max" label="Макс. процент возврата">
+                      <InputNumber
+                        style={{ width: '100%' }}
+                        min={0}
+                        max={100}
+                        addonAfter="%"
+                        placeholder="25"
+                      />
+                    </Form.Item>
+                  </Col>
+                </Row>
+                <Row gutter={16}>
                   <Col span={12}>
                     <Form.Item name="cashback_period" label="Период">
                       <Select
@@ -2142,23 +2233,11 @@ export default function CasinoProfile() {
           </div>
         }
       >
-        <Space style={{ marginBottom: 16 }} wrap>
-          <Typography.Text type="secondary">GEO:</Typography.Text>
-          <Select
-            style={{ minWidth: 120 }}
-            placeholder="Все"
-            allowClear
-            value={activeGeo}
-            onChange={setActiveGeo}
-            options={geoOptions}
-          />
-        </Space>
-
         <Table<CasinoPromo>
           rowKey="id"
           size="small"
           loading={promosLoading}
-          dataSource={(promos ?? []).filter((p) => (activeGeo ? p.geo === activeGeo : true))}
+          dataSource={promos ?? []}
           pagination={false}
           scroll={{ x: 1000 }}
           columns={[
@@ -2608,20 +2687,8 @@ export default function CasinoProfile() {
         </Drawer>
       </Card>
 
-      {/* Подключенные провайдеры (в срезе GEO) */}
+      {/* Подключенные провайдеры */}
       <Card title={<Typography.Text strong>Подключённые провайдеры</Typography.Text>}>
-        <Space style={{ marginBottom: 16 }} wrap align="center">
-          <Typography.Text type="secondary">GEO:</Typography.Text>
-          <Select
-            style={{ minWidth: 120 }}
-            placeholder="Выберите GEO"
-            allowClear
-            value={activeProviderGeo}
-            onChange={setActiveProviderGeo}
-            options={geoOptions}
-          />
-        </Space>
-
         {activeProviderGeo && (
           <>
             <div style={{ marginBottom: 16, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
@@ -2785,15 +2852,6 @@ export default function CasinoProfile() {
             ]}
             onChange={(val) => setActiveDirection(val)}
           />
-          <Typography.Text type="secondary">GEO:</Typography.Text>
-          <Select
-            style={{ minWidth: 200 }}
-            allowClear
-            placeholder="Фильтр GEO"
-            value={activeGeo}
-            options={geoOptions}
-            onChange={(val) => setActiveGeo(val)}
-          />
         </Space>
         <Table<CasinoPayment>
           rowKey="id"
@@ -2801,7 +2859,6 @@ export default function CasinoProfile() {
           loading={paymentsLoading}
           dataSource={(payments ?? []).filter((p) => {
             if (activeDirection && (p.direction ?? 'deposit') !== activeDirection) return false;
-            if (activeGeo && p.geo !== activeGeo) return false;
             return true;
           })}
           pagination={false}

@@ -33,35 +33,112 @@ const Login = () => {
     <div
       style={{
         minHeight: '100vh',
-        display: 'grid',
-        placeItems: 'center',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
         padding: 16,
-        background: '#020617',
+        background:
+          'radial-gradient(circle at top left, #1d2344 0, #020617 55%), radial-gradient(circle at bottom right, #0f172a 0, #020617 55%)',
       }}
     >
-      <Card style={{ width: '100%', maxWidth: 400 }}>
-        <Space direction="vertical" size={24} style={{ width: '100%' }}>
-          <div style={{ textAlign: 'center' }}>
-            <Typography.Title level={3} style={{ marginBottom: 8, fontWeight: 500 }}>
-              Research CRM
-            </Typography.Title>
-            <Typography.Text type="secondary" style={{ fontSize: 14 }}>
-              Вход в систему
-            </Typography.Text>
-          </div>
-          <Form layout="vertical" form={form}>
-            <Form.Item name="email" label="Email" rules={[{ required: true }, { type: 'email' }]}>
-              <Input placeholder="admin@example.com" />
-            </Form.Item>
-            <Form.Item name="password" label="Пароль" rules={[{ required: true }]}>
-              <Input.Password placeholder="••••••••" />
-            </Form.Item>
-            <Button type="primary" block loading={loading} onClick={handleSubmit}>
-              Войти
-            </Button>
-          </Form>
-        </Space>
-      </Card>
+      <div
+        style={{
+          width: '100%',
+          maxWidth: 420,
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 16,
+            color: '#e2e8f0',
+          }}
+        >
+          <Space size={10} align="center">
+            <div
+              className="app-sider-logo-badge"
+              style={{
+                width: 34,
+                height: 34,
+                fontSize: 18,
+                boxShadow:
+                  '0 18px 40px rgba(15, 23, 42, 0.8), 0 0 0 1px rgba(15, 23, 42, 0.9)',
+              }}
+            >
+              R
+            </div>
+            <div>
+              <Typography.Title
+                level={4}
+                style={{ margin: 0, color: '#e2e8f0', letterSpacing: '-0.03em' }}
+              >
+                Research CRM
+              </Typography.Title>
+            </div>
+          </Space>
+
+          <Card
+            style={{
+              width: '100%',
+              borderRadius: 18,
+              boxShadow:
+                '0 20px 55px rgba(15, 23, 42, 0.9), 0 0 0 1px rgba(15, 23, 42, 0.9)',
+              border: '1px solid rgba(148,163,184,0.45)',
+              background:
+                'linear-gradient(145deg, rgba(15,23,42,0.96), rgba(15,23,42,0.98))',
+            }}
+            bodyStyle={{ padding: 28 }}
+          >
+            <Space direction="vertical" size={20} style={{ width: '100%' }}>
+              <div style={{ textAlign: 'left' }}>
+                <Typography.Title
+                  level={4}
+                  style={{
+                    marginBottom: 4,
+                    fontWeight: 600,
+                    color: '#e5e7eb',
+                    letterSpacing: '-0.03em',
+                  }}
+                >
+                  Вход в рабочее пространство
+                </Typography.Title>
+              </div>
+
+              <Form
+                layout="vertical"
+                form={form}
+                requiredMark={false}
+                onFinish={handleSubmit}
+              >
+                <Form.Item
+                  name="email"
+                  label="Email"
+                  rules={[{ required: true }, { type: 'email' }]}
+                >
+                  <Input placeholder="you@company.com" />
+                </Form.Item>
+                <Form.Item
+                  name="password"
+                  label="Пароль"
+                  rules={[{ required: true }]}
+                >
+                  <Input.Password placeholder="••••••••" />
+                </Form.Item>
+                <Button
+                  type="primary"
+                  block
+                  loading={loading}
+                  htmlType="submit"
+                  style={{ marginTop: 4 }}
+                >
+                  Войти в систему
+                </Button>
+              </Form>
+            </Space>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 };

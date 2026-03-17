@@ -23,7 +23,7 @@ export function ProfileSettingsTable({ casinoId, activeGeo, onGeoChange, readOnl
   const { data: contexts = [] } = useGetProfileContextsQuery();
   const { data: settings = [] } = useGetCasinoProfileSettingsQuery(
     { casinoId, geo: activeGeo || '' },
-    { skip: !activeGeo }
+    { skip: false }
   );
   const [updateSetting] = useUpdateProfileSettingMutation();
 
@@ -146,42 +146,14 @@ export function ProfileSettingsTable({ casinoId, activeGeo, onGeoChange, readOnl
 
   return (
     <div>
-      {/* GEO buttons */}
-      <Space style={{ marginBottom: 16 }} wrap>
-        <Button
-          size="small"
-          type={!activeGeo ? 'primary' : 'default'}
-          onClick={() => onGeoChange?.(undefined)}
-        >
-          Все
-        </Button>
-        {activeGeos.map((g) => (
-          <Button
-            key={g.code}
-            size="small"
-            type={activeGeo === g.code ? 'primary' : 'default'}
-            onClick={() => onGeoChange?.(g.code)}
-          >
-            {g.code}
-          </Button>
-        ))}
-      </Space>
-
-      {/* Table */}
-      {activeGeo ? (
-        <Table
-          dataSource={dataSource}
-          columns={columns}
-          pagination={false}
-          size="small"
-          bordered
-          scroll={{ x: 'max-content' }}
-        />
-      ) : (
-        <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
-          Выберите GEO для просмотра настроек профиля.
-        </div>
-      )}
+      <Table
+        dataSource={dataSource}
+        columns={columns}
+        pagination={false}
+        size="small"
+        bordered
+        scroll={{ x: 'max-content' }}
+      />
     </div>
   );
 }

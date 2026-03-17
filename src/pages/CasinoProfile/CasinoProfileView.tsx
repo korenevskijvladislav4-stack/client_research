@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Badge,
@@ -6,6 +6,7 @@ import {
   Card,
   Descriptions,
   Drawer,
+  Dropdown,
   List,
   Modal,
   Select,
@@ -145,19 +146,33 @@ export default function CasinoProfileView() {
   const { token } = theme.useToken();
 
   const { data: casino, isLoading: casinoLoading } = useGetCasinoByIdQuery(casinoId);
-  const { data: profileResp, isLoading: profileLoading } = useGetCasinoProfileQuery(casinoId, {
-    skip: !casinoId,
-  } as any);
+  const casinoGeos = useMemo(() => casino?.geo ?? [], [casino?.geo]);
+  const [activeGeo, setActiveGeo] = useState<string | undefined>(() =>
+    Array.isArray(casinoGeos) && casinoGeos.length > 0 ? casinoGeos[0] : undefined,
+  );
+
+  useEffect(() => {
+    if (!activeGeo && Array.isArray(casinoGeos) && casinoGeos.length > 0) {
+      setActiveGeo(casinoGeos[0]);
+    }
+  }, [casinoGeos, activeGeo]);
+
+  const { data: profileResp, isLoading: profileLoading } = useGetCasinoProfileQuery(
+    { casinoId, geo: activeGeo },
+    {
+      skip: !casinoId,
+    } as any,
+  );
 
   const items: CasinoProfileItem[] = profileResp?.profile ?? [];
 
   const { data: bonuses, isLoading: bonusesLoading } = useGetCasinoBonusesQuery(
-    { casinoId },
+    { casinoId, geo: activeGeo },
     { skip: !casinoId } as any
   );
 
   const { data: payments, isLoading: paymentsLoading } = useGetCasinoPaymentsQuery(
-    { casinoId },
+    { casinoId, geo: activeGeo },
     { skip: !casinoId } as any
   );
 
@@ -166,11 +181,9 @@ export default function CasinoProfileView() {
   });
 
   const { data: promos, isLoading: promosLoading } = useGetCasinoPromosQuery(
-    { casinoId },
+    { casinoId, geo: activeGeo },
     { skip: !casinoId } as any
   );
-
-  const [activeGeo, setActiveGeo] = useState<string | undefined>(undefined);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const { data: screenshots = [], isLoading: screenshotsLoading } = useGetScreenshotsByCasinoQuery(casinoId, {
@@ -179,7 +192,6 @@ export default function CasinoProfileView() {
   const [takeScreenshot, { isLoading: takingScreenshot }] = useTakeScreenshotMutation();
 
   // Только GEO, на которые работает казино (проект)
-  const casinoGeos = useMemo(() => casino?.geo ?? [], [casino?.geo]);
 
   const [selectedBonus, setSelectedBonus] = useState<CasinoBonus | null>(null);
   const [pendingBonusImages, setPendingBonusImages] = useState<File[]>([]);
@@ -232,9 +244,9 @@ export default function CasinoProfileView() {
     { skip: !casinoId || !viewingPromo?.id }
   );
   const [uploadPromoImages] = useUploadPromoImagesMutation();
-  const [activeProviderGeo, setActiveProviderGeo] = useState<string | undefined>(undefined);
+  const [activeProviderGeo] = useState<string | undefined>(undefined);
   const { data: casinoProviders = [], isLoading: casinoProvidersLoading } = useGetCasinoProvidersQuery(
-    { casinoId, geo: activeProviderGeo },
+    { casinoId, geo: activeProviderGeo ?? activeGeo },
     { skip: !casinoId }
   );
 
@@ -377,52 +389,161 @@ export default function CasinoProfileView() {
   };
 
   if (!casinoId) return <Card>Неверный id казино</Card>;
-  if (casinoLoading || profileLoading) return <Spin />;
+  if (casinoLoading || profileLoading) {
+    return (
+      <div
+        style={{
+          minHeight: '50vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Spin size="large" />
+      </div>
+    );
+  }
 
   return (
-    <Space orientation="vertical" size={24} style={{ width: '100%' }}>
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'flex-start',
-        flexWrap: 'wrap',
-        gap: 16
-      }}>
-        <Space wrap>
-          <Button icon={<ArrowLeftOutlined />} onClick={() => nav('/casinos')} />
-          <Space direction="vertical" size={0}>
-            <Typography.Title level={3} style={{ margin: 0, fontWeight: 500 }}>
-              {casino?.name}
-            </Typography.Title>
-            <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-              {casino?.website || '—'}
-            </Typography.Text>
+    <Space direction="vertical" size={24} style={{ width: '100%' }}>
+      {casinoGeos.length > 0 && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 96,
+            right: 32,
+            zIndex: 50,
+          }}
+        >
+          <Dropdown
+            trigger={['click']}
+            menu={{
+              items: casinoGeos.map((g) => ({
+                key: g || 'ALL',
+                label: g || 'ALL',
+                onClick: () => setActiveGeo(g),
+              })),
+            }}
+          >
+            <Button
+              size="small"
+              type="default"
+              style={{
+                borderRadius: 999,
+                boxShadow: '0 8px 20px rgba(15, 23, 42, 0.35)',
+                paddingInline: 14,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                borderColor: 'rgba(148, 163, 184, 0.7)',
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 10,
+                  textTransform: 'uppercase',
+                  letterSpacing: 0.6,
+                  opacity: 0.7,
+                }}
+              >
+                GEO
+              </span>
+              <Tag
+                color="blue"
+                style={{
+                  margin: 0,
+                  borderRadius: 999,
+                  paddingInline: 8,
+                  fontSize: 11,
+                }}
+              >
+                {activeGeo || 'ALL'}
+              </Tag>
+            </Button>
+          </Dropdown>
+        </div>
+      )}
+      {/* Верхний блок с основными действиями */}
+      <Card
+        style={{
+          borderRadius: 16,
+        }}
+        bodyStyle={{
+          padding: 18,
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            flexWrap: 'wrap',
+            gap: 16,
+          }}
+        >
+          <Space align="start" size={14} wrap>
+            <Button
+              icon={<ArrowLeftOutlined />}
+              onClick={() => nav('/casinos')}
+              style={{ borderRadius: 999 }}
+            />
+            <Space direction="vertical" size={4}>
+              <Typography.Title
+                level={3}
+                style={{ margin: 0, fontWeight: 600, letterSpacing: '-0.03em' }}
+              >
+                {casino?.name}
+              </Typography.Title>
+              <Space size={8} wrap>
+                <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+                  {casino?.website || 'Сайт не указан'}
+                </Typography.Text>
+                {casino?.is_our && <Tag color="green">Наш проект</Tag>}
+              </Space>
+            </Space>
           </Space>
-        </Space>
-        <Space wrap>
-          <Tooltip title="Сравнить с другим казино">
-            <Button icon={<SwapOutlined />} onClick={() => nav(`/casinos/compare?casino1=${casinoId}`)}>
-              Сравнить
+          <Space wrap align="center">
+            <Tooltip title="Сравнить это казино с другим">
+              <Button
+                size="small"
+                icon={<SwapOutlined />}
+                onClick={() => nav(`/casinos/compare?casino1=${casinoId}`)}
+              >
+                Сравнить
+              </Button>
+            </Tooltip>
+            <Tooltip title="Экспорт анкеты в интерактивный HTML с фильтрами и модальными окнами.">
+              <Button size="small" icon={<DownloadOutlined />} onClick={handleExportHtml}>
+                Экспорт в HTML
+              </Button>
+            </Tooltip>
+            <Button
+              type="primary"
+              size="small"
+              onClick={() => nav(`/casinos/${casinoId}/edit`)}
+            >
+              Редактировать анкету
             </Button>
-          </Tooltip>
-          <Tooltip title="Экспорт анкеты в интерактивный HTML: фильтры по GEO и получателю, просмотр бонусов и платежей в модальных окнах, просмотр писем.">
-            <Button icon={<DownloadOutlined />} onClick={handleExportHtml}>
-              Экспорт в HTML
-            </Button>
-          </Tooltip>
-          <Button type="primary" onClick={() => nav(`/casinos/${casinoId}/edit`)}>
-            Редактировать анкету
-          </Button>
-        </Space>
-      </div>
-
-      {/* Теги казино */}
-      <Card size="small">
-        <CasinoTags casinoId={casinoId} />
+          </Space>
+        </div>
       </Card>
 
-      <Card>
-        <Space orientation="vertical" size={24} style={{ width: '100%' }}>
+      {/* Теги и общая информация */}
+      <Space direction="vertical" size={16} style={{ width: '100%' }}>
+        <Card
+          size="small"
+          title={
+            <Space size={8}>
+              <Tag>Теги</Tag>
+              <Typography.Text strong>Классификация казино</Typography.Text>
+            </Space>
+          }
+        >
+          <CasinoTags casinoId={casinoId} />
+        </Card>
+
+        <Card>
+          <Space direction="vertical" size={24} style={{ width: '100%' }}>
           <div>
             <Typography.Title level={5} style={{ marginBottom: 16 }}>
               Общая информация
@@ -469,7 +590,7 @@ export default function CasinoProfileView() {
               <Divider style={{ margin: '24px 0 16px' }} />
               <div>
               <Typography.Title level={5} style={{ marginBottom: 16 }}>
-                Дополнительные поля
+                Дополнительные поля{activeGeo ? ` (${activeGeo})` : ''}
               </Typography.Title>
               <Descriptions
                 column={1}
@@ -498,8 +619,9 @@ export default function CasinoProfileView() {
               </div>
             </>
           )}
-        </Space>
-      </Card>
+          </Space>
+        </Card>
+      </Space>
 
       {/* Галерея изображений */}
       <Card
@@ -562,26 +684,6 @@ export default function CasinoProfileView() {
 
       {/* Аккаунты */}
       <Card title="Аккаунты">
-        <Space style={{ marginBottom: 16 }}>
-          <Typography.Text type="secondary">Фильтр по GEO:</Typography.Text>
-          <Button
-            size="small"
-            type={!activeGeo ? 'primary' : 'default'}
-            onClick={() => setActiveGeo(undefined)}
-          >
-            Все
-          </Button>
-          {casinoGeos.map((g) => (
-            <Button
-              key={g}
-              size="small"
-              type={activeGeo === g ? 'primary' : 'default'}
-              onClick={() => setActiveGeo(g)}
-            >
-              {g}
-            </Button>
-          ))}
-        </Space>
         <AccountsTable
           accounts={(accounts ?? []).filter((a) => (activeGeo ? a.geo === activeGeo : true))}
           isLoading={accountsLoading}
@@ -591,26 +693,6 @@ export default function CasinoProfileView() {
 
       {/* Скриншоты (Селекторы и скриншоты) */}
       <Card title="Скриншоты">
-        <Space style={{ marginBottom: 16 }}>
-          <Typography.Text type="secondary">Фильтр по GEO:</Typography.Text>
-          <Button
-            size="small"
-            type={!activeGeo ? 'primary' : 'default'}
-            onClick={() => setActiveGeo(undefined)}
-          >
-            Все
-          </Button>
-          {casinoGeos.map((g) => (
-            <Button
-              key={g}
-              size="small"
-              type={activeGeo === g ? 'primary' : 'default'}
-              onClick={() => setActiveGeo(g)}
-            >
-              {g}
-            </Button>
-          ))}
-        </Space>
         <Table<SlotScreenshot>
           rowKey="selector_id"
           size="small"
@@ -694,34 +776,20 @@ export default function CasinoProfileView() {
       <Card
         title={
           <Typography.Title level={5} style={{ margin: 0 }}>
-            Настройки профиля
+            Настройки профиля{activeGeo ? ` (${activeGeo})` : ''}
           </Typography.Title>
         }
       >
-        <ProfileSettingsTable casinoId={casinoId} activeGeo={activeGeo} onGeoChange={setActiveGeo} readOnly={true} casinoGeoCodes={casino?.geo} />
+        <ProfileSettingsTable
+          casinoId={casinoId}
+          activeGeo={activeGeo}
+          onGeoChange={setActiveGeo}
+          readOnly={true}
+          casinoGeoCodes={casino?.geo}
+        />
       </Card>
 
-      <Card title="Бонусы">
-        <Space style={{ marginBottom: 16 }}>
-          <Typography.Text type="secondary">Фильтр по GEO:</Typography.Text>
-          <Button
-            size="small"
-            type={!activeGeo ? 'primary' : 'default'}
-            onClick={() => setActiveGeo(undefined)}
-          >
-            Все
-          </Button>
-          {casinoGeos.map((g) => (
-            <Button
-              key={g}
-              size="small"
-              type={activeGeo === g ? 'primary' : 'default'}
-              onClick={() => setActiveGeo(g)}
-            >
-              {g}
-            </Button>
-          ))}
-        </Space>
+      <Card title={`Бонусы${activeGeo ? ` (${activeGeo})` : ''}`}>
         <Table<CasinoBonus>
           rowKey="id"
           size="small"
@@ -1159,14 +1227,7 @@ export default function CasinoProfileView() {
       </Card>
 
       {/* Промо */}
-      <Card title="Промо">
-        <Space wrap style={{ marginBottom: 16 }}>
-          <Typography.Text type="secondary">GEO:</Typography.Text>
-          <Button size="small" type={activeGeo === undefined ? 'primary' : 'default'} onClick={() => setActiveGeo(undefined)}>Все</Button>
-          {casinoGeos.map((g) => (
-            <Button key={g} size="small" type={activeGeo === g ? 'primary' : 'default'} onClick={() => setActiveGeo(g)}>{g}</Button>
-          ))}
-        </Space>
+      <Card title={`Промо${activeGeo ? ` (${activeGeo})` : ''}`}>
 
         <Table<CasinoPromo>
           rowKey="id"
@@ -1486,18 +1547,7 @@ export default function CasinoProfileView() {
         )}
       </Modal>
 
-      <Card title="Подключённые провайдеры">
-        <Space wrap style={{ marginBottom: 16 }}>
-          <Typography.Text type="secondary">GEO:</Typography.Text>
-          <Button size="small" type={activeProviderGeo === undefined ? 'primary' : 'default'} onClick={() => setActiveProviderGeo(undefined)}>
-            Все
-          </Button>
-          {casinoGeos.map((g) => (
-            <Button key={g} size="small" type={activeProviderGeo === g ? 'primary' : 'default'} onClick={() => setActiveProviderGeo(g)}>
-              {g}
-            </Button>
-          ))}
-        </Space>
+      <Card title={`Подключённые провайдеры${(activeProviderGeo ?? activeGeo) ? ` (${activeProviderGeo ?? activeGeo})` : ''}`}>
         {casinoProvidersLoading ? (
           <Typography.Text type="secondary">Загрузка...</Typography.Text>
         ) : casinoProviders.length === 0 ? (

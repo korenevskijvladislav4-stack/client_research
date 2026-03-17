@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Layout, Menu, Button, theme, Switch, Space, Drawer, Typography } from 'antd';
+import { Layout, Menu, Button, theme, Switch, Space, Drawer, Typography, Avatar } from 'antd';
 import {
   BankOutlined,
   MailOutlined,
@@ -110,23 +110,19 @@ export function AppLayout() {
   // Determine sidebar theme and colors based on mode
   const siderTheme = mode === 'dark' ? 'dark' : 'light';
   const siderTextColor = mode === 'dark' ? token.colorTextLightSolid : token.colorText;
-  const siderSecondaryTextColor = mode === 'dark' ? token.colorTextSecondary : token.colorTextSecondary;
-  const siderBg = mode === 'dark' ? '#0f1629' : '#ffffff';
-  const themeToggleBg = mode === 'dark' ? 'rgba(129, 140, 248, 0.1)' : 'rgba(0,0,0,0.05)';
+  const siderSecondaryTextColor = token.colorTextSecondary;
+  const siderBg = mode === 'dark' ? '#020617' : '#ffffff';
+  const themeToggleBg = mode === 'dark' ? 'rgba(129, 140, 248, 0.18)' : 'rgba(15,23,42,0.03)';
 
   const menuContent = (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div
-        style={{
-          padding: '16px',
-          fontSize: 15,
-          fontWeight: 600,
-          color: siderTextColor,
-          letterSpacing: '-0.3px',
-          flexShrink: 0,
-        }}
-      >
-        Research CRM
+        <div className="app-sider-logo" style={{ color: siderTextColor }}>
+        <div className="app-sider-logo-badge">R</div>
+        {!collapsed && (
+          <div>
+            <div className="app-sider-logo-text-main">Research CRM</div>
+          </div>
+        )}
       </div>
       <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
         <Menu
@@ -147,60 +143,27 @@ export function AppLayout() {
           }}
         />
       </div>
-      <div 
-        style={{ 
+      <div
+        style={{
           flexShrink: 0,
-          padding: '12px',
-          paddingBottom: 60, // Space for collapse trigger button
+          padding: '10px 12px 64px',
           borderTop: `1px solid ${token.colorBorder}`,
           background: siderBg,
         }}
       >
-        <Space direction="vertical" style={{ width: '100%' }} size={8}>
-          <div 
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'space-between',
-              padding: '8px 12px',
-              borderRadius: 6,
-              background: themeToggleBg,
-            }}
-          >
-            <Space size={8}>
-              {mode === 'dark' ? (
-                <MoonOutlined style={{ color: siderSecondaryTextColor }} />
-              ) : (
-                <SunOutlined style={{ color: siderSecondaryTextColor }} />
-              )}
-              {!collapsed && (
-                <span style={{ color: siderSecondaryTextColor, fontSize: 13 }}>
-                  {mode === 'dark' ? 'Тёмная' : 'Светлая'}
-                </span>
-              )}
-            </Space>
-            <Switch
-              size="small"
-              checked={mode === 'dark'}
-              onChange={toggleTheme}
-              checkedChildren={<MoonOutlined />}
-              unCheckedChildren={<SunOutlined />}
-            />
-          </div>
-          <Button
-            type="text"
-            icon={<LogoutOutlined />}
-            onClick={() => dispatch(logout())}
-            style={{ 
-              width: '100%', 
-              justifyContent: collapsed ? 'center' : 'flex-start',
-              color: siderSecondaryTextColor,
-              height: 32,
-            }}
-          >
-            {!collapsed && 'Выйти'}
-          </Button>
-        </Space>
+        <Button
+          type="text"
+          icon={<LogoutOutlined />}
+          onClick={() => dispatch(logout())}
+          style={{
+            width: '100%',
+            justifyContent: collapsed ? 'center' : 'flex-start',
+            color: siderSecondaryTextColor,
+            height: 32,
+          }}
+        >
+          {!collapsed && 'Выйти'}
+        </Button>
       </div>
     </div>
   );
@@ -215,8 +178,8 @@ export function AppLayout() {
               top: 0,
               left: 0,
               right: 0,
-              height: 56,
-              background: token.colorBgContainer,
+              height: 60,
+              background: 'rgba(15,23,42,0.98)',
               borderBottom: `1px solid ${token.colorBorder}`,
               display: 'flex',
               alignItems: 'center',
@@ -225,14 +188,31 @@ export function AppLayout() {
               zIndex: 1000,
             }}
           >
-            <Typography.Title level={4} style={{ margin: 0, fontSize: 18 }}>
-              Research CRM
-            </Typography.Title>
-            <Button
-              type="text"
-              icon={<MenuOutlined />}
-              onClick={() => setMobileMenuOpen(true)}
-            />
+            <Space>
+              <div className="app-sider-logo-badge" style={{ width: 28, height: 28, fontSize: 15 }}>
+                R
+              </div>
+              <div>
+                <Typography.Title level={5} style={{ margin: 0, color: '#e2e8f0' }}>
+                  Research CRM
+                </Typography.Title>
+              </div>
+            </Space>
+            <Space>
+              <Switch
+                size="small"
+                checked={mode === 'dark'}
+                onChange={toggleTheme}
+                checkedChildren={<MoonOutlined />}
+                unCheckedChildren={<SunOutlined />}
+              />
+              <Button
+                type="text"
+                icon={<MenuOutlined />}
+                onClick={() => setMobileMenuOpen(true)}
+                style={{ color: token.colorText }}
+              />
+            </Space>
           </div>
           <Drawer
             title="Меню"
@@ -249,8 +229,10 @@ export function AppLayout() {
           >
             {menuContent}
           </Drawer>
-          <Content style={{ padding: '72px 16px 16px', minHeight: '100vh', marginLeft: 0 }}>
-            <Outlet />
+          <Content style={{ padding: '76px 12px 16px', minHeight: '100vh', marginLeft: 0 }}>
+            <div className="page-shell">
+              <Outlet />
+            </div>
           </Content>
         </>
       ) : (
@@ -268,7 +250,10 @@ export function AppLayout() {
               top: 0,
               bottom: 0,
               overflow: 'hidden',
-              background: siderBg,
+              background:
+                mode === 'dark'
+                  ? 'radial-gradient(circle at top, #1d2344 0, #020617 50%)'
+                  : 'radial-gradient(circle at top, #eef2ff 0, #ffffff 55%)',
               borderRight: `1px solid ${token.colorBorder}`,
             }}
           >
@@ -303,8 +288,64 @@ export function AppLayout() {
             </div>
           </Sider>
           <Layout style={{ marginLeft: collapsed ? 80 : 200, transition: 'margin-left 0.2s' }}>
-            <Content style={{ padding: '24px', minHeight: '100vh' }}>
-              <Outlet />
+            <Content style={{ padding: '20px 40px 32px', minHeight: '100vh' }}>
+              <div className="page-shell">
+                <div
+                  className="app-topbar"
+                  style={{
+                    border: `1px solid ${token.colorBorder}`,
+                    background:
+                      mode === 'dark'
+                        ? 'rgba(15, 23, 42, 0.92)'
+                        : 'linear-gradient(135deg, #ffffff, #f8fafc)',
+                    boxShadow:
+                      mode === 'dark'
+                        ? '0 14px 30px rgba(15, 23, 42, 0.55)'
+                        : '0 10px 25px rgba(15, 23, 42, 0.12)',
+                  }}
+                >
+                  <div className="app-topbar-title">
+                    <span className="app-topbar-title-main">Рабочее пространство</span>
+                    <span className="app-topbar-title-sub">
+                      Управляйте казино, бонусами, почтой и аналитикой в&nbsp;одном месте
+                    </span>
+                  </div>
+                  <Space size={12}>
+                    <Space
+                      style={{
+                        padding: '4px 10px',
+                        borderRadius: 999,
+                        background: themeToggleBg,
+                      }}
+                    >
+                      {mode === 'dark' ? (
+                        <MoonOutlined style={{ color: siderSecondaryTextColor }} />
+                      ) : (
+                        <SunOutlined style={{ color: siderSecondaryTextColor }} />
+                      )}
+                      <Switch
+                        size="small"
+                        checked={mode === 'dark'}
+                        onChange={toggleTheme}
+                        checkedChildren={<MoonOutlined />}
+                        unCheckedChildren={<SunOutlined />}
+                      />
+                    </Space>
+                    <Avatar
+                      size={32}
+                      style={{
+                        background:
+                          'conic-gradient(from 160deg, #6366f1, #22c55e, #0ea5e9, #6366f1)',
+                        color: '#0f172a',
+                        fontWeight: 600,
+                      }}
+                    >
+                      R
+                    </Avatar>
+                  </Space>
+                </div>
+                <Outlet />
+              </div>
             </Content>
           </Layout>
         </>

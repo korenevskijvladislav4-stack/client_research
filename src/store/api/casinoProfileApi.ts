@@ -76,16 +76,26 @@ export const casinoProfileApi = baseApi.injectEndpoints({
       invalidatesTags: [{ type: 'Profile', id: 'FIELDS' }],
     }),
 
-    getCasinoProfile: builder.query<CasinoProfileResponse, number>({
-      query: (casinoId) => `/casinos/${casinoId}/profile`,
-      providesTags: (_r, _e, casinoId) => [{ type: 'Profile', id: `CASINO_${casinoId}` }],
+    getCasinoProfile: builder.query<CasinoProfileResponse, { casinoId: number; geo?: string } | number>({
+      query: (arg) => {
+        if (typeof arg === 'number') {
+          return `/casinos/${arg}/profile`;
+        }
+        const { casinoId, geo } = arg;
+        const params = geo ? `?geo=${encodeURIComponent(geo)}` : '';
+        return `/casinos/${casinoId}/profile${params}`;
+      },
+      providesTags: (_r, _e, arg) => {
+        const casinoId = typeof arg === 'number' ? arg : arg.casinoId;
+        return [{ type: 'Profile', id: `CASINO_${casinoId}` }];
+      },
     }),
     updateCasinoProfile: builder.mutation<
       { message: string },
-      { casinoId: number; items: Array<{ field_id: number; value_json: any }> }
+      { casinoId: number; items: Array<{ field_id: number; value_json: any }>; geo?: string }
     >({
-      query: ({ casinoId, items }) => ({
-        url: `/casinos/${casinoId}/profile`,
+      query: ({ casinoId, items, geo }) => ({
+        url: `/casinos/${casinoId}/profile${geo ? `?geo=${encodeURIComponent(geo)}` : ''}`,
         method: 'PUT',
         body: { items },
       }),

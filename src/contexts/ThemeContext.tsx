@@ -182,7 +182,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <ThemeContext.Provider value={{ mode, toggleTheme, setTheme }}>
-      <ConfigProvider theme={currentTheme} locale={ruRU}>
+      <ConfigProvider theme={currentTheme} locale={ruRU} componentSize="middle">
         {children}
       </ConfigProvider>
     </ThemeContext.Provider>

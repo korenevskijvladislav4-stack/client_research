@@ -1,8 +1,16 @@
-/* Ant Design reset is imported in main.tsx.
-   Keep this file minimal to avoid conflicting with Ant Design. */
-#root { min-height: 100vh; }
+/* === Global SaaS look & feel === */
 
-/* Smooth theme transitions */
+/* Root and body */
+#root {
+  min-height: 100vh;
+}
+
+body {
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Smooth theme & layout transitions */
 body,
 .ant-layout,
 .ant-layout-sider,
@@ -15,16 +23,134 @@ body,
 .ant-select,
 .ant-modal-content,
 .ant-drawer-content {
-  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.2s ease;
+  transition:
+    background-color 0.3s ease,
+    border-color 0.3s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.12s ease-out;
 }
 
-/* Center align all AntD table headers and cells */
-.ant-table-wrapper .ant-table-thead > tr > th,
-.ant-table-wrapper .ant-table-tbody > tr > td {
-  text-align: center;
+/* Page container — теперь на всю ширину */
+.page-shell {
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
 }
 
-/* Custom scrollbar for dark theme */
+/* SaaS-style cards */
+.ant-card {
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.ant-card:hover {
+  box-shadow:
+    0 18px 45px rgba(15, 23, 42, 0.28),
+    0 0 0 1px rgba(129, 140, 248, 0.35);
+  transform: translateY(-2px);
+}
+
+/* Refined typography */
+.ant-typography,
+.ant-statistic-title {
+  letter-spacing: -0.01em;
+}
+
+.ant-typography strong {
+  letter-spacing: -0.01em;
+}
+
+/* Layout background gradient (subtle, works in both themes) */
+.ant-layout {
+  background:
+    radial-gradient(circle at top left, rgba(129, 140, 248, 0.16), transparent 55%),
+    radial-gradient(circle at bottom right, rgba(45, 212, 191, 0.18), transparent 60%);
+}
+
+/* Sidebar logo area */
+.app-sider-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 16px 12px;
+}
+
+.app-sider-logo-badge {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: conic-gradient(from 160deg, #6366f1, #22c55e, #0ea5e9, #6366f1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #0f172a;
+  font-size: 16px;
+  font-weight: 700;
+  box-shadow:
+    0 10px 25px rgba(15, 23, 42, 0.6),
+    0 0 0 1px rgba(15, 23, 42, 0.8);
+}
+
+.app-sider-logo-text-main {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+}
+
+.app-sider-logo-text-sub {
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+/* Sidebar menu tweaks */
+.ant-layout-sider-children .ant-menu {
+  margin-top: 4px;
+  padding-inline: 4px;
+}
+
+.ant-layout-sider .ant-menu-inline .ant-menu-item,
+.ant-layout-sider .ant-menu-inline .ant-menu-submenu-title {
+  border-radius: 999px !important;
+  margin-inline: 4px !important;
+  margin-block: 2px !important;
+  padding-inline: 14px !important;
+}
+
+.ant-menu-item-selected {
+  font-weight: 600;
+}
+
+/* Top content header (used in layout) */
+.app-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  margin-bottom: 20px;
+  padding: 14px 20px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.app-topbar-title {
+  display: flex;
+  flex-direction: column;
+}
+
+.app-topbar-title-main {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.app-topbar-title-sub {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+/* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -44,6 +170,12 @@ body,
 }
 
 /* Responsive utilities */
+@media (max-width: 1024px) {
+  .page-shell {
+    max-width: 100%;
+  }
+}
+
 @media (max-width: 768px) {
   /* Tables */
   .ant-table-wrapper {

@@ -7,6 +7,7 @@ import {
   Drawer,
   Form,
   Input,
+  Popconfirm,
   Select,
   Space,
   Switch,
@@ -334,20 +335,28 @@ export default function Casinos() {
                 render: (_: any, r: Casino) => (
                   <Space onClick={(e) => e.stopPropagation()}>
                     <Button type="link" size="small" icon={<EditOutlined />} onClick={() => showEdit(r)} />
-                    <Button
-                      type="link"
-                      danger
-                      size="small"
-                      icon={<DeleteOutlined />}
-                      onClick={async () => {
+                    <Popconfirm
+                      title="Удалить казино?"
+                      description="Вы уверены, что хотите удалить это казино? Действие необратимо."
+                      okText="Удалить"
+                      cancelText="Отмена"
+                      okButtonProps={{ danger: true }}
+                      onConfirm={async () => {
                         try {
                           await deleteCasino(r.id).unwrap();
-                          message.success('Удалено');
+                          message.success('Казино удалено');
                         } catch (e: any) {
                           message.error(getApiErrorMessage(e, 'Ошибка удаления'));
                         }
                       }}
-                    />
+                    >
+                      <Button
+                        type="link"
+                        danger
+                        size="small"
+                        icon={<DeleteOutlined />}
+                      />
+                    </Popconfirm>
                   </Space>
                 ),
               },
