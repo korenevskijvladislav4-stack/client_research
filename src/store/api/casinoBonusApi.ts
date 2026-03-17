@@ -32,6 +32,8 @@ export interface CasinoBonus {
   freespin_value?: number;
   freespin_game?: string;
   cashback_percent?: number;
+  cashback_percent_min?: number | null;
+  cashback_percent_max?: number | null;
   cashback_period?: string;
   min_deposit?: number;
   max_bonus?: number;

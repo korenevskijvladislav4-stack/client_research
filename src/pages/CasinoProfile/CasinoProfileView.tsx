@@ -783,9 +783,7 @@ export default function CasinoProfileView() {
         <ProfileSettingsTable
           casinoId={casinoId}
           activeGeo={activeGeo}
-          onGeoChange={setActiveGeo}
           readOnly={true}
-          casinoGeoCodes={casino?.geo}
         />
       </Card>
 

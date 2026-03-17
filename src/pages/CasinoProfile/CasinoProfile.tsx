@@ -251,7 +251,7 @@ export default function CasinoProfile() {
   const [createBonus] = useCreateCasinoBonusMutation();
   const [updateBonus] = useUpdateCasinoBonusMutation();
   const [deleteBonus] = useDeleteCasinoBonusMutation();
-  const [activeProviderGeo, setActiveProviderGeo] = useState<string | undefined>(undefined);
+  const [activeProviderGeo] = useState<string | undefined>(undefined);
   const [activeDirection, setActiveDirection] = useState<'deposit' | 'withdrawal' | undefined>(undefined);
   const [imagesPage, setImagesPage] = useState(1);
   const IMAGES_PAGE_SIZE = 12;
@@ -977,7 +977,7 @@ export default function CasinoProfile() {
           </Typography.Title>
         }
       >
-        <ProfileSettingsTable casinoId={casinoId} activeGeo={activeGeo} readOnly={false} casinoGeoCodes={casino?.geo} />
+        <ProfileSettingsTable casinoId={casinoId} activeGeo={activeGeo} readOnly={false} />
       </Card>
 
       <Card

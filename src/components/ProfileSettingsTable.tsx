@@ -1,24 +1,19 @@
 import { useMemo } from 'react';
-import { Button, Space, Table, message } from 'antd';
+import { Button, Table, message } from 'antd';
 import {
   useGetSettingsFieldsQuery,
   useGetProfileContextsQuery,
   useGetCasinoProfileSettingsQuery,
   useUpdateProfileSettingMutation,
 } from '../store/api/profileSettingsApi';
-import { useGetGeosQuery } from '../store/api/geoApi';
 
 interface ProfileSettingsTableProps {
   casinoId: number;
   activeGeo?: string;
-  onGeoChange?: (geo: string | undefined) => void;
   readOnly?: boolean;
-  /** Только GEO, на которые работает казино. Если задано — в фильтре показываются только они. */
-  casinoGeoCodes?: string[];
 }
 
-export function ProfileSettingsTable({ casinoId, activeGeo, onGeoChange, readOnly, casinoGeoCodes }: ProfileSettingsTableProps) {
-  const { data: geos = [] } = useGetGeosQuery();
+export function ProfileSettingsTable({ casinoId, activeGeo, readOnly }: ProfileSettingsTableProps) {
   const { data: fields = [] } = useGetSettingsFieldsQuery();
   const { data: contexts = [] } = useGetProfileContextsQuery();
   const { data: settings = [] } = useGetCasinoProfileSettingsQuery(
@@ -37,16 +32,6 @@ export function ProfileSettingsTable({ casinoId, activeGeo, onGeoChange, readOnl
     () => contexts.filter((c) => c.is_active).sort((a, b) => a.sort_order - b.sort_order),
     [contexts]
   );
-
-  // GEO для кнопок фильтра: только те, на которые работает казино (если передано casinoGeoCodes)
-  const activeGeos = useMemo(() => {
-    let list = geos.filter((g) => g.is_active);
-    if (casinoGeoCodes && casinoGeoCodes.length > 0) {
-      const allowed = new Set(casinoGeoCodes);
-      list = list.filter((g) => allowed.has(g.code));
-    }
-    return list;
-  }, [geos, casinoGeoCodes]);
 
   // Build a map of (field_id, context_id) -> value for quick lookup
   const settingsMap = useMemo(() => {
