@@ -104,6 +104,8 @@ import {
   useDeleteSelectorMutation,
   useGetScreenshotsByCasinoQuery,
   useTakeScreenshotMutation,
+  useUploadManualScreenshotMutation,
+  useDeleteManualScreenshotMutation,
   SlotSelector,
   SlotScreenshot,
 } from '../../store/api/slotSelectorApi';
@@ -318,18 +320,30 @@ export default function CasinoProfile() {
   const { data: selectors = [] } = useGetSelectorsByCasinoQuery(casinoId, {
     skip: !casinoId,
   });
-  const { data: screenshots = [], isLoading: screenshotsLoading } = useGetScreenshotsByCasinoQuery(casinoId, {
+  const {
+    data: screenshots = [],
+    isLoading: screenshotsLoading,
+    refetch: refetchScreenshots,
+  } = useGetScreenshotsByCasinoQuery(casinoId, {
     skip: !casinoId,
   });
   const [createSelector] = useCreateSelectorMutation();
   const [updateSelector] = useUpdateSelectorMutation();
   const [deleteSelector] = useDeleteSelectorMutation();
   const [takeScreenshot, { isLoading: takingScreenshot }] = useTakeScreenshotMutation();
+  const [uploadManualScreenshot, { isLoading: uploadingManualScreenshot }] =
+    useUploadManualScreenshotMutation();
+  const [deleteManualScreenshot, { isLoading: deletingManualScreenshot }] =
+    useDeleteManualScreenshotMutation();
   
   const [selectorDrawerOpen, setSelectorDrawerOpen] = useState(false);
   const [editingSelector, setEditingSelector] = useState<SlotSelector | null>(null);
   const [selectorForm] = Form.useForm();
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+
+  const [manualScreenshotDrawerOpen, setManualScreenshotDrawerOpen] = useState(false);
+  const [manualScreenshotFile, setManualScreenshotFile] = useState<File | null>(null);
+  const [manualScreenshotForm] = Form.useForm();
 
   // Accounts
   const { data: accounts, isLoading: accountsLoading } = useGetCasinoAccountsQuery(casinoId, {
@@ -834,19 +848,37 @@ export default function CasinoProfile() {
             gap: 12
           }}>
             <Typography.Text strong>Скриншоты</Typography.Text>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => {
-                setEditingSelector(null);
-                selectorForm.resetFields();
-                if (activeGeo) selectorForm.setFieldsValue({ geo: activeGeo });
-                if (casino?.website) selectorForm.setFieldsValue({ url: casino.website });
-                setSelectorDrawerOpen(true);
-              }}
-            >
-              Добавить селектор
-            </Button>
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => {
+                  setEditingSelector(null);
+                  selectorForm.resetFields();
+                  if (activeGeo) selectorForm.setFieldsValue({ geo: activeGeo });
+                  if (casino?.website) selectorForm.setFieldsValue({ url: casino.website });
+                  setSelectorDrawerOpen(true);
+                }}
+              >
+                Добавить селектор
+              </Button>
+              <Button
+                icon={<PictureOutlined />}
+                onClick={() => {
+                  setManualScreenshotDrawerOpen(true);
+                  manualScreenshotForm.resetFields();
+                  setManualScreenshotFile(null);
+                  manualScreenshotForm.setFieldsValue({
+                    geo: activeGeo,
+                    section: '',
+                    category: undefined,
+                    url: casino?.website ?? undefined,
+                  });
+                }}
+              >
+                Загрузить вручную
+              </Button>
+            </div>
           </div>
         }
       >
@@ -907,63 +939,113 @@ export default function CasinoProfile() {
               title: 'Действия',
               width: 150,
               align: 'right',
-              render: (_, record) => (
-                <Space>
-                  <Button
-                    type="link"
-                    size="small"
-                    loading={takingScreenshot}
-                    onClick={async () => {
-                      try {
-                        await takeScreenshot(record.selector_id).unwrap();
-                        message.success('Скриншот обновлён');
-                      } catch {
-                        message.error('Не удалось сделать скриншот');
-                      }
-                    }}
-                  >
-                    Обновить
-                  </Button>
-                  <Button
-                    type="text"
-                    size="small"
-                    icon={<EditOutlined />}
-                    onClick={() => {
-                      const selector = selectors.find((s) => s.id === record.selector_id);
-                      if (selector) {
-                        setEditingSelector(selector);
-                        selectorForm.resetFields();
-                        selectorForm.setFieldsValue({
-                          geo: selector.geo,
-                          section: selector.section,
-                          category: selector.category || undefined,
-                          selector: selector.selector,
-                          url: selector.url || undefined,
-                        });
-                        setSelectorDrawerOpen(true);
-                      }
-                    }}
-                  />
-                  <Popconfirm
-                    title="Удалить селектор?"
-                    onConfirm={async () => {
-                      try {
-                        await deleteSelector(record.selector_id).unwrap();
-                        message.success('Селектор удалён');
-                      } catch {
-                        message.error('Не удалось удалить селектор');
-                      }
-                    }}
-                  >
+              render: (_, record) => {
+                const openManualDrawer = () => {
+                  setManualScreenshotDrawerOpen(true);
+                  setManualScreenshotFile(null);
+                  manualScreenshotForm.resetFields();
+                  manualScreenshotForm.setFieldsValue({
+                    geo: record.geo,
+                    section: record.section,
+                    category: record.category || undefined,
+                    url: record.url || undefined,
+                  });
+                };
+
+                if (record.selector) {
+                  return (
+                    <Space>
+                      <Button
+                        type="link"
+                        size="small"
+                        loading={takingScreenshot}
+                        onClick={async () => {
+                          try {
+                            await takeScreenshot(record.selector_id).unwrap();
+                            message.success('Скриншот обновлён');
+                          } catch {
+                            message.error('Не удалось сделать скриншот');
+                          }
+                        }}
+                      >
+                        Обновить
+                      </Button>
+                      <Button
+                        type="text"
+                        size="small"
+                        icon={<EditOutlined />}
+                        onClick={() => {
+                          const selector = selectors.find((s) => s.id === record.selector_id);
+                          if (selector) {
+                            setEditingSelector(selector);
+                            selectorForm.resetFields();
+                            selectorForm.setFieldsValue({
+                              geo: selector.geo,
+                              section: selector.section,
+                              category: selector.category || undefined,
+                              selector: selector.selector,
+                              url: selector.url || undefined,
+                            });
+                            setSelectorDrawerOpen(true);
+                          }
+                        }}
+                      />
+                      <Popconfirm
+                        title="Удалить селектор?"
+                        onConfirm={async () => {
+                          try {
+                            await deleteSelector(record.selector_id).unwrap();
+                            message.success('Селектор удалён');
+                          } catch {
+                            message.error('Не удалось удалить селектор');
+                          }
+                        }}
+                      >
+                        <Button type="text" danger size="small" icon={<DeleteOutlined />} />
+                      </Popconfirm>
+                    </Space>
+                  );
+                }
+
+                // Manual screenshots: selector === null
+                return (
+                  <Space>
                     <Button
-                      type="text"
-                      danger
+                      type="link"
                       size="small"
-                      icon={<DeleteOutlined />}
-                    />
-                  </Popconfirm>
-                </Space>
-              ),
+                      loading={uploadingManualScreenshot}
+                      onClick={openManualDrawer}
+                    >
+                      {record.screenshot_id ? 'Обновить' : 'Загрузить'}
+                    </Button>
+                    {record.screenshot_id ? (
+                      <Popconfirm
+                        title="Удалить скриншот?"
+                        onConfirm={async () => {
+                          try {
+                            await deleteManualScreenshot({
+                              casinoId,
+                              screenshotId: record.screenshot_id!,
+                            }).unwrap();
+                            message.success('Скриншот удалён');
+                            refetchScreenshots();
+                          } catch {
+                            message.error('Не удалось удалить скриншот');
+                          }
+                        }}
+                      >
+                        <Button
+                          type="text"
+                          danger
+                          size="small"
+                          icon={<DeleteOutlined />}
+                          loading={deletingManualScreenshot}
+                        />
+                      </Popconfirm>
+                    ) : null}
+                  </Space>
+                );
+              },
             },
           ]}
         />
@@ -3742,6 +3824,121 @@ export default function CasinoProfile() {
                 setEditingSelector(null);
                 selectorForm.resetFields();
               }}>
+                Отмена
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Drawer>
+
+      {/* Drawer для ручной загрузки скриншота */}
+      <Drawer
+        title="Загрузка скриншота вручную"
+        open={manualScreenshotDrawerOpen}
+        onClose={() => {
+          setManualScreenshotDrawerOpen(false);
+          setManualScreenshotFile(null);
+          manualScreenshotForm.resetFields();
+        }}
+        width={520}
+        destroyOnClose
+      >
+        <Form
+          form={manualScreenshotForm}
+          layout="vertical"
+          onFinish={async (values) => {
+            try {
+              if (!manualScreenshotFile) {
+                message.error('Выберите файл изображения');
+                return;
+              }
+
+              await uploadManualScreenshot({
+                casinoId,
+                geo: values.geo,
+                section: values.section,
+                category: values.category || null,
+                url: values.url || null,
+                file: manualScreenshotFile,
+              }).unwrap();
+
+              message.success('Скриншот загружен');
+              setManualScreenshotDrawerOpen(false);
+              setManualScreenshotFile(null);
+              manualScreenshotForm.resetFields();
+              refetchScreenshots();
+            } catch (error: any) {
+              message.error(error?.data?.error ?? 'Не удалось загрузить скриншот');
+            }
+          }}
+        >
+          <Form.Item
+            name="geo"
+            label="GEO"
+            rules={[{ required: true, message: 'Выберите GEO' }]}
+          >
+            <Select
+              placeholder="Выберите GEO"
+              options={geoOptions}
+              showSearch
+              filterOption={(input, option) =>
+                (option?.label ?? '').toString().toLowerCase().includes(input.toLowerCase())
+              }
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="section"
+            label="Раздел"
+            rules={[{ required: true, message: 'Введите раздел' }]}
+            tooltip="Название раздела (например: 'Основной', 'Слоты', 'Популярные игры')"
+          >
+            <Input placeholder="Например: Основной" />
+          </Form.Item>
+
+          <Form.Item
+            name="category"
+            label="Категория (опционально)"
+          >
+            <Input placeholder="Например: Слоты" />
+          </Form.Item>
+
+          <Form.Item name="url" label="URL (опционально)">
+            <Input placeholder="Полный URL или относительный путь" />
+          </Form.Item>
+
+          <Form.Item
+            label="Файл скриншота"
+            required
+          >
+            <Upload
+              accept="image/*"
+              multiple={false}
+              showUploadList={!!manualScreenshotFile}
+              beforeUpload={(file) => {
+                setManualScreenshotFile(file);
+                return false;
+              }}
+              onRemove={() => {
+                setManualScreenshotFile(null);
+              }}
+            >
+              <Button icon={<PictureOutlined />}>Выбрать файл</Button>
+            </Upload>
+          </Form.Item>
+
+          <Form.Item>
+            <Space>
+              <Button type="primary" htmlType="submit" loading={uploadingManualScreenshot}>
+                Загрузить
+              </Button>
+              <Button
+                onClick={() => {
+                  setManualScreenshotDrawerOpen(false);
+                  setManualScreenshotFile(null);
+                  manualScreenshotForm.resetFields();
+                }}
+              >
                 Отмена
               </Button>
             </Space>

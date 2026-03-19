@@ -38,6 +38,7 @@ export interface SlotScreenshot {
   screenshot_path?: string;
   screenshot_url?: string;
   screenshot_created_at?: string;
+  selector?: string | null;
 }
 
 export interface ScreenshotGalleryItem {
@@ -140,6 +141,48 @@ export const slotSelectorApi = baseApi.injectEndpoints({
         return tags;
       },
     }),
+    uploadManualScreenshot: builder.mutation<
+      SlotScreenshot,
+      {
+        casinoId: number;
+        geo: string;
+        section: string;
+        category?: string | null;
+        url?: string | null;
+        file: File;
+      }
+    >({
+      query: ({ casinoId, geo, section, category, url, file }) => {
+        const formData = new FormData();
+        formData.append('image', file);
+        formData.append('geo', geo);
+        formData.append('section', section);
+        if (category != null && category !== '') formData.append('category', category);
+        if (url != null && url !== '') formData.append('url', url);
+
+        return {
+          url: `/casinos/${casinoId}/screenshots/manual`,
+          method: 'POST',
+          body: formData,
+        };
+      },
+      invalidatesTags: (_result, _error, { casinoId }) => [
+        { type: 'SlotScreenshot', id: `LIST-${casinoId}` },
+        { type: 'SlotScreenshot', id: 'LIST' },
+        { type: 'ScreenshotGallery', id: 'LIST' },
+      ],
+    }),
+    deleteManualScreenshot: builder.mutation<void, { casinoId: number; screenshotId: number }>({
+      query: ({ casinoId, screenshotId }) => ({
+        url: `/casinos/${casinoId}/screenshots/manual/${screenshotId}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: (_result, _error, { casinoId }) => [
+        { type: 'SlotScreenshot', id: `LIST-${casinoId}` },
+        { type: 'SlotScreenshot', id: 'LIST' },
+        { type: 'ScreenshotGallery', id: 'LIST' },
+      ],
+    }),
     takeScreenshot: builder.mutation<SlotScreenshot, number>({
       query: (selectorId) => ({
         url: `/selectors/${selectorId}/screenshots`,
@@ -181,4 +224,6 @@ export const {
   useGetScreenshotsByCasinoQuery,
   useTakeScreenshotMutation,
   useGetAllScreenshotsQuery,
+  useUploadManualScreenshotMutation,
+  useDeleteManualScreenshotMutation,
 } = slotSelectorApi;

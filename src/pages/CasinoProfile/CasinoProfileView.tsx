@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Badge,
@@ -79,6 +79,8 @@ import { getApiBaseUrl } from '../../config/api';
 import {
   useGetCasinoCommentsQuery,
   useGetCasinoImagesQuery,
+  useCreateCommentMutation,
+  useUploadCommentImageMutation,
   CasinoCommentImage,
 } from '../../store/api/casinoCommentApi';
 import { useSelector } from 'react-redux';
@@ -204,7 +206,7 @@ export default function CasinoProfileView() {
 
   const [selectedPayment, setSelectedPayment] = useState<CasinoPayment | null>(null);
   const [pendingPaymentImages, setPendingPaymentImages] = useState<File[]>([]);
-  const [activePaymentDirection, setActivePaymentDirection] = useState<'deposit' | 'withdrawal' | undefined>(undefined);
+  const [activePaymentDirection] = useState<'deposit' | 'withdrawal' | undefined>(undefined);
 
   const { data: paymentImages = [] } = useGetPaymentImagesQuery(
     { casinoId, paymentId: selectedPayment?.id ?? 0 },
@@ -257,14 +259,42 @@ export default function CasinoProfileView() {
   const { data: images = [] } = useGetCasinoImagesQuery(casinoId, {
     skip: !casinoId,
   } as any);
+  const [createComment] = useCreateCommentMutation();
+  const [uploadCommentImage] = useUploadCommentImageMutation();
+  const [galleryCommentId, setGalleryCommentId] = useState<number | null>(null);
   const authToken = useSelector((state: any) => state.auth.token);
+
+  // Все изображения: комментарии + скриншоты
+  const allImages: CasinoCommentImage[] = useMemo(() => {
+    const base = images as CasinoCommentImage[];
+    const screenshotImages: CasinoCommentImage[] =
+      (screenshots ?? [])
+        .filter((s) => s.screenshot_url)
+        .map((s, idx) => ({
+          id: -(s.screenshot_id ?? idx + 1),
+          casino_id: casinoId,
+          comment_id: null,
+          bonus_id: null,
+          payment_id: null,
+          file_path: s.screenshot_path || '',
+          original_name: s.section || 'Скриншот',
+          created_at: s.screenshot_created_at || '',
+          url: s.screenshot_url as string,
+          label: s.section || undefined,
+          username: undefined,
+          bonus_name: undefined,
+          payment_name: undefined,
+          entity_type: 'comment',
+        })) as any;
+    return [...base, ...screenshotImages];
+  }, [images, screenshots, casinoId]);
 
   // Пагинация изображений
   const paginatedImages = useMemo(() => {
     const start = (imagesPage - 1) * IMAGES_PAGE_SIZE;
     const end = start + IMAGES_PAGE_SIZE;
-    return images.slice(start, end);
-  }, [images, imagesPage]);
+    return allImages.slice(start, end);
+  }, [allImages, imagesPage]);
 
   const handleExportHtml = async () => {
     if (!casino) return;
@@ -387,6 +417,36 @@ export default function CasinoProfileView() {
       message.error({ content: 'Ошибка экспорта', key: 'export' });
     }
   };
+
+  const ensureGalleryComment = useCallback(async () => {
+    if (galleryCommentId) return galleryCommentId;
+    try {
+      const comment = await createComment({
+        casinoId,
+        data: { text: 'Галерея изображений' },
+      }).unwrap();
+      setGalleryCommentId(comment.id);
+      return comment.id;
+    } catch {
+      message.error('Не удалось создать запись для изображений');
+      throw new Error('gallery-comment-failed');
+    }
+  }, [galleryCommentId, createComment, casinoId]);
+
+  const handleUploadImage = useCallback(
+    async (file: File) => {
+      try {
+        const commentId = await ensureGalleryComment();
+        await uploadCommentImage({ casinoId, commentId, file }).unwrap();
+        message.success('Изображение загружено');
+      } catch (e) {
+        if ((e as Error).message !== 'gallery-comment-failed') {
+          message.error('Не удалось загрузить изображение');
+        }
+      }
+    },
+    [ensureGalleryComment, uploadCommentImage, casinoId],
+  );
 
   if (!casinoId) return <Card>Неверный id казино</Card>;
   if (casinoLoading || profileLoading) {
@@ -629,12 +689,27 @@ export default function CasinoProfileView() {
           <Space>
             <PictureOutlined />
             <Typography.Title level={5} style={{ margin: 0 }}>
-              Изображения ({images.length})
+              Изображения ({allImages.length})
             </Typography.Title>
           </Space>
         }
+        extra={
+          <Upload
+            accept="image/*"
+            multiple
+            showUploadList={false}
+            beforeUpload={async (file) => {
+              await handleUploadImage(file);
+              return false;
+            }}
+          >
+            <Button size="small" icon={<PictureOutlined />}>
+              Загрузить
+            </Button>
+          </Upload>
+        }
       >
-        {images.length === 0 ? (
+        {allImages.length === 0 ? (
           <Typography.Text type="secondary">Изображения ещё не загружены.</Typography.Text>
         ) : (
           <>
@@ -666,11 +741,11 @@ export default function CasinoProfileView() {
                 })}
               </Space>
             </Image.PreviewGroup>
-            {images.length > IMAGES_PAGE_SIZE && (
+            {allImages.length > IMAGES_PAGE_SIZE && (
               <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
                 <Pagination
                   current={imagesPage}
-                  total={images.length}
+                  total={allImages.length}
                   pageSize={IMAGES_PAGE_SIZE}
                   onChange={(page) => setImagesPage(page)}
                   showSizeChanger={false}
@@ -692,7 +767,9 @@ export default function CasinoProfileView() {
       </Card>
 
       {/* Скриншоты (Селекторы и скриншоты) */}
-      <Card title="Скриншоты">
+      <Card
+        title="Скриншоты"
+      >
         <Table<SlotScreenshot>
           rowKey="selector_id"
           size="small"
@@ -751,21 +828,23 @@ export default function CasinoProfileView() {
               width: 150,
               align: 'right',
               render: (_, record) => (
-                <Button
-                  type="link"
-                  size="small"
-                  loading={takingScreenshot}
-                  onClick={async () => {
-                    try {
-                      await takeScreenshot(record.selector_id).unwrap();
-                      message.success('Скриншот обновлён');
-                    } catch {
-                      message.error('Не удалось сделать скриншот');
-                    }
-                  }}
-                >
-                  Обновить
-                </Button>
+                (record as any).selector ? (
+                  <Button
+                    type="link"
+                    size="small"
+                    loading={takingScreenshot}
+                    onClick={async () => {
+                      try {
+                        await takeScreenshot(record.selector_id).unwrap();
+                        message.success('Скриншот обновлён');
+                      } catch {
+                        message.error('Не удалось сделать скриншот');
+                      }
+                    }}
+                  >
+                    Обновить
+                  </Button>
+                ) : null
               ),
             },
           ]}
@@ -1562,56 +1641,12 @@ export default function CasinoProfileView() {
       </Card>
 
       <Card title="Платёжные решения">
-        <Space wrap style={{ marginBottom: 16 }}>
-          <Typography.Text type="secondary">Направление:</Typography.Text>
-          <Button
-            size="small"
-            type={activePaymentDirection === undefined ? 'primary' : 'default'}
-            onClick={() => setActivePaymentDirection(undefined)}
-          >
-            Все
-          </Button>
-          <Button
-            size="small"
-            type={activePaymentDirection === 'deposit' ? 'primary' : 'default'}
-            onClick={() => setActivePaymentDirection('deposit')}
-          >
-            Деп
-          </Button>
-          <Button
-            size="small"
-            type={activePaymentDirection === 'withdrawal' ? 'primary' : 'default'}
-            onClick={() => setActivePaymentDirection('withdrawal')}
-          >
-            Вывод
-          </Button>
-          <Divider type="vertical" />
-          <Typography.Text type="secondary">GEO:</Typography.Text>
-          <Button
-            size="small"
-            type={!activeGeo ? 'primary' : 'default'}
-            onClick={() => setActiveGeo(undefined)}
-          >
-            Все
-          </Button>
-          {casinoGeos.map((g) => (
-            <Button
-              key={g}
-              size="small"
-              type={activeGeo === g ? 'primary' : 'default'}
-              onClick={() => setActiveGeo(g)}
-            >
-              {g}
-            </Button>
-          ))}
-        </Space>
         <Table<CasinoPayment>
           rowKey="id"
           size="small"
           loading={paymentsLoading}
           dataSource={(payments ?? []).filter((p) => {
             if (activePaymentDirection != null && (p.direction ?? 'deposit') !== activePaymentDirection) return false;
-            if (activeGeo && p.geo !== activeGeo) return false;
             return true;
           })}
           pagination={false}
