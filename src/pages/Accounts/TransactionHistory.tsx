@@ -53,17 +53,19 @@ export default function TransactionHistory() {
 
   return (
     <Space direction="vertical" size={24} style={{ width: '100%' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
-        <Space direction="vertical" size={0} style={{ flex: 1, minWidth: 200 }}>
-          <Typography.Title level={4} style={{ margin: 0 }}>История транзакций</Typography.Title>
-          <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-            Депозиты и выводы по аккаунтам. Экспорт в XLSX с учётом фильтров.
-          </Typography.Text>
-        </Space>
-        <Space wrap>
-          <Button type="primary" onClick={handleExport}>Выгрузить XLSX</Button>
-        </Space>
-      </div>
+      <Card size="small">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
+          <Space direction="vertical" size={0} style={{ flex: 1, minWidth: 200 }}>
+            <Typography.Title level={4} style={{ margin: 0 }}>История транзакций</Typography.Title>
+            <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+              Депозиты и выводы по аккаунтам. Экспорт в XLSX с учётом фильтров.
+            </Typography.Text>
+          </Space>
+          <Space wrap>
+            <Button type="primary" onClick={handleExport}>Выгрузить XLSX</Button>
+          </Space>
+        </div>
+      </Card>
 
       <Card size="small">
         <Space wrap size={[12, 12]} style={{ width: '100%' }}>

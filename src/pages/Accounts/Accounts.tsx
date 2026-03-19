@@ -55,19 +55,21 @@ export default function Accounts() {
   return (
     <>
     <Space direction="vertical" size={24} style={{ width: '100%' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
-        <Space direction="vertical" size={0} style={{ flex: 1, minWidth: 200 }}>
-          <Typography.Title level={4} style={{ margin: 0 }}>Аккаунты</Typography.Title>
-          <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-            Аккаунты казино. Депозиты и выводы по каждому аккаунту. Всего: {total} записей.
-          </Typography.Text>
-        </Space>
-        <Space wrap>
-          <Link to="/accounts/transactions">
-            <Button>История транзакций</Button>
-          </Link>
-        </Space>
-      </div>
+      <Card size="small">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
+          <Space direction="vertical" size={0} style={{ flex: 1, minWidth: 200 }}>
+            <Typography.Title level={4} style={{ margin: 0 }}>Аккаунты</Typography.Title>
+            <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+              Аккаунты казино. Депозиты и выводы по каждому аккаунту. Всего: {total} записей.
+            </Typography.Text>
+          </Space>
+          <Space wrap>
+            <Link to="/accounts/transactions">
+              <Button>История транзакций</Button>
+            </Link>
+          </Space>
+        </div>
+      </Card>
 
       <Card size="small">
         <Space wrap size={[12, 12]} style={{ width: '100%' }}>

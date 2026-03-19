@@ -157,6 +157,8 @@ export default function BonusSection({ casinoId, bonuses, isLoading, activeGeo }
               {selectedBonus.freespin_value != null && <Descriptions.Item label="Стоимость спина">{fmtAmount(selectedBonus.freespin_value, selectedBonus.currency)}</Descriptions.Item>}
               {selectedBonus.freespin_game && <Descriptions.Item label="Игра для фриспинов">{selectedBonus.freespin_game}</Descriptions.Item>}
               {selectedBonus.cashback_percent != null && <Descriptions.Item label="Процент возврата">{fmt(selectedBonus.cashback_percent)}%</Descriptions.Item>}
+              {selectedBonus.cashback_percent_min != null && <Descriptions.Item label="Мин. сумма кешбека">{fmt(selectedBonus.cashback_percent_min)}%</Descriptions.Item>}
+              {selectedBonus.cashback_percent_max != null && <Descriptions.Item label="Макс. сумма кешбека">{fmt(selectedBonus.cashback_percent_max)}%</Descriptions.Item>}
               {selectedBonus.cashback_period && (
                 <Descriptions.Item label="Период возврата">
                   {({ daily: 'Ежедневно', weekly: 'Еженедельно', monthly: 'Ежемесячно' } as Record<string, string>)[selectedBonus.cashback_period] || selectedBonus.cashback_period}

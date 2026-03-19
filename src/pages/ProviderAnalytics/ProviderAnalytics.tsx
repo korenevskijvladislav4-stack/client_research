@@ -133,22 +133,24 @@ export default function ProviderAnalytics() {
 
   return (
     <Space direction="vertical" size={24} style={{ width: '100%' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
-        <Space direction="vertical" size={0}>
-          <Typography.Title level={4} style={{ margin: 0 }}>
-            <ApiOutlined style={{ marginRight: 8 }} />
-            Аналитика по провайдерам
-          </Typography.Title>
-          <Typography.Text type="secondary">
-            Строки — казино, столбцы — провайдеры. Галочка — подключено для выбранного GEO, прочерк — нет.
-          </Typography.Text>
-        </Space>
-        <Space wrap>
-          <Button icon={<DownloadOutlined />} onClick={handleExport}>
-            Выгрузить XLSX
-          </Button>
-        </Space>
-      </div>
+      <Card size="small">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
+          <Space direction="vertical" size={0}>
+            <Typography.Title level={4} style={{ margin: 0 }}>
+              <ApiOutlined style={{ marginRight: 8 }} />
+              Аналитика по провайдерам
+            </Typography.Title>
+            <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+              Строки — казино, столбцы — провайдеры. Галочка — подключено для выбранного GEO, прочерк — нет.
+            </Typography.Text>
+          </Space>
+          <Space wrap>
+            <Button icon={<DownloadOutlined />} onClick={handleExport}>
+              Выгрузить XLSX
+            </Button>
+          </Space>
+        </div>
+      </Card>
 
       <Card size="small">
         <Space wrap size={16}>

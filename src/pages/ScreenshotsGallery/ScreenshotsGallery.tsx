@@ -79,7 +79,9 @@ export default function ScreenshotsGallery() {
   return (
     <div style={{ padding: '24px' }}>
       <Space direction="vertical" size="large" style={{ width: '100%' }}>
-        <Title level={2}>Галерея скриншотов</Title>
+        <Card size="small">
+          <Typography.Title level={4} style={{ margin: 0 }}>Галерея скриншотов</Typography.Title>
+        </Card>
 
         {/* Filters */}
         <Card>

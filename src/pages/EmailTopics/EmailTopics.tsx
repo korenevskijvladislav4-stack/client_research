@@ -66,20 +66,22 @@ export default function EmailTopics() {
 
   return (
     <Space direction="vertical" size={24} style={{ width: '100%' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Space>
-          <Typography.Title level={4} style={{ margin: 0 }}>
-            <MailOutlined style={{ marginRight: 8 }} />
-            Темы писем
-          </Typography.Title>
-          <Typography.Text type="secondary">
-            Список тем для ИИ-классификации писем. При синхронизации и при ручном запросе саммари тема подбирается по описанию.
-          </Typography.Text>
-        </Space>
-        <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-          Добавить тему
-        </Button>
-      </div>
+      <Card size="small">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+          <Space direction="vertical" size={0}>
+            <Typography.Title level={4} style={{ margin: 0 }}>
+              <MailOutlined style={{ marginRight: 8 }} />
+              Темы писем
+            </Typography.Title>
+            <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+              Список тем для ИИ-классификации писем.
+            </Typography.Text>
+          </Space>
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+            Добавить тему
+          </Button>
+        </div>
+      </Card>
       <Card>
         <Table<EmailTopic>
           rowKey="id"

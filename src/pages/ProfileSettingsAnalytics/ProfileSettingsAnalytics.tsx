@@ -167,9 +167,11 @@ export default function ProfileSettingsAnalytics() {
 
   return (
     <Space direction="vertical" size={24} style={{ width: '100%' }}>
-      <Title level={3} style={{ margin: 0, fontWeight: 500 }}>
-        Аналитика настроек профиля
-      </Title>
+      <Card size="small">
+        <Title level={4} style={{ margin: 0 }}>
+          Аналитика настроек профиля
+        </Title>
+      </Card>
       <Card>
         <Space style={{ marginBottom: 24 }} wrap size={16}>
           {/* GEO Filter */}

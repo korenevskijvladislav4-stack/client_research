@@ -70,25 +70,27 @@ export default function ImapAccounts() {
   return (
     <Space direction="vertical" size={24} style={{ width: '100%' }}>
       {/* Header */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: 12,
-        }}
-      >
-        <Space>
-          <Link to="/emails">← Почта</Link>
-          <Title level={3} style={{ margin: 0, fontWeight: 500 }}>
-            Почтовые аккаунты
-          </Title>
-        </Space>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-          Добавить аккаунт
-        </Button>
-      </div>
+      <Card size="small">
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 12,
+          }}
+        >
+          <Space>
+            <Link to="/emails">← Почта</Link>
+            <Title level={4} style={{ margin: 0 }}>
+              Почтовые аккаунты
+            </Title>
+          </Space>
+          <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
+            Добавить аккаунт
+          </Button>
+        </div>
+      </Card>
 
       {/* Table */}
       <Card>

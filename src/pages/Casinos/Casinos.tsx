@@ -167,18 +167,20 @@ export default function Casinos() {
   return (
     <Space direction="vertical" size={24} style={{ width: '100%' }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
-        <Space direction="vertical" size={0}>
-          <Typography.Title level={4} style={{ margin: 0 }}>Казино</Typography.Title>
-          <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-            Список казино. Нажмите на строку, чтобы открыть профиль.
-          </Typography.Text>
-        </Space>
-        <Space wrap>
-          <ColumnSelector {...columnSettings} />
-          <Button type="primary" onClick={showCreate}>Добавить казино</Button>
-        </Space>
-      </div>
+      <Card size="small">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
+          <Space direction="vertical" size={0}>
+            <Typography.Title level={4} style={{ margin: 0 }}>Казино</Typography.Title>
+            <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+              Список казино. Нажмите на строку, чтобы открыть профиль.
+            </Typography.Text>
+          </Space>
+          <Space wrap>
+            <ColumnSelector {...columnSettings} />
+            <Button type="primary" onClick={showCreate}>Добавить казино</Button>
+          </Space>
+        </div>
+      </Card>
 
       {/* Filters */}
       <Card size="small">

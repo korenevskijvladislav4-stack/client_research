@@ -104,14 +104,16 @@ export default function ProfileFields() {
 
   return (
     <Space direction="vertical" size={24} style={{ width: '100%' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography.Title level={3} style={{ margin: 0, fontWeight: 500 }}>
-          Поля профиля казино
-        </Typography.Title>
-        <Button type="primary" onClick={showCreate}>
-          Добавить поле
-        </Button>
-      </div>
+      <Card size="small">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography.Title level={4} style={{ margin: 0 }}>
+            Поля профиля казино
+          </Typography.Title>
+          <Button type="primary" onClick={showCreate}>
+            Добавить поле
+          </Button>
+        </div>
+      </Card>
       <Card>
       <Table
         rowKey="id"

@@ -204,38 +204,40 @@ export default function Emails() {
   return (
     <Space direction="vertical" size={24} style={{ width: '100%' }}>
       {/* Header */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: 12,
-        }}
-      >
-        <Title level={3} style={{ margin: 0, fontWeight: 500 }}>
-          Почта
-        </Title>
-        <Space>
-          <Button
-            icon={<DownloadOutlined />}
-            onClick={handleExport}
-          >
-            Выгрузить XLSX
-          </Button>
-          <Link to="/emails/imap-accounts">
-            <Button icon={<SettingOutlined />}>Настройки</Button>
-          </Link>
-          <Button
-            type="primary"
-            icon={<SyncOutlined spin={syncing} />}
-            loading={syncing}
-            onClick={handleSync}
-          >
-            Синхронизировать
-          </Button>
-        </Space>
-      </div>
+      <Card size="small">
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 12,
+          }}
+        >
+          <Title level={4} style={{ margin: 0 }}>
+            Почта
+          </Title>
+          <Space>
+            <Button
+              icon={<DownloadOutlined />}
+              onClick={handleExport}
+            >
+              Выгрузить XLSX
+            </Button>
+            <Link to="/emails/imap-accounts">
+              <Button icon={<SettingOutlined />}>Настройки</Button>
+            </Link>
+            <Button
+              type="primary"
+              icon={<SyncOutlined spin={syncing} />}
+              loading={syncing}
+              onClick={handleSync}
+            >
+              Синхронизировать
+            </Button>
+          </Space>
+        </div>
+      </Card>
 
       {/* Content */}
       <Card>
