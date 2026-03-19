@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Button, Table, message } from 'antd';
+import { Button, Table, message, theme } from 'antd';
 import {
   useGetSettingsFieldsQuery,
   useGetProfileContextsQuery,
@@ -14,6 +14,7 @@ interface ProfileSettingsTableProps {
 }
 
 export function ProfileSettingsTable({ casinoId, activeGeo, readOnly }: ProfileSettingsTableProps) {
+  const { token } = theme.useToken();
   const { data: fields = [] } = useGetSettingsFieldsQuery();
   const { data: contexts = [] } = useGetProfileContextsQuery();
   const { data: settings = [] } = useGetCasinoProfileSettingsQuery(
@@ -107,7 +108,7 @@ export function ProfileSettingsTable({ casinoId, activeGeo, readOnly }: ProfileS
 
   if (activeFields.length === 0 && activeContexts.length === 0) {
     return (
-      <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
+      <div style={{ textAlign: 'center', padding: '40px 0', color: token.colorTextTertiary }}>
         Настройки профиля не настроены. Добавьте поля и контексты в разделе "Настройки профиля".
       </div>
     );
@@ -115,7 +116,7 @@ export function ProfileSettingsTable({ casinoId, activeGeo, readOnly }: ProfileS
 
   if (activeFields.length === 0) {
     return (
-      <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
+      <div style={{ textAlign: 'center', padding: '40px 0', color: token.colorTextTertiary }}>
         Не созданы поля (строки). Добавьте поля в разделе "Настройки профиля" → "Поля (строки)".
       </div>
     );
@@ -123,7 +124,7 @@ export function ProfileSettingsTable({ casinoId, activeGeo, readOnly }: ProfileS
 
   if (activeContexts.length === 0) {
     return (
-      <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
+      <div style={{ textAlign: 'center', padding: '40px 0', color: token.colorTextTertiary }}>
         Не созданы контексты (столбцы). Добавьте контексты в разделе "Настройки профиля" → "Контексты (столбцы)".
       </div>
     );
@@ -134,7 +135,7 @@ export function ProfileSettingsTable({ casinoId, activeGeo, readOnly }: ProfileS
       <Table
         dataSource={dataSource}
         columns={columns}
-        pagination={false}
+        pagination={{ pageSize: 20 }}
         size="small"
         bordered
         scroll={{ x: 'max-content' }}

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Button, ColorPicker, Input, Select, Space, Tag, Tooltip, message } from 'antd';
+import { Button, ColorPicker, Input, Select, Space, Tag, Tooltip, message, theme } from 'antd';
 import { PlusOutlined, TagsOutlined } from '@ant-design/icons';
 import {
   useGetTagsQuery,
@@ -22,6 +22,7 @@ interface CasinoTagsProps {
 // ---------------------------------------------------------------------------
 
 export default function CasinoTags({ casinoId }: CasinoTagsProps) {
+  const { token } = theme.useToken();
   const { data: allTags = [] } = useGetTagsQuery();
   const { data: casinoTags = [] } = useGetCasinoTagsQuery(casinoId);
   const [createTag] = useCreateTagMutation();
@@ -69,7 +70,7 @@ export default function CasinoTags({ casinoId }: CasinoTagsProps) {
   return (
     <Space wrap size={8} style={{ marginBottom: 4 }}>
       <Tooltip title="Теги">
-        <TagsOutlined style={{ color: '#8c8c8c', fontSize: 14 }} />
+        <TagsOutlined style={{ color: token.colorTextTertiary, fontSize: 14 }} />
       </Tooltip>
 
       {/* Currently assigned tags */}

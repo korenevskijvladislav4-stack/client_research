@@ -15,6 +15,7 @@ import {
   Typography,
   Upload,
   message,
+  theme,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { SearchOutlined, EyeOutlined, PictureOutlined, DeleteOutlined } from '@ant-design/icons';
@@ -77,6 +78,7 @@ const fmtDate = (d?: string | null) => (d ? dayjs(d).format('DD.MM.YYYY') : '—
 
 export default function Promos() {
   const nav = useNavigate();
+  const { token: themeToken } = theme.useToken();
   const columnSettings = useColumnSettings('promos', COLUMN_CONFIG);
   const token = useAppSelector((s) => s.auth.token);
   const [selectedPromo, setSelectedPromo] = useState<CasinoPromo | null>(null);
@@ -511,7 +513,7 @@ export default function Promos() {
 
               <div
                 style={{
-                  border: '2px dashed #d9d9d9',
+                  border: `2px dashed ${themeToken.colorBorder}`,
                   borderRadius: 4,
                   padding: 16,
                   textAlign: 'center',
@@ -547,7 +549,7 @@ export default function Promos() {
                   }
                 }}
               >
-                <PictureOutlined style={{ fontSize: 24, color: '#8c8c8c', marginBottom: 8 }} />
+                <PictureOutlined style={{ fontSize: 24, color: themeToken.colorTextTertiary, marginBottom: 8 }} />
                 <div style={{ marginBottom: 8 }}>
                   <Typography.Text type="secondary">
                     Перетащите изображения сюда или вставьте (Ctrl+V)

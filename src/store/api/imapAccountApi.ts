@@ -125,7 +125,6 @@ export const imapAccountApi = baseApi.injectEndpoints({
 
 export const {
   useGetImapAccountsQuery,
-  useGetImapAccountByIdQuery,
   useCreateImapAccountMutation,
   useUpdateImapAccountMutation,
   useDeleteImapAccountMutation,

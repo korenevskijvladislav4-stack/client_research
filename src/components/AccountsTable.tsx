@@ -21,7 +21,7 @@ export function AccountsTable({ accounts, isLoading, onEdit, onDelete, onAddTran
       rowKey="id"
       loading={isLoading}
       size="small"
-      pagination={false}
+      pagination={{ pageSize: 20 }}
       columns={[
         {
           title: 'GEO',

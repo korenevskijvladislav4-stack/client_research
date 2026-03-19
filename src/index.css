@@ -31,23 +31,37 @@ body,
     transform 0.12s ease-out;
 }
 
-/* Page container — теперь на всю ширину */
+/* Page container — на всю ширину */
 .page-shell {
   width: 100%;
   max-width: 100%;
   margin: 0;
 }
 
-/* SaaS-style cards */
+/* SaaS-style cards — theme-aware */
 .ant-card {
   border-radius: 12px;
+}
+
+[data-theme="light"] .ant-card {
   border: 1px solid rgba(148, 163, 184, 0.25);
 }
 
-.ant-card:hover {
+[data-theme="dark"] .ant-card {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="light"] .ant-card:hover {
   box-shadow:
-    0 18px 45px rgba(15, 23, 42, 0.28),
-    0 0 0 1px rgba(129, 140, 248, 0.35);
+    0 12px 32px rgba(15, 23, 42, 0.12),
+    0 0 0 1px rgba(99, 102, 241, 0.2);
+  transform: translateY(-2px);
+}
+
+[data-theme="dark"] .ant-card:hover {
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(129, 140, 248, 0.25);
   transform: translateY(-2px);
 }
 
@@ -61,11 +75,17 @@ body,
   letter-spacing: -0.01em;
 }
 
-/* Layout background gradient (subtle, works in both themes) */
-.ant-layout {
+/* Layout background gradient */
+[data-theme="light"] .ant-layout {
   background:
-    radial-gradient(circle at top left, rgba(129, 140, 248, 0.16), transparent 55%),
-    radial-gradient(circle at bottom right, rgba(45, 212, 191, 0.18), transparent 60%);
+    radial-gradient(circle at top left, rgba(99, 102, 241, 0.06), transparent 55%),
+    radial-gradient(circle at bottom right, rgba(45, 212, 191, 0.06), transparent 60%);
+}
+
+[data-theme="dark"] .ant-layout {
+  background:
+    radial-gradient(circle at top left, rgba(129, 140, 248, 0.1), transparent 55%),
+    radial-gradient(circle at bottom right, rgba(45, 212, 191, 0.08), transparent 60%);
 }
 
 /* Sidebar logo area */
@@ -84,12 +104,20 @@ body,
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #0f172a;
   font-size: 16px;
   font-weight: 700;
+}
+
+[data-theme="light"] .app-sider-logo-badge {
+  color: #0f172a;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+[data-theme="dark"] .app-sider-logo-badge {
+  color: #0f172a;
   box-shadow:
-    0 10px 25px rgba(15, 23, 42, 0.6),
-    0 0 0 1px rgba(15, 23, 42, 0.8);
+    0 10px 25px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.1);
 }
 
 .app-sider-logo-text-main {
@@ -150,7 +178,7 @@ body,
   opacity: 0.7;
 }
 
-/* Custom scrollbar */
+/* Custom scrollbar — theme-aware */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -160,13 +188,22 @@ body,
   background: transparent;
 }
 
-::-webkit-scrollbar-thumb {
-  background: rgba(100, 116, 139, 0.5);
+[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.35);
   border-radius: 4px;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 116, 139, 0.7);
+[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.55);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.25);
+  border-radius: 4px;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.45);
 }
 
 /* Responsive utilities */
@@ -177,7 +214,6 @@ body,
 }
 
 @media (max-width: 768px) {
-  /* Tables */
   .ant-table-wrapper {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
@@ -187,7 +223,6 @@ body,
     min-width: 600px;
   }
 
-  /* Cards */
   .ant-card {
     margin-bottom: 16px;
   }
@@ -200,12 +235,10 @@ body,
     padding: 16px;
   }
 
-  /* Forms */
   .ant-form-item {
     margin-bottom: 16px;
   }
 
-  /* Modals */
   .ant-modal {
     max-width: calc(100vw - 32px);
     margin: 16px auto;
@@ -215,13 +248,11 @@ body,
     padding: 16px;
   }
 
-  /* Descriptions */
   .ant-descriptions-item-label {
     width: 120px !important;
     min-width: 120px !important;
   }
 
-  /* Space components */
   .ant-space {
     width: 100%;
   }
@@ -230,22 +261,18 @@ body,
     width: 100%;
   }
 
-  /* Typography */
   .ant-typography {
     word-break: break-word;
   }
 
-  /* Buttons */
   .ant-btn {
     white-space: nowrap;
   }
 
-  /* Select */
   .ant-select {
     width: 100% !important;
   }
 
-  /* Input groups */
   .ant-input-group {
     display: flex;
     flex-direction: column;
@@ -255,7 +282,6 @@ body,
     margin-bottom: 8px;
   }
 
-  /* Filters */
   .filter-container {
     flex-direction: column;
   }
@@ -264,7 +290,6 @@ body,
     width: 100%;
   }
 
-  /* Tables with actions */
   .ant-table-tbody > tr > td:last-child {
     position: sticky;
     right: 0;
@@ -274,7 +299,6 @@ body,
 }
 
 @media (max-width: 576px) {
-  /* Even smaller screens */
   .ant-modal {
     max-width: calc(100vw - 16px);
     margin: 8px auto;

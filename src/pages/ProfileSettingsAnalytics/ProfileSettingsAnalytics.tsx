@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Button, Card, Select, Space, Table, Tag, Tooltip, Typography } from 'antd';
+import { Button, Card, Select, Space, Table, Tag, Tooltip, Typography, theme } from 'antd';
 import { CheckCircleFilled } from '@ant-design/icons';
 import {
   useGetSettingsFieldsQuery,
@@ -13,6 +13,7 @@ import { useGetAllCasinosQuery } from '../../store/api/casinoApi';
 const { Title, Text } = Typography;
 
 export default function ProfileSettingsAnalytics() {
+  const { token } = theme.useToken();
   const [selectedGeo, setSelectedGeo] = useState<string | undefined>(undefined);
   const [selectedCasinos, setSelectedCasinos] = useState<number[]>([]);
 
@@ -66,12 +67,12 @@ export default function ProfileSettingsAnalytics() {
           fontWeight: 600, 
           marginBottom: 12, 
           paddingBottom: 8,
-          borderBottom: '1px solid rgba(255,255,255,0.15)',
+          borderBottom: `1px solid ${token.colorBorderSecondary}`,
           display: 'flex',
           alignItems: 'center',
           gap: 6
         }}>
-          <CheckCircleFilled style={{ color: '#52c41a' }} />
+          <CheckCircleFilled style={{ color: token.colorSuccess }} />
           Казино: {data.count}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -215,7 +216,7 @@ export default function ProfileSettingsAnalytics() {
         </Space>
 
         {activeFields.length === 0 || activeContexts.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
+          <div style={{ textAlign: 'center', padding: '40px 0', color: token.colorTextTertiary }}>
             Настройки профиля не настроены. Добавьте поля и контексты в разделе "Настройки профиля".
           </div>
         ) : (

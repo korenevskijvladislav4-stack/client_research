@@ -21,7 +21,7 @@ export function ColumnSelector({
         background: 'var(--ant-color-bg-elevated)',
         borderRadius: 8,
         padding: '8px 0',
-        boxShadow: '0 6px 16px rgba(0,0,0,0.2)',
+        boxShadow: '0 6px 16px rgba(0,0,0,0.12)',
         minWidth: 180,
       }}
     >

@@ -22,7 +22,7 @@ import {
   UserOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { useSelector } from 'react-redux';
+import { useAppSelector } from '../../../hooks/redux';
 import {
   useGetCasinoCommentsQuery,
   useCreateCommentMutation,
@@ -81,7 +81,7 @@ export default function CasinoActivity({ casinoId }: CasinoActivityProps) {
   // ---- Local state ----
   const [newComment, setNewComment] = useState('');
   const [pendingImageFile, setPendingImageFile] = useState<File | null>(null);
-  const currentUser = useSelector((state: any) => state.auth.user);
+  const currentUser = useAppSelector((state) => state.auth.user);
 
   // ---- Derived ----
   const imagesByCommentId = useMemo(() => {
@@ -301,11 +301,8 @@ export default function CasinoActivity({ casinoId }: CasinoActivityProps) {
 
   return (
     <Card
-      title={
-        <Typography.Title level={5} style={{ margin: 0 }}>
-          Активность
-        </Typography.Title>
-      }
+      size="small"
+      title={<Space><CommentOutlined /><span>Активность</span></Space>}
       loading={commentsLoading}
     >
       {/* Tab switcher (Jira-style pill buttons) */}

@@ -166,8 +166,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, mode);
-    // Update document background for smoother transitions
     document.body.style.backgroundColor = mode === 'dark' ? '#0a0e27' : '#f8fafc';
+    document.documentElement.setAttribute('data-theme', mode);
   }, [mode]);
 
   const toggleTheme = () => {

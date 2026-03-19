@@ -111,7 +111,7 @@ export function AppLayout() {
   const siderTheme = mode === 'dark' ? 'dark' : 'light';
   const siderTextColor = mode === 'dark' ? token.colorTextLightSolid : token.colorText;
   const siderSecondaryTextColor = token.colorTextSecondary;
-  const siderBg = mode === 'dark' ? '#020617' : '#ffffff';
+  const siderBg = mode === 'dark' ? '#020617' : token.colorBgContainer;
   const themeToggleBg = mode === 'dark' ? 'rgba(129, 140, 248, 0.18)' : 'rgba(15,23,42,0.03)';
 
   const menuContent = (
@@ -179,7 +179,7 @@ export function AppLayout() {
               left: 0,
               right: 0,
               height: 60,
-              background: 'rgba(15,23,42,0.98)',
+              background: mode === 'dark' ? 'rgba(15,23,42,0.98)' : token.colorBgContainer,
               borderBottom: `1px solid ${token.colorBorder}`,
               display: 'flex',
               alignItems: 'center',
@@ -193,7 +193,7 @@ export function AppLayout() {
                 R
               </div>
               <div>
-                <Typography.Title level={5} style={{ margin: 0, color: '#e2e8f0' }}>
+                <Typography.Title level={5} style={{ margin: 0, color: token.colorText }}>
                   Research CRM
                 </Typography.Title>
               </div>
@@ -336,7 +336,7 @@ export function AppLayout() {
                       style={{
                         background:
                           'conic-gradient(from 160deg, #6366f1, #22c55e, #0ea5e9, #6366f1)',
-                        color: '#0f172a',
+                        color: token.colorTextBase,
                         fontWeight: 600,
                       }}
                     >

@@ -14,6 +14,7 @@ import {
   Image,
   Upload,
   message,
+  theme,
 } from 'antd';
 import { SearchOutlined, EyeOutlined, PictureOutlined, DeleteOutlined } from '@ant-design/icons';
 import {
@@ -84,6 +85,7 @@ const fmtAmount = (value: any, currency?: string | null) => {
 
 export default function Bonuses() {
   const nav = useNavigate();
+  const { token: themeToken } = theme.useToken();
   const columnSettings = useColumnSettings('bonuses', COLUMN_CONFIG);
   const token = useAppSelector((s) => s.auth.token);
   const table = useServerTable<{
@@ -634,7 +636,7 @@ export default function Bonuses() {
                 {/* Upload Area */}
                 <div
                   style={{
-                    border: '2px dashed #d9d9d9',
+                    border: `2px dashed ${themeToken.colorBorder}`,
                     borderRadius: 4,
                     padding: 16,
                     textAlign: 'center',
@@ -670,7 +672,7 @@ export default function Bonuses() {
                     }
                   }}
                 >
-                  <PictureOutlined style={{ fontSize: 24, color: '#8c8c8c', marginBottom: 8 }} />
+                  <PictureOutlined style={{ fontSize: 24, color: themeToken.colorTextTertiary, marginBottom: 8 }} />
                   <div style={{ marginBottom: 8 }}>
                     <Typography.Text type="secondary">
                       Перетащите изображения сюда или вставьте (Ctrl+V)

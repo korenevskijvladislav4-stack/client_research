@@ -15,24 +15,24 @@ const rawBaseQuery = fetchBaseQuery({
   },
 });
 
-const baseQuery = async (args: any, api: any, extraOptions: any) => {
+const baseQuery = async (
+  args: Parameters<typeof rawBaseQuery>[0],
+  api: Parameters<typeof rawBaseQuery>[1],
+  extraOptions: Parameters<typeof rawBaseQuery>[2],
+) => {
   const result = await rawBaseQuery(args, api, extraOptions);
   if (result.error) {
     const status = result.error.status;
     if (status === 401) {
       api.dispatch(logout());
-      const msg = (result.error?.data as any)?.error;
-      message.error(msg || 'Сессия истекла. Войдите снова.');
+      const msg = getApiErrorMessage(result.error, 'Сессия истекла. Войдите снова.');
+      message.error(msg);
     } else if (
       status === 'FETCH_ERROR' ||
       status === 'PARSING_ERROR' ||
       status === 'TIMEOUT_ERROR'
     ) {
       message.error('Сервер недоступен. Проверьте подключение или попробуйте позже.');
-    } else {
-      // Показываем текст ошибки с бэкенда для остальных статусов
-      const msg = getApiErrorMessage(result.error);
-      message.error(msg);
     }
   }
   return result;
@@ -44,18 +44,20 @@ export const baseApi = createApi({
   endpoints: () => ({}),
 });
 
-/** Текст ошибки с бэкенда для показа пользователю */
-export function getApiErrorMessage(error: any, fallback = 'Ошибка запроса'): string {
-  if (!error) return fallback;
-  const status = error?.status;
+/** Extract user-facing error text from an RTK Query error object */
+export function getApiErrorMessage(error: unknown, fallback = 'Произошла ошибка'): string {
+  if (!error || typeof error !== 'object') return fallback;
+  const err = error as Record<string, unknown>;
+  const status = err.status;
   if (status === 'FETCH_ERROR' || status === 'PARSING_ERROR' || status === 'TIMEOUT_ERROR') {
     return 'Сервер недоступен. Проверьте подключение или попробуйте позже.';
   }
-  const data = error?.data;
+  const data = err.data;
   if (data && typeof data === 'object') {
-    if (typeof data.error === 'string') return data.error;
-    if (typeof data.message === 'string') return data.message;
+    const d = data as Record<string, unknown>;
+    if (typeof d.error === 'string') return d.error;
+    if (typeof d.message === 'string') return d.message;
   }
-  if (typeof error?.message === 'string') return error.message;
+  if (typeof err.message === 'string') return err.message;
   return fallback;
 }

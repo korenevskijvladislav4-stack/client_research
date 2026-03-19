@@ -5,76 +5,63 @@ import {
   Button,
   Card,
   Descriptions,
-  Drawer,
   Dropdown,
-  List,
-  Modal,
-  Select,
   Space,
   Spin,
   Table,
+  Tabs,
   Tag,
   Tooltip,
   Typography,
-  Divider,
   message,
   Upload,
   Image,
   Pagination,
   theme,
 } from 'antd';
-import { ArrowLeftOutlined, CameraOutlined, InfoCircleOutlined, EyeOutlined, DeleteOutlined, LoadingOutlined, PictureOutlined, DownloadOutlined, RobotOutlined, SwapOutlined } from '@ant-design/icons';
+import {
+  ArrowLeftOutlined,
+  InfoCircleOutlined,
+  PictureOutlined,
+  DownloadOutlined,
+  SwapOutlined,
+  GiftOutlined,
+  ThunderboltOutlined,
+  CreditCardOutlined,
+  UserOutlined,
+  CameraOutlined,
+  AppstoreOutlined,
+  MailOutlined,
+  CommentOutlined,
+  SettingOutlined,
+} from '@ant-design/icons';
 import { ProfileSettingsTable } from '../../components/ProfileSettingsTable';
 import { AccountsTable } from '../../components/AccountsTable';
 
 import CasinoActivity from './components/CasinoActivity';
 import CasinoTags from './components/CasinoTags';
+import BonusSection from './components/BonusSection';
+import PromoSection from './components/PromoSection';
+import PaymentSection from './components/PaymentSection';
+import EmailSection from './components/EmailSection';
+
 import { useGetCasinoByIdQuery } from '../../store/api/casinoApi';
 import {
   useGetCasinoProfileQuery,
   CasinoProfileItem,
   ProfileField,
 } from '../../store/api/casinoProfileApi';
-import {
-  useGetCasinoBonusesQuery,
-  CasinoBonus,
-  useGetBonusImagesQuery,
-  useUploadBonusImagesMutation,
-  CasinoBonusImage,
-} from '../../store/api/casinoBonusApi';
-import {
-  useGetCasinoPaymentsQuery,
-  CasinoPayment,
-  useGetPaymentImagesQuery,
-  useUploadPaymentImagesMutation,
-  CasinoPaymentImage,
-} from '../../store/api/casinoPaymentApi';
-import {
-  useGetCasinoAccountsQuery,
-} from '../../store/api/casinoAccountApi';
-import {
-  useGetCasinoPromosQuery,
-  useGetPromoImagesQuery,
-  useUploadPromoImagesMutation,
-  CasinoPromo,
-  CasinoPromoImage,
-  PromoCategory,
-  PromoStatus,
-} from '../../store/api/casinoPromoApi';
+import { useGetCasinoBonusesQuery } from '../../store/api/casinoBonusApi';
+import { useGetCasinoPaymentsQuery } from '../../store/api/casinoPaymentApi';
+import { useGetCasinoAccountsQuery } from '../../store/api/casinoAccountApi';
+import { useGetCasinoPromosQuery } from '../../store/api/casinoPromoApi';
 import { useGetCasinoProvidersQuery } from '../../store/api/casinoProviderApi';
 import {
   useGetScreenshotsByCasinoQuery,
   useTakeScreenshotMutation,
   SlotScreenshot,
 } from '../../store/api/slotSelectorApi';
-import {
-  useGetEmailsForCasinoByNameQuery,
-  useGetRecipientsQuery,
-  useMarkEmailAsReadMutation,
-  useRequestEmailSummaryMutation,
-  useRequestEmailScreenshotMutation,
-  Email,
-} from '../../store/api/emailApi';
+import { useGetEmailsForCasinoByNameQuery, useGetRecipientsQuery } from '../../store/api/emailApi';
 import { getApiBaseUrl } from '../../config/api';
 import {
   useGetCasinoCommentsQuery,
@@ -83,25 +70,11 @@ import {
   useUploadCommentImageMutation,
   CasinoCommentImage,
 } from '../../store/api/casinoCommentApi';
-import { useSelector } from 'react-redux';
+import { useAppSelector } from '../../hooks/redux';
 import dayjs from 'dayjs';
 import { exportProfileToInteractiveHtml, ExportData } from '../../utils/exportProfileToInteractiveHtml';
 
-// Форматирование числа
-const fmt = (n: any) => {
-  const num = Number(n);
-  if (isNaN(num)) return n;
-  return Number.isInteger(num) ? num : parseFloat(num.toFixed(2));
-};
-
-// Форматирование суммы с валютой
-const fmtAmount = (value: any, currency?: string | null) => {
-  if (value == null) return '—';
-  const formatted = fmt(value);
-  return currency ? `${formatted} ${currency}` : formatted;
-};
-
-function renderFieldValue(field: ProfileField, value: any) {
+function renderFieldValue(field: ProfileField, value: unknown) {
   if (value == null || value === '') return '—';
 
   switch (field.field_type) {
@@ -113,11 +86,11 @@ function renderFieldValue(field: ProfileField, value: any) {
         />
       );
     case 'rating':
-      return <Typography.Text strong>{value}</Typography.Text>;
+      return <Typography.Text strong>{String(value)}</Typography.Text>;
     case 'multiselect':
       return (
         <Space wrap size={[4, 4]}>
-          {(Array.isArray(value) ? value : []).map((v: any) => (
+          {(Array.isArray(value) ? value : []).map((v: unknown) => (
             <Tag key={String(v)}>{String(v)}</Tag>
           ))}
         </Space>
@@ -161,21 +134,18 @@ export default function CasinoProfileView() {
 
   const { data: profileResp, isLoading: profileLoading } = useGetCasinoProfileQuery(
     { casinoId, geo: activeGeo },
-    {
-      skip: !casinoId,
-    } as any,
+    { skip: !casinoId } as Record<string, unknown>,
   );
-
   const items: CasinoProfileItem[] = profileResp?.profile ?? [];
 
   const { data: bonuses, isLoading: bonusesLoading } = useGetCasinoBonusesQuery(
     { casinoId, geo: activeGeo },
-    { skip: !casinoId } as any
+    { skip: !casinoId } as Record<string, unknown>,
   );
 
   const { data: payments, isLoading: paymentsLoading } = useGetCasinoPaymentsQuery(
     { casinoId, geo: activeGeo },
-    { skip: !casinoId } as any
+    { skip: !casinoId } as Record<string, unknown>,
   );
 
   const { data: accounts, isLoading: accountsLoading } = useGetCasinoAccountsQuery(casinoId, {
@@ -184,8 +154,9 @@ export default function CasinoProfileView() {
 
   const { data: promos, isLoading: promosLoading } = useGetCasinoPromosQuery(
     { casinoId, geo: activeGeo },
-    { skip: !casinoId } as any
+    { skip: !casinoId } as Record<string, unknown>,
   );
+
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const { data: screenshots = [], isLoading: screenshotsLoading } = useGetScreenshotsByCasinoQuery(casinoId, {
@@ -193,78 +164,28 @@ export default function CasinoProfileView() {
   });
   const [takeScreenshot, { isLoading: takingScreenshot }] = useTakeScreenshotMutation();
 
-  // Только GEO, на которые работает казино (проект)
-
-  const [selectedBonus, setSelectedBonus] = useState<CasinoBonus | null>(null);
-  const [pendingBonusImages, setPendingBonusImages] = useState<File[]>([]);
-
-  const { data: bonusImages = [] } = useGetBonusImagesQuery(
-    { casinoId, bonusId: selectedBonus?.id ?? 0 },
-    { skip: !selectedBonus?.id || !casinoId }
+  const [activeProviderGeo] = useState<string | undefined>(undefined);
+  const { data: casinoProviders = [], isLoading: casinoProvidersLoading } = useGetCasinoProvidersQuery(
+    { casinoId, geo: activeProviderGeo ?? activeGeo },
+    { skip: !casinoId },
   );
-  const [uploadBonusImages] = useUploadBonusImagesMutation();
-
-  const [selectedPayment, setSelectedPayment] = useState<CasinoPayment | null>(null);
-  const [pendingPaymentImages, setPendingPaymentImages] = useState<File[]>([]);
-  const [activePaymentDirection] = useState<'deposit' | 'withdrawal' | undefined>(undefined);
-
-  const { data: paymentImages = [] } = useGetPaymentImagesQuery(
-    { casinoId, paymentId: selectedPayment?.id ?? 0 },
-    { skip: !selectedPayment?.id || !casinoId }
-  );
-  const [uploadPaymentImages] = useUploadPaymentImagesMutation();
 
   const [imagesPage, setImagesPage] = useState(1);
   const IMAGES_PAGE_SIZE = 12;
 
-  const PAGE_SIZE = 20;
-  const [emailPage, setEmailPage] = useState(1);
-  const [emailToFilter, setEmailToFilter] = useState<string | undefined>(undefined);
-  const {
-    data: emailResp,
-    isLoading: emailsLoading,
-    refetch: refetchEmails,
-  } = useGetEmailsForCasinoByNameQuery(
-    {
-      casinoId,
-      limit: PAGE_SIZE,
-      offset: (emailPage - 1) * PAGE_SIZE,
-      ...(emailToFilter ? { to_email: emailToFilter } : {}),
-    },
-    { skip: !casinoId } as any
-  );
-  const { data: recipients = [] } = useGetRecipientsQuery();
-  const [markAsRead] = useMarkEmailAsReadMutation();
-  const [reqSummary, { isLoading: summaryLoading }] = useRequestEmailSummaryMutation();
-  const [reqScreenshot, { isLoading: screenshotLoading }] = useRequestEmailScreenshotMutation();
-  const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
-  const [casinoScreenshotVisible, setCasinoScreenshotVisible] = useState(false);
-  const [viewingPromo, setViewingPromo] = useState<CasinoPromo | null>(null);
-  const [pendingPromoImages, setPendingPromoImages] = useState<File[]>([]);
-  const { data: promoImages = [] } = useGetPromoImagesQuery(
-    { casinoId, promoId: viewingPromo?.id ?? 0 },
-    { skip: !casinoId || !viewingPromo?.id }
-  );
-  const [uploadPromoImages] = useUploadPromoImagesMutation();
-  const [activeProviderGeo] = useState<string | undefined>(undefined);
-  const { data: casinoProviders = [], isLoading: casinoProvidersLoading } = useGetCasinoProvidersQuery(
-    { casinoId, geo: activeProviderGeo ?? activeGeo },
-    { skip: !casinoId }
-  );
-
-  // Comments & Images (needed for export)
-  const { data: comments } = useGetCasinoCommentsQuery(casinoId, {
-    skip: !casinoId,
-  } as any);
-  const { data: images = [] } = useGetCasinoImagesQuery(casinoId, {
-    skip: !casinoId,
-  } as any);
+  const { data: comments } = useGetCasinoCommentsQuery(casinoId, { skip: !casinoId } as Record<string, unknown>);
+  const { data: images = [] } = useGetCasinoImagesQuery(casinoId, { skip: !casinoId } as Record<string, unknown>);
   const [createComment] = useCreateCommentMutation();
   const [uploadCommentImage] = useUploadCommentImageMutation();
   const [galleryCommentId, setGalleryCommentId] = useState<number | null>(null);
-  const authToken = useSelector((state: any) => state.auth.token);
+  const authToken = useAppSelector((state) => state.auth.token);
 
-  // Все изображения: комментарии + скриншоты
+  const { data: emailResp } = useGetEmailsForCasinoByNameQuery(
+    { casinoId, limit: 20, offset: 0 },
+    { skip: !casinoId } as Record<string, unknown>,
+  );
+  const { data: recipients = [] } = useGetRecipientsQuery();
+
   const allImages: CasinoCommentImage[] = useMemo(() => {
     const base = images as CasinoCommentImage[];
     const screenshotImages: CasinoCommentImage[] =
@@ -285,15 +206,13 @@ export default function CasinoProfileView() {
           bonus_name: undefined,
           payment_name: undefined,
           entity_type: 'comment',
-        })) as any;
+        })) as CasinoCommentImage[];
     return [...base, ...screenshotImages];
   }, [images, screenshots, casinoId]);
 
-  // Пагинация изображений
   const paginatedImages = useMemo(() => {
     const start = (imagesPage - 1) * IMAGES_PAGE_SIZE;
-    const end = start + IMAGES_PAGE_SIZE;
-    return allImages.slice(start, end);
+    return allImages.slice(start, start + IMAGES_PAGE_SIZE);
   }, [allImages, imagesPage]);
 
   const handleExportHtml = async () => {
@@ -307,9 +226,7 @@ export default function CasinoProfileView() {
         const data = await r.json();
         const list = Array.isArray(data) ? data : (data?.data ?? data?.images ?? []);
         bonusImageUrls[b.id] = (list as { url?: string }[]).map((img) => img.url).filter(Boolean) as string[];
-      } catch {
-        bonusImageUrls[b.id] = [];
-      }
+      } catch { bonusImageUrls[b.id] = []; }
     }
     const paymentImageUrls: Record<number, string[]> = {};
     for (const p of payments ?? []) {
@@ -318,9 +235,7 @@ export default function CasinoProfileView() {
         const data = await r.json();
         const list = Array.isArray(data) ? data : (data?.data ?? data?.images ?? []);
         paymentImageUrls[p.id] = (list as { url?: string }[]).map((img) => img.url).filter(Boolean) as string[];
-      } catch {
-        paymentImageUrls[p.id] = [];
-      }
+      } catch { paymentImageUrls[p.id] = []; }
     }
     const commentImageUrls = (images ?? [])
       .filter((img) => img.comment_id != null)
@@ -350,14 +265,10 @@ export default function CasinoProfileView() {
           for (const s of list as { geo?: string; field_id: number; context_id: number; value: boolean }[]) {
             settingsByGeo.push({ geo: s.geo ?? geo, field_id: s.field_id, context_id: s.context_id, value: s.value });
           }
-        } catch {
-          // skip
-        }
+        } catch { /* skip */ }
       }
       profileSettings = settingsByGeo;
-    } catch {
-      // skip profile settings
-    }
+    } catch { /* skip profile settings */ }
 
     const exportData: ExportData = {
       casino: {
@@ -400,9 +311,7 @@ export default function CasinoProfileView() {
           reader.onerror = reject;
           reader.readAsDataURL(blob);
         });
-      } catch {
-        return null;
-      }
+      } catch { return null; }
     };
     try {
       await exportProfileToInteractiveHtml(exportData, {
@@ -412,7 +321,7 @@ export default function CasinoProfileView() {
       });
       hide();
       message.success({ content: 'HTML-файл сохранён', key: 'export' });
-    } catch (e) {
+    } catch {
       hide();
       message.error({ content: 'Ошибка экспорта', key: 'export' });
     }
@@ -421,10 +330,7 @@ export default function CasinoProfileView() {
   const ensureGalleryComment = useCallback(async () => {
     if (galleryCommentId) return galleryCommentId;
     try {
-      const comment = await createComment({
-        casinoId,
-        data: { text: 'Галерея изображений' },
-      }).unwrap();
+      const comment = await createComment({ casinoId, data: { text: 'Галерея изображений' } }).unwrap();
       setGalleryCommentId(comment.id);
       return comment.id;
     } catch {
@@ -451,261 +357,86 @@ export default function CasinoProfileView() {
   if (!casinoId) return <Card>Неверный id казино</Card>;
   if (casinoLoading || profileLoading) {
     return (
-      <div
-        style={{
-          minHeight: '50vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
+      <div style={{ minHeight: '50vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Spin size="large" />
       </div>
     );
   }
 
-  return (
-    <Space direction="vertical" size={24} style={{ width: '100%' }}>
-      {casinoGeos.length > 0 && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 96,
-            right: 32,
-            zIndex: 50,
-          }}
-        >
-          <Dropdown
-            trigger={['click']}
-            menu={{
-              items: casinoGeos.map((g) => ({
-                key: g || 'ALL',
-                label: g || 'ALL',
-                onClick: () => setActiveGeo(g),
-              })),
-            }}
-          >
-            <Button
-              size="small"
-              type="default"
-              style={{
-                borderRadius: 999,
-                boxShadow: '0 8px 20px rgba(15, 23, 42, 0.35)',
-                paddingInline: 14,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                borderColor: 'rgba(148, 163, 184, 0.7)',
-              }}
-            >
-              <span
-                style={{
-                  fontSize: 10,
-                  textTransform: 'uppercase',
-                  letterSpacing: 0.6,
-                  opacity: 0.7,
-                }}
-              >
-                GEO
-              </span>
-              <Tag
-                color="blue"
-                style={{
-                  margin: 0,
-                  borderRadius: 999,
-                  paddingInline: 8,
-                  fontSize: 11,
-                }}
-              >
-                {activeGeo || 'ALL'}
-              </Tag>
-            </Button>
-          </Dropdown>
-        </div>
-      )}
-      {/* Верхний блок с основными действиями */}
+  const overviewTab = (
+    <Space direction="vertical" size={20} style={{ width: '100%' }}>
       <Card
-        style={{
-          borderRadius: 16,
-        }}
-        bodyStyle={{
-          padding: 18,
-        }}
+        size="small"
+        title={<Space size={8}><Tag>Теги</Tag><Typography.Text strong>Классификация казино</Typography.Text></Space>}
       >
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-start',
-            flexWrap: 'wrap',
-            gap: 16,
-          }}
-        >
-          <Space align="start" size={14} wrap>
-            <Button
-              icon={<ArrowLeftOutlined />}
-              onClick={() => nav('/casinos')}
-              style={{ borderRadius: 999 }}
-            />
-            <Space direction="vertical" size={4}>
-              <Typography.Title
-                level={3}
-                style={{ margin: 0, fontWeight: 600, letterSpacing: '-0.03em' }}
-              >
-                {casino?.name}
-              </Typography.Title>
-              <Space size={8} wrap>
-                <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-                  {casino?.website || 'Сайт не указан'}
-                </Typography.Text>
-                {casino?.is_our && <Tag color="green">Наш проект</Tag>}
-              </Space>
-            </Space>
-          </Space>
-          <Space wrap align="center">
-            <Tooltip title="Сравнить это казино с другим">
-              <Button
-                size="small"
-                icon={<SwapOutlined />}
-                onClick={() => nav(`/casinos/compare?casino1=${casinoId}`)}
-              >
-                Сравнить
-              </Button>
-            </Tooltip>
-            <Tooltip title="Экспорт анкеты в интерактивный HTML с фильтрами и модальными окнами.">
-              <Button size="small" icon={<DownloadOutlined />} onClick={handleExportHtml}>
-                Экспорт в HTML
-              </Button>
-            </Tooltip>
-            <Button
-              type="primary"
-              size="small"
-              onClick={() => nav(`/casinos/${casinoId}/edit`)}
-            >
-              Редактировать анкету
-            </Button>
-          </Space>
-        </div>
+        <CasinoTags casinoId={casinoId} />
       </Card>
 
-      {/* Теги и общая информация */}
-      <Space direction="vertical" size={16} style={{ width: '100%' }}>
-        <Card
+      <Card size="small" title="Общая информация">
+        <Descriptions
+          column={1}
+          bordered
           size="small"
-          title={
-            <Space size={8}>
-              <Tag>Теги</Tag>
-              <Typography.Text strong>Классификация казино</Typography.Text>
-            </Space>
-          }
+          styles={{ label: { width: 200, minWidth: 200 } }}
         >
-          <CasinoTags casinoId={casinoId} />
-        </Card>
-
-        <Card>
-          <Space direction="vertical" size={24} style={{ width: '100%' }}>
-          <div>
-            <Typography.Title level={5} style={{ marginBottom: 16 }}>
-              Общая информация
-            </Typography.Title>
-            <Descriptions column={1} bordered size="small">
-              <Descriptions.Item label="Название">{casino?.name || '—'}</Descriptions.Item>
-              <Descriptions.Item label="Сайт">
-                {casino?.website ? (
-                  <a href={casino.website} target="_blank" rel="noreferrer">
-                    {casino.website}
-                  </a>
-                ) : (
-                  '—'
-                )}
-              </Descriptions.Item>
-              <Descriptions.Item label="GEO">
-                {casino?.geo && casino.geo.length > 0 ? (
-                  <Space wrap size={[4, 4]}>
-                    {casino.geo.map((g) => (
-                      <Tag key={g}>{g}</Tag>
-                    ))}
-                  </Space>
-                ) : (
-                  '—'
-                )}
-              </Descriptions.Item>
-              <Descriptions.Item label="Наш">
-                {casino?.is_our ? (
-                  <Tag color="green">Да</Tag>
-                ) : (
-                  <Tag>Нет</Tag>
-                )}
-              </Descriptions.Item>
-              {casino?.description && (
-                <Descriptions.Item label="Описание">
-                  {casino.description}
-                </Descriptions.Item>
-              )}
-            </Descriptions>
-          </div>
-
-          {items.length > 0 && (
-            <>
-              <Divider style={{ margin: '24px 0 16px' }} />
-              <div>
-              <Typography.Title level={5} style={{ marginBottom: 16 }}>
-                Дополнительные поля{activeGeo ? ` (${activeGeo})` : ''}
-              </Typography.Title>
-              <Descriptions
-                column={1}
-                bordered
-                size="small"
-                styles={{ label: { width: 200, minWidth: 200 }, content: { minWidth: 300 } }}
-              >
-                {items.map((it) => (
-                  <Descriptions.Item
-                    key={it.field.id}
-                    label={
-                      <Space size={6}>
-                        <Typography.Text>{it.field.label}</Typography.Text>
-                        {it.field.description ? (
-                          <Tooltip title={it.field.description}>
-                            <InfoCircleOutlined style={{ fontSize: 12 }} />
-                          </Tooltip>
-                        ) : null}
-                      </Space>
-                    }
-                  >
-                    {renderFieldValue(it.field, it.value)}
-                  </Descriptions.Item>
-                ))}
-              </Descriptions>
-              </div>
-            </>
+          <Descriptions.Item label="Название">{casino?.name || '—'}</Descriptions.Item>
+          <Descriptions.Item label="Сайт">
+            {casino?.website ? <a href={casino.website} target="_blank" rel="noreferrer">{casino.website}</a> : '—'}
+          </Descriptions.Item>
+          <Descriptions.Item label="GEO">
+            {casino?.geo?.length ? (
+              <Space wrap size={[4, 4]}>{casino.geo.map((g) => <Tag key={g}>{g}</Tag>)}</Space>
+            ) : '—'}
+          </Descriptions.Item>
+          <Descriptions.Item label="Наш">
+            {casino?.is_our ? <Tag color="green">Да</Tag> : <Tag>Нет</Tag>}
+          </Descriptions.Item>
+          {casino?.description && (
+            <Descriptions.Item label="Описание">{casino.description}</Descriptions.Item>
           )}
-          </Space>
-        </Card>
-      </Space>
+        </Descriptions>
+      </Card>
 
-      {/* Галерея изображений */}
+      <Card size="small" title={`Дополнительные поля${activeGeo ? ` (${activeGeo})` : ''}`}>
+        {items.length === 0 ? (
+          <Typography.Text type="secondary">Нет дополнительных полей для этого профиля.</Typography.Text>
+        ) : (
+          <Descriptions
+            column={1}
+            bordered
+            size="small"
+            styles={{ label: { width: 200, minWidth: 200 }, content: { minWidth: 300 } }}
+          >
+            {items.map((it) => (
+              <Descriptions.Item
+                key={it.field.id}
+                label={
+                  <Space size={6}>
+                    <Typography.Text>{it.field.label}</Typography.Text>
+                    {it.field.description ? (
+                      <Tooltip title={it.field.description}><InfoCircleOutlined style={{ fontSize: 12 }} /></Tooltip>
+                    ) : null}
+                  </Space>
+                }
+              >
+                {renderFieldValue(it.field, it.value)}
+              </Descriptions.Item>
+            ))}
+          </Descriptions>
+        )}
+      </Card>
+
       <Card
-        title={
-          <Space>
-            <PictureOutlined />
-            <Typography.Title level={5} style={{ margin: 0 }}>
-              Изображения ({allImages.length})
-            </Typography.Title>
-          </Space>
-        }
+        size="small"
+        title={<Space><PictureOutlined /><span>Изображения ({allImages.length})</span></Space>}
         extra={
           <Upload
             accept="image/*"
             multiple
             showUploadList={false}
-            beforeUpload={async (file) => {
-              await handleUploadImage(file);
-              return false;
-            }}
+            beforeUpload={async (file) => { await handleUploadImage(file); return false; }}
           >
-            <Button size="small" icon={<PictureOutlined />}>
-              Загрузить
-            </Button>
+            <Button size="small" icon={<PictureOutlined />}>Загрузить</Button>
           </Upload>
         }
       >
@@ -715,24 +446,13 @@ export default function CasinoProfileView() {
           <>
             <Image.PreviewGroup>
               <Space wrap size={[8, 8]}>
-                {paginatedImages.map((img: CasinoCommentImage, index) => {
+                {paginatedImages.map((img, index) => {
                   const globalIndex = (imagesPage - 1) * IMAGES_PAGE_SIZE + index;
                   return (
-                    <div
-                      key={`${(img as any).entity_type || 'image'}-${img.id}-${globalIndex}`}
-                      style={{ width: 120, textAlign: 'center' }}
-                    >
-                      <Image
-                        src={img.url}
-                        alt={img.original_name || ''}
-                        style={{ width: 120, height: 80, objectFit: 'cover', borderRadius: 6 }}
-                      />
+                    <div key={`img-${img.id}-${globalIndex}`} style={{ width: 120, textAlign: 'center' }}>
+                      <Image src={img.url} alt={img.original_name || ''} style={{ width: 120, height: 80, objectFit: 'cover', borderRadius: 6 }} />
                       {(img.label || img.username) && (
-                        <Typography.Text
-                          type="secondary"
-                          style={{ display: 'block', fontSize: 11, marginTop: 4 }}
-                          ellipsis={{ tooltip: img.label || img.username }}
-                        >
+                        <Typography.Text type="secondary" style={{ display: 'block', fontSize: 11, marginTop: 4 }} ellipsis={{ tooltip: img.label || img.username }}>
                           {img.label || img.username}
                         </Typography.Text>
                       )}
@@ -757,8 +477,7 @@ export default function CasinoProfileView() {
         )}
       </Card>
 
-      {/* Аккаунты */}
-      <Card title="Аккаунты">
+      <Card size="small" title={<Space><UserOutlined /><span>Аккаунты</span></Space>}>
         <AccountsTable
           accounts={(accounts ?? []).filter((a) => (activeGeo ? a.geo === activeGeo : true))}
           isLoading={accountsLoading}
@@ -766,10 +485,7 @@ export default function CasinoProfileView() {
         />
       </Card>
 
-      {/* Скриншоты (Селекторы и скриншоты) */}
-      <Card
-        title="Скриншоты"
-      >
+      <Card size="small" title={<Space><CameraOutlined /><span>Скриншоты</span></Space>}>
         <Table<SlotScreenshot>
           rowKey="selector_id"
           size="small"
@@ -779,56 +495,34 @@ export default function CasinoProfileView() {
           scroll={{ x: 1200 }}
           columns={[
             { title: 'GEO', dataIndex: 'geo', width: 80 },
-            { 
-              title: 'Раздел', 
-              dataIndex: 'section', 
-              width: 150,
-              render: (v) => v || '—',
-            },
-            { 
-              title: 'Категория', 
-              dataIndex: 'category', 
-              width: 150,
-              render: (v) => v || '—',
-            },
+            { title: 'Раздел', dataIndex: 'section', width: 150, render: (v) => v || '—' },
+            { title: 'Категория', dataIndex: 'category', width: 150, render: (v) => v || '—' },
             {
               title: 'Скриншот',
               width: 150,
-              render: (_, record) => {
-                return (
-                  record.screenshot_url ? (
-                    <Button
-                      type="link"
-                      size="small"
-                      onClick={() => setPreviewImage(record.screenshot_url || null)}
-                    >
-                      Раскрыть
-                    </Button>
-                  ) : (
-                    <Typography.Text type="secondary">Нет скриншота</Typography.Text>
-                  )
-                );
-              },
+              render: (_, record) =>
+                record.screenshot_url ? (
+                  <Button type="link" size="small" onClick={() => setPreviewImage(record.screenshot_url || null)}>Раскрыть</Button>
+                ) : (
+                  <Typography.Text type="secondary">Нет скриншота</Typography.Text>
+                ),
             },
             {
               title: 'Дата обновления',
               width: 180,
-              render: (_, record) => (
+              render: (_, record) =>
                 record.screenshot_created_at ? (
-                  <Typography.Text>
-                    {dayjs(record.screenshot_created_at).format('DD.MM.YYYY HH:mm')}
-                  </Typography.Text>
+                  <Typography.Text>{dayjs(record.screenshot_created_at).format('DD.MM.YYYY HH:mm')}</Typography.Text>
                 ) : (
                   <Typography.Text type="secondary">—</Typography.Text>
-                )
-              ),
+                ),
             },
             {
               title: 'Действия',
               width: 150,
-              align: 'right',
-              render: (_, record) => (
-                (record as any).selector ? (
+              align: 'right' as const,
+              render: (_, record) =>
+                (record as SlotScreenshot & { selector?: string }).selector ? (
                   <Button
                     type="link"
                     size="small"
@@ -837,794 +531,25 @@ export default function CasinoProfileView() {
                       try {
                         await takeScreenshot(record.selector_id).unwrap();
                         message.success('Скриншот обновлён');
-                      } catch {
-                        message.error('Не удалось сделать скриншот');
-                      }
+                      } catch { message.error('Не удалось сделать скриншот'); }
                     }}
                   >
                     Обновить
                   </Button>
-                ) : null
-              ),
+                ) : null,
             },
           ]}
         />
       </Card>
 
-      {/* Настройки профиля */}
-      <Card
-        title={
-          <Typography.Title level={5} style={{ margin: 0 }}>
-            Настройки профиля{activeGeo ? ` (${activeGeo})` : ''}
-          </Typography.Title>
-        }
-      >
-        <ProfileSettingsTable
-          casinoId={casinoId}
-          activeGeo={activeGeo}
-          readOnly={true}
-        />
+      <Card size="small" title={<Space><SettingOutlined /><span>Настройки профиля{activeGeo ? ` (${activeGeo})` : ''}</span></Space>}>
+        <ProfileSettingsTable casinoId={casinoId} activeGeo={activeGeo} readOnly={true} />
       </Card>
 
-      <Card title={`Бонусы${activeGeo ? ` (${activeGeo})` : ''}`}>
-        <Table<CasinoBonus>
-          rowKey="id"
-          size="small"
-          loading={bonusesLoading}
-          dataSource={(bonuses ?? []).filter((b) => (activeGeo ? b.geo === activeGeo : true))}
-          pagination={false}
-          scroll={{ x: 700 }}
-          columns={[
-            { title: 'GEO', dataIndex: 'geo', width: 60 },
-            { title: 'Название', dataIndex: 'name', width: 150, ellipsis: true },
-            {
-              title: 'Категория',
-              dataIndex: 'bonus_category',
-              width: 80,
-              render: (v) => {
-                const labels: Record<string, string> = {
-                  casino: 'Казино',
-                  sport: 'Спорт',
-                };
-                return labels[v] || v || 'Казино';
-              },
-            },
-            {
-              title: 'Вид',
-              dataIndex: 'bonus_kind',
-              width: 80,
-              render: (v) => {
-                const labels: Record<string, string> = {
-                  deposit: 'Депозит',
-                  nodeposit: 'Бездеп',
-                  cashback: 'Кешбек',
-                  rakeback: 'Рейкбек',
-                };
-                return labels[v] || v || '—';
-              },
-            },
-            {
-              title: 'Тип',
-              dataIndex: 'bonus_type',
-              width: 80,
-              render: (v) => {
-                const labels: Record<string, string> = {
-                  cash: 'Кэш',
-                  freespin: 'FS',
-                  combo: 'Комбо',
-                  freebet: 'Фрибет',
-                  wagering: 'Вейджеринг',
-                  insurance: 'Страховка',
-                  accumulator: 'Аккумулятор',
-                  odds_boost: 'Повышение коэф.',
-                };
-                return labels[v] || v || '—';
-              },
-            },
-            {
-              title: 'Бонус',
-              width: 120,
-              render: (_, b) => {
-                const parts: string[] = [];
-                if (b.bonus_value != null) {
-                  if (b.bonus_unit === 'percent') {
-                    parts.push(`${fmt(b.bonus_value)}%`);
-                  } else {
-                    parts.push(b.currency ? `${fmt(b.bonus_value)} ${b.currency}` : `${fmt(b.bonus_value)}`);
-                  }
-                }
-                if (b.freespins_count) {
-                  parts.push(`${fmt(b.freespins_count)} FS`);
-                }
-                if (b.cashback_percent) {
-                  parts.push(`${fmt(b.cashback_percent)}%`);
-                }
-                return parts.length > 0 ? parts.join('+') : '—';
-              },
-            },
-            {
-              title: 'Мин.',
-              dataIndex: 'min_deposit',
-              width: 80,
-              render: (v, b) => fmtAmount(v, b.currency),
-            },
-            {
-              title: 'Вейджер',
-              width: 100,
-              render: (_, b) => {
-                const parts: string[] = [];
-                if (b.wagering_requirement != null) parts.push(`кэш x${fmt(b.wagering_requirement)}`);
-                if (b.wagering_freespin != null) parts.push(`FS x${fmt(b.wagering_freespin)}`);
-                return parts.length > 0 ? parts.join(', ') : '—';
-              },
-            },
-            {
-              title: '',
-              width: 40,
-              align: 'right',
-              render: (_, b) => (
-                <Button
-                  type="text"
-                  size="small"
-                  icon={<EyeOutlined />}
-                  onClick={() => setSelectedBonus(b)}
-                />
-              ),
-            },
-          ]}
-        />
+      <BonusSection casinoId={casinoId} bonuses={bonuses} isLoading={bonusesLoading} activeGeo={activeGeo} />
+      <PromoSection casinoId={casinoId} casinoName={casino?.name} promos={promos} isLoading={promosLoading} activeGeo={activeGeo} />
 
-        {/* Модальное окно с подробностями бонуса */}
-        <Modal
-          title={selectedBonus?.name || 'Информация о бонусе'}
-          open={!!selectedBonus}
-          onCancel={() => {
-            setSelectedBonus(null);
-            setPendingBonusImages([]);
-          }}
-          footer={
-            <Button
-              onClick={() => {
-                setSelectedBonus(null);
-                setPendingBonusImages([]);
-              }}
-            >
-              Закрыть
-            </Button>
-          }
-          width={700}
-        >
-          {selectedBonus && (
-            <>
-            <Descriptions column={1} bordered size="small">
-              <Descriptions.Item label="GEO">
-                <Tag>{selectedBonus.geo}</Tag>
-              </Descriptions.Item>
-              <Descriptions.Item label="Категория">
-                {(() => {
-                  const labels: Record<string, string> = {
-                    casino: 'Казино',
-                    sport: 'Спорт',
-                  };
-                  return labels[selectedBonus.bonus_category || 'casino'] || selectedBonus.bonus_category || 'Казино';
-                })()}
-              </Descriptions.Item>
-              <Descriptions.Item label="Вид бонуса">
-                {(() => {
-                  const labels: Record<string, string> = {
-                    deposit: 'Депозитный',
-                    nodeposit: 'Бездепозитный',
-                    cashback: 'Кешбек',
-                    rakeback: 'Рейкбек',
-                  };
-                  return labels[selectedBonus.bonus_kind || ''] || selectedBonus.bonus_kind || '—';
-                })()}
-              </Descriptions.Item>
-              <Descriptions.Item label="Тип бонуса">
-                {(() => {
-                  const labels: Record<string, string> = {
-                    cash: 'Кэш-бонус',
-                    freespin: 'Фриспин-бонус',
-                    combo: 'Комбинированный',
-                    freebet: 'Фрибет',
-                    wagering: 'Вейджеринг',
-                    insurance: 'Страховка',
-                    accumulator: 'Аккумулятор',
-                    odds_boost: 'Повышение коэффициентов',
-                  };
-                  return labels[selectedBonus.bonus_type || ''] || selectedBonus.bonus_type || '—';
-                })()}
-              </Descriptions.Item>
-              
-              {/* Валюта */}
-              {selectedBonus.currency && (
-                <Descriptions.Item label="Валюта">
-                  {selectedBonus.currency}
-                </Descriptions.Item>
-              )}
-
-              {/* Кэш-бонус */}
-              {selectedBonus.bonus_value != null && (
-                <Descriptions.Item label="Размер кэш-бонуса">
-                  {selectedBonus.bonus_unit === 'percent' 
-                    ? `${fmt(selectedBonus.bonus_value)}%` 
-                    : fmtAmount(selectedBonus.bonus_value, selectedBonus.currency)}
-                </Descriptions.Item>
-              )}
-              {selectedBonus.max_bonus != null && (
-                <Descriptions.Item label="Макс. бонус">
-                  {fmtAmount(selectedBonus.max_bonus, selectedBonus.currency)}
-                </Descriptions.Item>
-              )}
-              {/* Максвин по кэш-части / % части — рядом с кэш-бонусом */}
-              {selectedBonus.bonus_type === 'cash' &&
-                (selectedBonus.max_win_cash_value != null || selectedBonus.max_cashout != null) && (
-                  <Descriptions.Item label="Максвин кэш-бонуса">
-                    {selectedBonus.max_win_cash_value != null ? (
-                      <>
-                        {selectedBonus.max_win_cash_unit === 'coefficient'
-                          ? `x${fmt(selectedBonus.max_win_cash_value)}`
-                          : fmtAmount(selectedBonus.max_win_cash_value, selectedBonus.currency)}
-                        {' '}
-                        ({selectedBonus.max_win_cash_unit === 'coefficient' ? 'коэффициент' : 'фикс. сумма'})
-                      </>
-                    ) : (
-                      `x${fmt(selectedBonus.max_cashout)} (коэффициент)`
-                    )}
-                  </Descriptions.Item>
-                )}
-              {selectedBonus.bonus_type === 'combo' &&
-                selectedBonus.max_win_percent_value != null && (
-                  <Descriptions.Item label="Максвин % части">
-                    {selectedBonus.max_win_percent_unit === 'coefficient'
-                      ? `x${fmt(selectedBonus.max_win_percent_value)}`
-                      : fmtAmount(selectedBonus.max_win_percent_value, selectedBonus.currency)}
-                    {' '}
-                    ({selectedBonus.max_win_percent_unit === 'coefficient' ? 'коэффициент' : 'фикс. сумма'})
-                  </Descriptions.Item>
-                )}
-
-              {/* Фриспины */}
-              {selectedBonus.freespins_count != null && (
-                <Descriptions.Item label="Количество фриспинов">
-                  {selectedBonus.freespins_count} FS
-                </Descriptions.Item>
-              )}
-              {selectedBonus.freespin_value != null && (
-                <Descriptions.Item label="Стоимость спина">
-                  {fmtAmount(selectedBonus.freespin_value, selectedBonus.currency)}
-                </Descriptions.Item>
-              )}
-              {selectedBonus.freespin_game && (
-                <Descriptions.Item label="Игра для фриспинов">
-                  {selectedBonus.freespin_game}
-                </Descriptions.Item>
-              )}
-              {/* Максвин фриспинов — рядом с информацией по спинам */}
-              {(selectedBonus.bonus_type === 'freespin' || selectedBonus.bonus_type === 'combo') &&
-                selectedBonus.max_win_freespin_value != null && (
-                  <Descriptions.Item label="Максвин фриспинов">
-                    {selectedBonus.max_win_freespin_unit === 'coefficient'
-                      ? `x${fmt(selectedBonus.max_win_freespin_value)}`
-                      : fmtAmount(selectedBonus.max_win_freespin_value, selectedBonus.currency)}
-                    {' '}
-                    ({selectedBonus.max_win_freespin_unit === 'coefficient' ? 'коэффициент' : 'фикс. сумма'})
-                  </Descriptions.Item>
-                )}
-
-              {/* Кешбек/Рейкбек */}
-              {selectedBonus.cashback_percent != null && (
-                <Descriptions.Item label="Процент возврата">
-                  {fmt(selectedBonus.cashback_percent)}%
-                </Descriptions.Item>
-              )}
-              {selectedBonus.cashback_period && (
-                <Descriptions.Item label="Период возврата">
-                  {(() => {
-                    const labels: Record<string, string> = {
-                      daily: 'Ежедневно',
-                      weekly: 'Еженедельно',
-                      monthly: 'Ежемесячно',
-                    };
-                    return labels[selectedBonus.cashback_period] || selectedBonus.cashback_period;
-                  })()}
-                </Descriptions.Item>
-              )}
-
-              {/* Общие поля */}
-              {selectedBonus.min_deposit != null && (
-                <Descriptions.Item label="Мин. депозит">
-                  {fmtAmount(selectedBonus.min_deposit, selectedBonus.currency)}
-                </Descriptions.Item>
-              )}
-              {(selectedBonus.wagering_requirement != null || selectedBonus.wagering_freespin != null) && (
-                <Descriptions.Item label="Вейджер">
-                  {[
-                    selectedBonus.wagering_requirement != null && `кэш x${fmt(selectedBonus.wagering_requirement)}`,
-                    selectedBonus.wagering_freespin != null && `фриспины x${fmt(selectedBonus.wagering_freespin)}`,
-                  ].filter(Boolean).join(', ')}
-                </Descriptions.Item>
-              )}
-              {selectedBonus.wagering_time_limit && (
-                <Descriptions.Item label="Время на отыгрыш">
-                  {selectedBonus.wagering_time_limit}
-                </Descriptions.Item>
-              )}
-              {selectedBonus.wagering_games && (
-                <Descriptions.Item label="Игры для отыгрыша">
-                  {selectedBonus.wagering_games}
-                </Descriptions.Item>
-              )}
-              {selectedBonus.notes && (
-                <Descriptions.Item label="Заметки">
-                  {selectedBonus.notes}
-                </Descriptions.Item>
-              )}
-            </Descriptions>
-
-            {/* Изображения бонуса (просмотр + загрузка) */}
-            <div style={{ marginTop: 24 }}>
-              <Typography.Title level={5}>Изображения бонуса</Typography.Title>
-
-              {/* Уже загруженные изображения */}
-              {bonusImages && bonusImages.length > 0 && (
-                <Image.PreviewGroup>
-                  <Space wrap size={[8, 8]} style={{ marginBottom: 16 }}>
-                    {bonusImages.map((img: CasinoBonusImage) => (
-                      <Image
-                        key={img.id}
-                        src={img.url}
-                        alt={img.original_name || 'Bonus image'}
-                        width={90}
-                        height={90}
-                        style={{ objectFit: 'cover', borderRadius: 4 }}
-                      />
-                    ))}
-                  </Space>
-                </Image.PreviewGroup>
-              )}
-
-              {/* Область для добавления новых изображений */}
-              <div
-                style={{
-                  border: '2px dashed #d9d9d9',
-                  borderRadius: 6,
-                  padding: 12,
-                  textAlign: 'center',
-                  cursor: 'pointer',
-                  marginTop: 4,
-                }}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                }}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  const files = Array.from(e.dataTransfer.files).filter((f) =>
-                    f.type.startsWith('image/')
-                  );
-                  if (files.length > 0) {
-                    setPendingBonusImages((prev) => [...prev, ...files]);
-                    message.info('Изображения добавлены, нажмите \"Загрузить\"');
-                  }
-                }}
-                onPaste={(e) => {
-                  const items = Array.from(e.clipboardData.items || []);
-                  const files: File[] = [];
-                  for (const item of items) {
-                    if (item.type.startsWith('image/')) {
-                      const file = item.getAsFile();
-                      if (file) files.push(file);
-                    }
-                  }
-                  if (files.length > 0) {
-                    setPendingBonusImages((prev) => [...prev, ...files]);
-                    message.info('Изображения добавлены (Ctrl+V), нажмите \"Загрузить\"');
-                  }
-                }}
-              >
-                <PictureOutlined style={{ fontSize: 22, color: '#8c8c8c', marginBottom: 6 }} />
-                <div style={{ marginBottom: 8 }}>
-                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                    Перетащите изображения, вставьте (Ctrl+V) или выберите файлы
-                  </Typography.Text>
-                </div>
-                <Upload
-                  multiple
-                  accept="image/*"
-                  showUploadList={false}
-                  beforeUpload={(file) => {
-                    setPendingBonusImages((prev) => [...prev, file]);
-                    return false;
-                  }}
-                >
-                  <Button size="small" icon={<PictureOutlined />}>
-                    Выбрать файлы
-                  </Button>
-                </Upload>
-              </div>
-
-              {/* Предпросмотр новых изображений + кнопка загрузки */}
-              {pendingBonusImages.length > 0 && (
-                <div style={{ marginTop: 12 }}>
-                  <Typography.Text strong style={{ fontSize: 12 }}>
-                    К загрузке ({pendingBonusImages.length}):
-                  </Typography.Text>
-                  <Space wrap size={[8, 8]} style={{ marginTop: 8 }}>
-                    {pendingBonusImages.map((file, idx) => (
-                      <div key={idx} style={{ position: 'relative' }}>
-                        <img
-                          src={URL.createObjectURL(file)}
-                          alt={file.name}
-                          width={70}
-                          height={70}
-                          style={{ objectFit: 'cover', borderRadius: 4 }}
-                        />
-                        <Button
-                          type="text"
-                          size="small"
-                          danger
-                          icon={<DeleteOutlined />}
-                          style={{ position: 'absolute', top: 0, right: 0 }}
-                          onClick={() => {
-                            setPendingBonusImages((prev) => prev.filter((_, i) => i !== idx));
-                          }}
-                        />
-                      </div>
-                    ))}
-                  </Space>
-                  <Button
-                    type="primary"
-                    size="small"
-                    style={{ marginTop: 8 }}
-                    onClick={async () => {
-                      if (!selectedBonus?.id || pendingBonusImages.length === 0) return;
-                      try {
-                        await uploadBonusImages({
-                          casinoId,
-                          bonusId: selectedBonus.id,
-                          files: pendingBonusImages,
-                        }).unwrap();
-                        message.success('Изображения бонуса загружены');
-                        setPendingBonusImages([]);
-                      } catch (e: any) {
-                        message.error(e?.data?.error ?? 'Ошибка загрузки изображений');
-                      }
-                    }}
-                  >
-                    Загрузить
-                  </Button>
-                </div>
-              )}
-            </div>
-            </>
-          )}
-        </Modal>
-      </Card>
-
-      {/* Промо */}
-      <Card title={`Промо${activeGeo ? ` (${activeGeo})` : ''}`}>
-
-        <Table<CasinoPromo>
-          rowKey="id"
-          size="small"
-          loading={promosLoading}
-          dataSource={(promos ?? []).filter((p) => (activeGeo ? p.geo === activeGeo : true))}
-          pagination={false}
-          scroll={{ x: 1000 }}
-          columns={[
-            { title: 'GEO', dataIndex: 'geo', width: 60 },
-            {
-              title: 'Категория',
-              dataIndex: 'promo_category',
-              width: 110,
-              render: (v: PromoCategory) => (
-                <Tag
-                  color={
-                    v === 'tournament'
-                      ? 'blue'
-                      : v === 'promotion'
-                      ? 'purple'
-                      : 'gold'
-                  }
-                >
-                  {v === 'tournament'
-                    ? 'Турнир'
-                    : v === 'promotion'
-                    ? 'Акция'
-                    : 'Лотерея'}
-                </Tag>
-              ),
-            },
-            { title: 'Тип турнира', dataIndex: 'promo_type', width: 110, ellipsis: true, render: (v: string) => v || '—' },
-            { title: 'Название турнира', dataIndex: 'name', width: 180, ellipsis: true },
-            {
-              title: 'Тип периода',
-              width: 120,
-              render: (_: any, r: CasinoPromo) => {
-                const t = r.period_type ?? 'fixed';
-                if (t === 'daily') return 'Ежедневный';
-                if (t === 'weekly') return 'Еженедельный';
-                if (t === 'monthly') return 'Ежемесячный';
-                return 'Фикс. даты';
-              },
-            },
-            {
-              title: 'Период проведения',
-              width: 150,
-              render: (_: any, r: CasinoPromo) => {
-                if (!r.period_start && !r.period_end) return '';
-                const s = r.period_start ? dayjs(r.period_start).format('DD.MM.YY') : '?';
-                const e = r.period_end ? dayjs(r.period_end).format('DD.MM.YY') : '?';
-                return `${s} – ${e}`;
-              },
-            },
-            { title: 'Провайдер', dataIndex: 'provider', width: 120, ellipsis: true, render: (v: string) => v || '—' },
-            { title: 'Общий ПФ', dataIndex: 'prize_fund', width: 100, ellipsis: true, render: (v: string) => v || '—' },
-            { title: 'Механика', dataIndex: 'mechanics', width: 140, ellipsis: true, render: (v: string) => v || '—' },
-            { title: 'Мин. ставка', dataIndex: 'min_bet', width: 100, render: (v: string) => v || '—' },
-            { title: 'Вейджер на приз', dataIndex: 'wagering_prize', width: 110, render: (v: string) => v || '—' },
-            {
-              title: '',
-              width: 40,
-              align: 'right',
-              render: (_, r: CasinoPromo) => (
-                <Button
-                  type="text"
-                  size="small"
-                  icon={<EyeOutlined />}
-                  onClick={() => setViewingPromo(r)}
-                />
-              ),
-            },
-          ]}
-        />
-      </Card>
-
-      <Modal
-        title={
-              <Space align="center">
-            <Tag
-              color={
-                viewingPromo?.promo_category === 'tournament'
-                  ? 'blue'
-                  : viewingPromo?.promo_category === 'promotion'
-                  ? 'purple'
-                  : 'gold'
-              }
-            >
-              {viewingPromo?.promo_category === 'tournament'
-                ? 'Турнир'
-                : viewingPromo?.promo_category === 'promotion'
-                ? 'Акция'
-                : 'Лотерея'}
-            </Tag>
-            <span>{viewingPromo?.name || 'Промо'}</span>
-          </Space>
-        }
-        open={!!viewingPromo}
-        onCancel={() => {
-          setViewingPromo(null);
-          setPendingPromoImages([]);
-        }}
-        footer={null}
-        width={640}
-      >
-        {viewingPromo && (
-          <>
-            <Descriptions column={1} bordered size="small" labelStyle={{ fontWeight: 500, width: 200 }}>
-              <Descriptions.Item label="GEO">
-                <Tag>{viewingPromo.geo}</Tag>
-              </Descriptions.Item>
-              <Descriptions.Item label="Конкурент">
-                {casino?.name || '—'}
-              </Descriptions.Item>
-              <Descriptions.Item label="Категория">
-                <Tag
-                  color={
-                    viewingPromo.promo_category === 'tournament'
-                      ? 'blue'
-                      : viewingPromo.promo_category === 'promotion'
-                      ? 'purple'
-                      : 'gold'
-                  }
-                >
-                  {viewingPromo.promo_category === 'tournament'
-                    ? 'Турнир'
-                    : viewingPromo.promo_category === 'promotion'
-                    ? 'Акция'
-                    : 'Лотерея'}
-                </Tag>
-              </Descriptions.Item>
-              <Descriptions.Item label="Тип турнира">
-                {viewingPromo.promo_type || '—'}
-              </Descriptions.Item>
-              <Descriptions.Item label="Название турнира">
-                {viewingPromo.name}
-              </Descriptions.Item>
-              <Descriptions.Item label="Тип периода">
-                {viewingPromo.period_type === 'daily'
-                  ? 'Ежедневный'
-                  : viewingPromo.period_type === 'weekly'
-                  ? 'Еженедельный'
-                  : viewingPromo.period_type === 'monthly'
-                  ? 'Ежемесячный'
-                  : 'Фиксированные даты'}
-              </Descriptions.Item>
-              {(viewingPromo.period_start || viewingPromo.period_end) && (
-                <Descriptions.Item label="Период проведения">
-                  {viewingPromo.period_start
-                    ? dayjs(viewingPromo.period_start).format('DD.MM.YYYY')
-                    : '—'}
-                  {' – '}
-                  {viewingPromo.period_end
-                    ? dayjs(viewingPromo.period_end).format('DD.MM.YYYY')
-                    : '—'}
-                </Descriptions.Item>
-              )}
-              <Descriptions.Item label="Провайдер">
-                {viewingPromo.provider || '—'}
-              </Descriptions.Item>
-              <Descriptions.Item label="Общий ПФ">
-                {viewingPromo.prize_fund || '—'}
-              </Descriptions.Item>
-              <Descriptions.Item label="Механика">
-                {viewingPromo.mechanics || '—'}
-              </Descriptions.Item>
-              <Descriptions.Item label="Мин. ставка для участия">
-                {viewingPromo.min_bet || '—'}
-              </Descriptions.Item>
-              <Descriptions.Item label="Вейджер на приз">
-                {viewingPromo.wagering_prize || '—'}
-              </Descriptions.Item>
-              <Descriptions.Item label="Кнопка участия">
-                {viewingPromo.has_participation_button ? 'Да' : 'Нет'}
-              </Descriptions.Item>
-              <Descriptions.Item label="Статус">
-                <Tag color={({ active: 'green', paused: 'orange', expired: 'red', draft: 'default' } as Record<PromoStatus, string>)[viewingPromo.status] ?? 'default'}>
-                  {({ active: 'Активен', paused: 'Пауза', expired: 'Истёк', draft: 'Черновик' } as Record<PromoStatus, string>)[viewingPromo.status] ?? viewingPromo.status}
-                </Tag>
-              </Descriptions.Item>
-            </Descriptions>
-
-            <div style={{ marginTop: 24 }}>
-              <Typography.Title level={5}>Изображения промо</Typography.Title>
-
-              {promoImages && promoImages.length > 0 && (
-                <Image.PreviewGroup>
-                  <Space wrap size={[8, 8]} style={{ marginBottom: 16 }}>
-                    {promoImages.map((img: CasinoPromoImage) => (
-                      <Image
-                        key={img.id}
-                        src={img.url}
-                        alt={img.original_name || 'Promo image'}
-                        width={90}
-                        height={90}
-                        style={{ objectFit: 'cover', borderRadius: 4 }}
-                      />
-                    ))}
-                  </Space>
-                </Image.PreviewGroup>
-              )}
-
-              <div
-                style={{
-                  border: '2px dashed #d9d9d9',
-                  borderRadius: 6,
-                  padding: 12,
-                  textAlign: 'center',
-                  cursor: 'pointer',
-                  marginTop: 4,
-                }}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                }}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  const files = Array.from(e.dataTransfer.files).filter((f) =>
-                    f.type.startsWith('image/')
-                  );
-                  if (files.length > 0) {
-                    setPendingPromoImages((prev) => [...prev, ...files]);
-                    message.info('Изображения добавлены, нажмите «Загрузить»');
-                  }
-                }}
-                onPaste={(e) => {
-                  const items = Array.from(e.clipboardData.items || []);
-                  const files: File[] = [];
-                  for (const item of items) {
-                    if (item.type.startsWith('image/')) {
-                      const file = item.getAsFile();
-                      if (file) files.push(file);
-                    }
-                  }
-                  if (files.length > 0) {
-                    setPendingPromoImages((prev) => [...prev, ...files]);
-                    message.info('Изображения добавлены (Ctrl+V), нажмите «Загрузить»');
-                  }
-                }}
-              >
-                <PictureOutlined style={{ fontSize: 22, color: '#8c8c8c', marginBottom: 6 }} />
-                <div style={{ marginBottom: 8 }}>
-                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                    Перетащите изображения, вставьте (Ctrl+V) или выберите файлы
-                  </Typography.Text>
-                </div>
-                <Upload
-                  multiple
-                  accept="image/*"
-                  showUploadList={false}
-                  beforeUpload={(file) => {
-                    setPendingPromoImages((prev) => [...prev, file]);
-                    return false;
-                  }}
-                >
-                  <Button size="small" icon={<PictureOutlined />}>
-                    Выбрать файлы
-                  </Button>
-                </Upload>
-              </div>
-
-              {pendingPromoImages.length > 0 && (
-                <div style={{ marginTop: 12 }}>
-                  <Typography.Text strong style={{ fontSize: 12 }}>
-                    К загрузке ({pendingPromoImages.length}):
-                  </Typography.Text>
-                  <Space wrap size={[8, 8]} style={{ marginTop: 8 }}>
-                    {pendingPromoImages.map((file, idx) => (
-                      <div key={idx} style={{ position: 'relative' }}>
-                        <img
-                          src={URL.createObjectURL(file)}
-                          alt={file.name}
-                          width={70}
-                          height={70}
-                          style={{ objectFit: 'cover', borderRadius: 4 }}
-                        />
-                        <Button
-                          type="text"
-                          size="small"
-                          danger
-                          icon={<DeleteOutlined />}
-                          style={{ position: 'absolute', top: 0, right: 0 }}
-                          onClick={() => {
-                            setPendingPromoImages((prev) => prev.filter((_, i) => i !== idx));
-                          }}
-                        />
-                      </div>
-                    ))}
-                  </Space>
-                  <Button
-                    type="primary"
-                    size="small"
-                    style={{ marginTop: 8 }}
-                    onClick={async () => {
-                      if (!viewingPromo?.id || pendingPromoImages.length === 0) return;
-                      try {
-                        await uploadPromoImages({
-                          casinoId,
-                          promoId: viewingPromo.id,
-                          files: pendingPromoImages,
-                        }).unwrap();
-                        message.success('Изображения промо загружены');
-                        setPendingPromoImages([]);
-                      } catch (e: any) {
-                        message.error(e?.data?.error ?? 'Ошибка загрузки изображений');
-                      }
-                    }}
-                  >
-                    Загрузить
-                  </Button>
-                </div>
-              )}
-            </div>
-          </>
-        )}
-      </Modal>
-
-      <Card title={`Подключённые провайдеры${(activeProviderGeo ?? activeGeo) ? ` (${activeProviderGeo ?? activeGeo})` : ''}`}>
+      <Card size="small" title={<Space><AppstoreOutlined /><span>Провайдеры{(activeProviderGeo ?? activeGeo) ? ` (${activeProviderGeo ?? activeGeo})` : ''}</span></Space>}>
         {casinoProvidersLoading ? (
           <Typography.Text type="secondary">Загрузка...</Typography.Text>
         ) : casinoProviders.length === 0 ? (
@@ -1633,467 +558,232 @@ export default function CasinoProfileView() {
           </Typography.Text>
         ) : (
           <Space wrap size={[8, 8]}>
-            {casinoProviders.map((cp) => (
-              <Tag key={cp.id}>{cp.provider_name}</Tag>
-            ))}
+            {casinoProviders.map((cp) => <Tag key={cp.id}>{cp.provider_name}</Tag>)}
           </Space>
         )}
       </Card>
 
-      <Card title="Платёжные решения">
-        <Table<CasinoPayment>
-          rowKey="id"
-          size="small"
-          loading={paymentsLoading}
-          dataSource={(payments ?? []).filter((p) => {
-            if (activePaymentDirection != null && (p.direction ?? 'deposit') !== activePaymentDirection) return false;
-            return true;
-          })}
-          pagination={false}
-          columns={[
-            { title: 'Направление', dataIndex: 'direction', width: 100, render: (v: string) => v === 'withdrawal' ? 'Выплата' : 'Депозит' },
-            { title: 'GEO', dataIndex: 'geo', width: 60 },
-            { title: 'Тип', dataIndex: 'type', width: 140 },
-            { title: 'Метод', dataIndex: 'method', width: 140 },
-            {
-              title: 'Мин.',
-              dataIndex: 'min_amount',
-              width: 100,
-              render: (v, r) => v != null ? `${Number(v).toLocaleString()} ${r.currency || ''}`.trim() : '—',
-            },
-            {
-              title: 'Макс.',
-              dataIndex: 'max_amount',
-              width: 100,
-              render: (v, r) => v != null ? `${Number(v).toLocaleString()} ${r.currency || ''}`.trim() : '—',
-            },
-            {
-              title: '',
-              width: 60,
-              align: 'right',
-              render: (_, p) => (
-                <Button
-                  type="text"
-                  size="small"
-                  icon={<EyeOutlined />}
-                  onClick={() => setSelectedPayment(p)}
-                />
-              ),
-            },
-          ]}
-        />
-
-        {/* Модалка с деталями платежа и изображениями */}
-        <Modal
-          title="Платёжный метод"
-          open={!!selectedPayment}
-          onCancel={() => {
-            setSelectedPayment(null);
-            setPendingPaymentImages([]);
-          }}
-          footer={
-            <Button
-              onClick={() => {
-                setSelectedPayment(null);
-                setPendingPaymentImages([]);
-              }}
-            >
-              Закрыть
-            </Button>
-          }
-          width={600}
-        >
-          {selectedPayment && (
-            <>
-              <Descriptions column={1} bordered size="small">
-                <Descriptions.Item label="GEO">{selectedPayment.geo}</Descriptions.Item>
-                <Descriptions.Item label="Тип">{selectedPayment.type}</Descriptions.Item>
-                <Descriptions.Item label="Метод">{selectedPayment.method}</Descriptions.Item>
-                <Descriptions.Item label="Мин. сумма">
-                  {selectedPayment.min_amount != null
-                    ? `${Number(selectedPayment.min_amount).toLocaleString()} ${selectedPayment.currency || ''}`.trim()
-                    : '—'}
-                </Descriptions.Item>
-                <Descriptions.Item label="Макс. сумма">
-                  {selectedPayment.max_amount != null
-                    ? `${Number(selectedPayment.max_amount).toLocaleString()} ${selectedPayment.currency || ''}`.trim()
-                    : '—'}
-                </Descriptions.Item>
-                {selectedPayment.notes && (
-                  <Descriptions.Item label="Заметки">{selectedPayment.notes}</Descriptions.Item>
-                )}
-              </Descriptions>
-
-              {/* Изображения платежного метода */}
-              <div style={{ marginTop: 24 }}>
-                <Typography.Title level={5}>Изображения платежного метода</Typography.Title>
-
-                {/* Уже загруженные */}
-                {paymentImages && paymentImages.length > 0 && (
-                  <Image.PreviewGroup>
-                    <Space wrap size={[8, 8]} style={{ marginBottom: 16 }}>
-                      {paymentImages.map((img: CasinoPaymentImage) => (
-                        <Image
-                          key={img.id}
-                          src={img.url}
-                          alt={img.original_name || 'Payment image'}
-                          width={90}
-                          height={90}
-                          style={{ objectFit: 'cover', borderRadius: 4 }}
-                        />
-                      ))}
-                    </Space>
-                  </Image.PreviewGroup>
-                )}
-
-                {/* Область добавления */}
-                <div
-                  style={{
-                    border: '2px dashed #d9d9d9',
-                    borderRadius: 6,
-                    padding: 12,
-                    textAlign: 'center',
-                    cursor: 'pointer',
-                    marginTop: 4,
-                  }}
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const files = Array.from(e.dataTransfer.files).filter((f) =>
-                      f.type.startsWith('image/')
-                    );
-                    if (files.length > 0) {
-                      setPendingPaymentImages((prev) => [...prev, ...files]);
-                      message.info('Изображения добавлены, нажмите \"Загрузить\"');
-                    }
-                  }}
-                  onPaste={(e) => {
-                    const items = Array.from(e.clipboardData.items || []);
-                    const files: File[] = [];
-                    for (const item of items) {
-                      if (item.type.startsWith('image/')) {
-                        const file = item.getAsFile();
-                        if (file) files.push(file);
-                      }
-                    }
-                    if (files.length > 0) {
-                      setPendingPaymentImages((prev) => [...prev, ...files]);
-                      message.info('Изображения добавлены (Ctrl+V), нажмите \"Загрузить\"');
-                    }
-                  }}
-                >
-                  <PictureOutlined style={{ fontSize: 22, color: '#8c8c8c', marginBottom: 6 }} />
-                  <div style={{ marginBottom: 8 }}>
-                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                      Перетащите изображения, вставьте (Ctrl+V) или выберите файлы
-                    </Typography.Text>
-                  </div>
-                  <Upload
-                    multiple
-                    accept="image/*"
-                    showUploadList={false}
-                    beforeUpload={(file) => {
-                      setPendingPaymentImages((prev) => [...prev, file]);
-                      return false;
-                    }}
-                  >
-                    <Button size="small" icon={<PictureOutlined />}>
-                      Выбрать файлы
-                    </Button>
-                  </Upload>
-                </div>
-
-                {/* Новые изображения + загрузка */}
-                {pendingPaymentImages.length > 0 && (
-                  <div style={{ marginTop: 12 }}>
-                    <Typography.Text strong style={{ fontSize: 12 }}>
-                      К загрузке ({pendingPaymentImages.length}):
-                    </Typography.Text>
-                    <Space wrap size={[8, 8]} style={{ marginTop: 8 }}>
-                      {pendingPaymentImages.map((file, idx) => (
-                        <div key={idx} style={{ position: 'relative' }}>
-                          <img
-                            src={URL.createObjectURL(file)}
-                            alt={file.name}
-                            width={70}
-                            height={70}
-                            style={{ objectFit: 'cover', borderRadius: 4 }}
-                          />
-                          <Button
-                            type="text"
-                            size="small"
-                            danger
-                            icon={<DeleteOutlined />}
-                            style={{ position: 'absolute', top: 0, right: 0 }}
-                            onClick={() => {
-                              setPendingPaymentImages((prev) => prev.filter((_, i) => i !== idx));
-                            }}
-                          />
-                        </div>
-                      ))}
-                    </Space>
-                    <Button
-                      type="primary"
-                      size="small"
-                      style={{ marginTop: 8 }}
-                      onClick={async () => {
-                        if (!selectedPayment?.id || pendingPaymentImages.length === 0) return;
-                        try {
-                          await uploadPaymentImages({
-                            casinoId,
-                            paymentId: selectedPayment.id,
-                            files: pendingPaymentImages,
-                          }).unwrap();
-                          message.success('Изображения платежа загружены');
-                          setPendingPaymentImages([]);
-                        } catch (e: any) {
-                          message.error(e?.data?.error ?? 'Ошибка загрузки изображений');
-                        }
-                      }}
-                    >
-                      Загрузить
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-        </Modal>
-      </Card>
-
-      <Card size="small" title="Почта">
-        <div style={{ marginBottom: 12 }}>
-          <Select
-            allowClear
-            showSearch
-            placeholder="Получатель"
-            style={{ minWidth: 220 }}
-            options={recipients.map((r) => ({ value: r.email, label: r.email }))}
-            value={emailToFilter}
-            onChange={(value) => {
-              setEmailToFilter(value);
-              setEmailPage(1);
-            }}
-            filterOption={(input, option) =>
-              (option?.label ?? '').toString().toLowerCase().includes(input.toLowerCase())
-            }
-          />
-        </div>
-        <List
-          loading={emailsLoading}
-          dataSource={emailResp?.data ?? []}
-          renderItem={(email) => (
-            <List.Item
-              onClick={() => setSelectedEmail(email)}
-              style={{ cursor: 'pointer' }}
-            >
-              <List.Item.Meta
-                title={
-                  <Space wrap>
-                    <Typography.Text strong>
-                      {email.from_name || email.from_email || 'Без отправителя'}
-                    </Typography.Text>
-                    {email.to_email && (
-                      <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                        → {email.to_email}
-                      </Typography.Text>
-                    )}
-                    {email.geo && <Tag color="orange">{email.geo}</Tag>}
-                    {email.topic_name && <Tag color="purple">{email.topic_name}</Tag>}
-                    {!email.is_read ? <Badge status="processing" text="Новое" /> : null}
-                  </Space>
-                }
-                description={
-                  <Space direction="vertical" size={2}>
-                    <Typography.Text>{email.subject || '(Без темы)'}</Typography.Text>
-                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                      {email.date_received
-                        ? dayjs(email.date_received).format('YYYY-MM-DD HH:mm')
-                        : '—'}
-                    </Typography.Text>
-                    {email.ai_summary && (
-                      <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                        <RobotOutlined style={{ marginRight: 4 }} />
-                        {email.ai_summary.length > 100 ? email.ai_summary.slice(0, 100) + '…' : email.ai_summary}
-                      </Typography.Text>
-                    )}
-                    <Space size={4}>
-                      {email.screenshot_url && (
-                        <Tag color="green" style={{ fontSize: 11, margin: 0 }}><CameraOutlined /> Скрин</Tag>
-                      )}
-                      {email.ai_summary && (
-                        <Tag color="blue" style={{ fontSize: 11, margin: 0 }}><RobotOutlined /> AI</Tag>
-                      )}
-                    </Space>
-                  </Space>
-                }
-              />
-            </List.Item>
-          )}
-          pagination={{
-            current: emailPage,
-            total: emailResp?.total ?? 0,
-            pageSize: PAGE_SIZE,
-            showSizeChanger: false,
-            showTotal: (total, range) => `${range[0]}-${range[1]} из ${total}`,
-            onChange: (page) => {
-              setEmailPage(page);
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            },
-          }}
-        />
-
-        {selectedEmail && (
-          <Drawer
-            open={!!selectedEmail}
-            onClose={() => { setSelectedEmail(null); setCasinoScreenshotVisible(false); }}
-            width={720}
-            title={selectedEmail?.subject || '(Без темы)'}
-            destroyOnClose
-            extra={
-              <Space size={4}>
-                <Tooltip title={selectedEmail?.ai_summary ? 'Пересоздать саммари' : 'Запросить саммари'}>
-                  <Button
-                    size="small"
-                    icon={summaryLoading ? <LoadingOutlined /> : <RobotOutlined />}
-                    loading={summaryLoading}
-                    onClick={async () => {
-                      try {
-                        const updated = await reqSummary(selectedEmail.id).unwrap();
-                        setSelectedEmail(updated);
-                        refetchEmails();
-                        message.success('Саммари получено');
-                      } catch {
-                        message.error('Ошибка получения саммари');
-                      }
-                    }}
-                  >
-                    Саммари
-                  </Button>
-                </Tooltip>
-                <Tooltip title={selectedEmail?.screenshot_url ? 'Пересоздать скриншот' : 'Сделать скриншот'}>
-                  <Button
-                    size="small"
-                    icon={screenshotLoading ? <LoadingOutlined /> : <CameraOutlined />}
-                    loading={screenshotLoading}
-                    onClick={async () => {
-                      try {
-                        const updated = await reqScreenshot(selectedEmail.id).unwrap();
-                        setSelectedEmail(updated);
-                        refetchEmails();
-                        message.success('Скриншот создан');
-                      } catch {
-                        message.error('Ошибка создания скриншота');
-                      }
-                    }}
-                  >
-                    Скриншот
-                  </Button>
-                </Tooltip>
-                {selectedEmail?.screenshot_url && (
-                  <Tooltip title="Посмотреть скриншот">
-                    <Button
-                      size="small"
-                      icon={<EyeOutlined />}
-                      onClick={() => setCasinoScreenshotVisible(true)}
-                    />
-                  </Tooltip>
-                )}
-                {selectedEmail && !selectedEmail.is_read && (
-                  <Button
-                    size="small"
-                    onClick={async () => {
-                      try {
-                        await markAsRead(selectedEmail.id).unwrap();
-                        refetchEmails();
-                      } catch { /* ignore */ }
-                    }}
-                  >
-                    Прочитано
-                  </Button>
-                )}
-              </Space>
-            }
-          >
-            <Space direction="vertical" size={16} style={{ width: '100%' }}>
-              <Descriptions bordered size="small" column={1}>
-                <Descriptions.Item label="От">
-                  {selectedEmail.from_name || ''} &lt;{selectedEmail.from_email}&gt;
-                </Descriptions.Item>
-                <Descriptions.Item label="Кому">
-                  {selectedEmail.to_email || '—'}
-                </Descriptions.Item>
-                <Descriptions.Item label="Дата">
-                  {selectedEmail.date_received
-                    ? dayjs(selectedEmail.date_received).format('YYYY-MM-DD HH:mm')
-                    : '—'}
-                </Descriptions.Item>
-                {selectedEmail.geo && (
-                  <Descriptions.Item label="GEO">
-                    <Tag color="orange">{selectedEmail.geo}</Tag>
-                  </Descriptions.Item>
-                )}
-                {selectedEmail.topic_name && (
-                  <Descriptions.Item label="Тема письма">
-                    <Tag color="purple">{selectedEmail.topic_name}</Tag>
-                  </Descriptions.Item>
-                )}
-              </Descriptions>
-
-              {/* AI Summary */}
-              {selectedEmail.ai_summary && (
-                <Card
-                  size="small"
-                  style={{
-                    background: token.colorPrimaryBg,
-                    borderColor: token.colorPrimaryBorder,
-                  }}
-                >
-                  <Space align="start" size={8}>
-                    <Tag icon={<RobotOutlined />} color="processing" style={{ margin: 0, flexShrink: 0 }}>AI</Tag>
-                    <Typography.Text style={{ fontSize: 13, lineHeight: 1.5 }}>
-                      {selectedEmail.ai_summary}
-                    </Typography.Text>
-                  </Space>
-                </Card>
-              )}
-
-              {/* Hidden screenshot for fullscreen preview */}
-              {selectedEmail.screenshot_url && (
-                <Image
-                  src={`${getApiBaseUrl().replace(/\/api\/?$/, '')}${selectedEmail.screenshot_url}`}
-                  alt="Email screenshot"
-                  style={{ display: 'none' }}
-                  preview={{
-                    visible: casinoScreenshotVisible,
-                    onVisibleChange: (v) => setCasinoScreenshotVisible(v),
-                  }}
-                />
-              )}
-
-              <Card size="small" title="Текст письма">
-                {selectedEmail.body_html ? (
-                  <div
-                    dangerouslySetInnerHTML={{ __html: selectedEmail.body_html }}
-                    style={{ maxHeight: '60vh', overflow: 'auto' }}
-                  />
-                ) : (
-                  <pre style={{ whiteSpace: 'pre-wrap', margin: 0 }}>
-                    {selectedEmail.body_text || 'Нет содержимого'}
-                  </pre>
-                )}
-              </Card>
-            </Space>
-          </Drawer>
-        )}
-      </Card>
-
-      {/* Активность (комментарии + история) */}
+      <PaymentSection casinoId={casinoId} payments={payments} isLoading={paymentsLoading} />
+      <EmailSection casinoId={casinoId} />
       <CasinoActivity casinoId={casinoId} />
+    </Space>
+  );
+
+  const tabItems = [
+    {
+      key: 'overview',
+      label: <Space size={6}><SettingOutlined />Анкета</Space>,
+      children: overviewTab,
+    },
+    {
+      key: 'bonuses',
+      label: <Space size={6}><GiftOutlined />Бонусы</Space>,
+      children: <BonusSection casinoId={casinoId} bonuses={bonuses} isLoading={bonusesLoading} activeGeo={activeGeo} />,
+    },
+    {
+      key: 'promos',
+      label: <Space size={6}><ThunderboltOutlined />Промо</Space>,
+      children: <PromoSection casinoId={casinoId} casinoName={casino?.name} promos={promos} isLoading={promosLoading} activeGeo={activeGeo} />,
+    },
+    {
+      key: 'payments',
+      label: <Space size={6}><CreditCardOutlined />Платежи</Space>,
+      children: <PaymentSection casinoId={casinoId} payments={payments} isLoading={paymentsLoading} />,
+    },
+    {
+      key: 'accounts',
+      label: <Space size={6}><UserOutlined />Аккаунты</Space>,
+      children: (
+        <Card size="small" title={<Space><UserOutlined /><span>Аккаунты</span></Space>}>
+          <AccountsTable
+            accounts={(accounts ?? []).filter((a) => (activeGeo ? a.geo === activeGeo : true))}
+            isLoading={accountsLoading}
+            readOnly={true}
+          />
+        </Card>
+      ),
+    },
+    {
+      key: 'screenshots',
+      label: <Space size={6}><CameraOutlined />Скриншоты</Space>,
+      children: (
+        <Card size="small" title={<Space><CameraOutlined /><span>Скриншоты</span></Space>}>
+          <Table<SlotScreenshot>
+            rowKey="selector_id"
+            size="small"
+            loading={screenshotsLoading}
+            dataSource={screenshots.filter((s) => (activeGeo ? s.geo === activeGeo : true))}
+            pagination={{ pageSize: 20 }}
+            scroll={{ x: 1200 }}
+            columns={[
+              { title: 'GEO', dataIndex: 'geo', width: 80 },
+              { title: 'Раздел', dataIndex: 'section', width: 150, render: (v) => v || '—' },
+              { title: 'Категория', dataIndex: 'category', width: 150, render: (v) => v || '—' },
+              {
+                title: 'Скриншот', width: 150,
+                render: (_, record) =>
+                  record.screenshot_url ? (
+                    <Button type="link" size="small" onClick={() => setPreviewImage(record.screenshot_url || null)}>Раскрыть</Button>
+                  ) : (
+                    <Typography.Text type="secondary">Нет скриншота</Typography.Text>
+                  ),
+              },
+              {
+                title: 'Дата обновления', width: 180,
+                render: (_, record) =>
+                  record.screenshot_created_at ? (
+                    <Typography.Text>{dayjs(record.screenshot_created_at).format('DD.MM.YYYY HH:mm')}</Typography.Text>
+                  ) : (
+                    <Typography.Text type="secondary">—</Typography.Text>
+                  ),
+              },
+              {
+                title: 'Действия', width: 150, align: 'right' as const,
+                render: (_, record) =>
+                  (record as SlotScreenshot & { selector?: string }).selector ? (
+                    <Button type="link" size="small" loading={takingScreenshot}
+                      onClick={async () => {
+                        try { await takeScreenshot(record.selector_id).unwrap(); message.success('Скриншот обновлён'); }
+                        catch { message.error('Не удалось сделать скриншот'); }
+                      }}
+                    >Обновить</Button>
+                  ) : null,
+              },
+            ]}
+          />
+        </Card>
+      ),
+    },
+    {
+      key: 'providers',
+      label: <Space size={6}><AppstoreOutlined />Провайдеры</Space>,
+      children: (
+        <Card size="small" title={<Space><AppstoreOutlined /><span>Провайдеры{(activeProviderGeo ?? activeGeo) ? ` (${activeProviderGeo ?? activeGeo})` : ''}</span></Space>}>
+          {casinoProvidersLoading ? (
+            <Typography.Text type="secondary">Загрузка...</Typography.Text>
+          ) : casinoProviders.length === 0 ? (
+            <Typography.Text type="secondary">
+              {activeProviderGeo ? `Нет провайдеров для GEO «${activeProviderGeo}».` : 'Выберите GEO для просмотра списка провайдеров.'}
+            </Typography.Text>
+          ) : (
+            <Space wrap size={[8, 8]}>
+              {casinoProviders.map((cp) => <Tag key={cp.id}>{cp.provider_name}</Tag>)}
+            </Space>
+          )}
+        </Card>
+      ),
+    },
+    {
+      key: 'emails',
+      label: <Space size={6}><MailOutlined />Почта</Space>,
+      children: <EmailSection casinoId={casinoId} />,
+    },
+    {
+      key: 'comments',
+      label: <Space size={6}><CommentOutlined />Активность</Space>,
+      children: <CasinoActivity casinoId={casinoId} />,
+    },
+  ];
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+      {/* Header */}
+      <div
+        style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 20,
+          background: token.colorBgContainer,
+          border: `1px solid ${token.colorBorderSecondary}`,
+          borderRadius: token.borderRadiusLG,
+          padding: '14px 20px',
+          marginBottom: 20,
+          boxShadow: '0 1px 4px rgba(0, 0, 0, 0.06)',
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+          <Space size={14} align="center">
+            <Button
+              icon={<ArrowLeftOutlined />}
+              onClick={() => nav('/casinos')}
+              shape="circle"
+              size="middle"
+            />
+            <div style={{ lineHeight: 1.3 }}>
+              <Typography.Title level={4} style={{ margin: 0, fontWeight: 600 }}>
+                {casino?.name}
+              </Typography.Title>
+              <Space size={8} wrap>
+                {casino?.website && (
+                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                    <a href={casino.website} target="_blank" rel="noreferrer" style={{ color: 'inherit' }}>
+                      {casino.website}
+                    </a>
+                  </Typography.Text>
+                )}
+                {casino?.is_our && <Tag color="green">Наш проект</Tag>}
+              </Space>
+            </div>
+          </Space>
+          <Space size={10} wrap>
+            {casinoGeos.length > 0 && (
+              <Dropdown
+                trigger={['click']}
+                menu={{
+                  items: casinoGeos.map((g) => ({
+                    key: g || 'ALL',
+                    label: g || 'ALL',
+                    onClick: () => setActiveGeo(g),
+                  })),
+                  selectedKeys: activeGeo ? [activeGeo] : [],
+                }}
+              >
+                <Button
+                  style={{
+                    borderRadius: token.borderRadiusLG,
+                    paddingInline: 14,
+                    height: 36,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                  }}
+                >
+                  <span style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5, opacity: 0.6, fontWeight: 500 }}>
+                    GEO
+                  </span>
+                  <Tag color="blue" style={{ margin: 0, borderRadius: 999, paddingInline: 10, fontSize: 12, fontWeight: 600 }}>
+                    {activeGeo || 'ALL'}
+                  </Tag>
+                </Button>
+              </Dropdown>
+            )}
+            <Tooltip title="Сравнить это казино с другим">
+              <Button icon={<SwapOutlined />} onClick={() => nav(`/casinos/compare?casino1=${casinoId}`)}
+                style={{ borderRadius: token.borderRadiusLG, height: 36 }}
+              >Сравнить</Button>
+            </Tooltip>
+            <Tooltip title="Экспорт анкеты в интерактивный HTML">
+              <Button icon={<DownloadOutlined />} onClick={handleExportHtml}
+                style={{ borderRadius: token.borderRadiusLG, height: 36 }}
+              >Экспорт</Button>
+            </Tooltip>
+            <Button type="primary" onClick={() => nav(`/casinos/${casinoId}/edit`)}
+              style={{ borderRadius: token.borderRadiusLG, height: 36, fontWeight: 500 }}
+            >Редактировать</Button>
+          </Space>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <Card size="small" styles={{ body: { padding: '12px 16px' } }}>
+        <Tabs
+          defaultActiveKey="overview"
+          items={tabItems}
+          size="middle"
+          tabBarStyle={{ marginBottom: 16 }}
+          destroyInactiveTabPane={false}
+        />
+      </Card>
 
       {previewImage && (
         <Image
@@ -2101,16 +791,10 @@ export default function CasinoProfileView() {
           src={previewImage}
           preview={{
             visible: true,
-            onVisibleChange: (visible) => {
-              if (!visible) {
-                setPreviewImage(null);
-              }
-            },
+            onVisibleChange: (visible) => { if (!visible) setPreviewImage(null); },
           }}
         />
       )}
-
-    </Space>
+    </div>
   );
 }
-

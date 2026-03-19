@@ -179,7 +179,6 @@ export const {
   useGetEmailsQuery,
   useGetEmailsForCasinoByNameQuery,
   useGetEmailAnalyticsQuery,
-  useGetEmailByIdQuery,
   useSyncEmailsMutation,
   useRelinkEmailsMutation,
   useMarkEmailAsReadMutation,
