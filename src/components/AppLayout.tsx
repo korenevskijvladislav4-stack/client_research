@@ -37,7 +37,7 @@ const menuItems = [
   { key: '/accounts/transactions', icon: <HistoryOutlined />, label: <Link to="/accounts/transactions">История транзакций</Link> },
   { key: '/emails', icon: <MailOutlined />, label: <Link to="/emails">Почта</Link> },
   { key: '/screenshots', icon: <PictureOutlined />, label: <Link to="/screenshots">Скриншоты</Link> },
-  { key: '/chat', icon: <MessageOutlined />, label: <Link to="/chat">Чат с ИИ</Link> },
+  { key: '/chat', icon: <MessageOutlined />, label: <Link to="/chat">Ассистент</Link> },
   { type: 'divider' as const },
   {
     key: 'analytics-submenu',

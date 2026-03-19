@@ -180,6 +180,8 @@ export const slotSelectorApi = baseApi.injectEndpoints({
       invalidatesTags: (_result, _error, { casinoId }) => [
         { type: 'SlotScreenshot', id: `LIST-${casinoId}` },
         { type: 'SlotScreenshot', id: 'LIST' },
+        { type: 'SlotSelector', id: `LIST-${casinoId}` },
+        { type: 'SlotSelector', id: 'LIST' },
         { type: 'ScreenshotGallery', id: 'LIST' },
       ],
     }),
