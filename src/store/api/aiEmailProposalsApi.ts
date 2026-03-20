@@ -25,6 +25,8 @@ export interface AiEmailProposalListItem {
     screenshot_url?: string | null;
     from_email?: string | null;
     from_name?: string | null;
+    /** GEO ящика (casino_accounts по to_email и привязанному казино), как в списке писем */
+    geo?: string | null;
   };
   email_topics?: { id: number; name: string } | null;
   casinos?: { id: number; name: string } | null;

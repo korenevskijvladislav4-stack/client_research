@@ -9,3 +9,24 @@ export function getApiBaseUrl(): string {
   if (import.meta.env.DEV) return 'http://localhost:5000/api/v1/';
   return '/api/v1/';
 }
+
+/**
+ * Origin сервера без суффикса `/api/v1` — для публичной статики `/api/uploads/...`
+ * (она смонтирована вне `V1`; в img src нет заголовка Authorization).
+ */
+export function getServerOrigin(): string {
+  return getApiBaseUrl()
+    .replace(/\/api\/v1\/?$/i, '')
+    .replace(/\/+$/, '');
+}
+
+/** Полный URL для путей из БД вроде `/api/uploads/email-screenshots/...`. */
+export function resolvePublicUploadUrl(storedPath: string | null | undefined): string {
+  if (storedPath == null) return '';
+  const p = storedPath.trim();
+  if (!p) return '';
+  if (p.startsWith('http://') || p.startsWith('https://')) return p;
+  const origin = getServerOrigin();
+  const pathPart = p.startsWith('/') ? p : `/${p}`;
+  return `${origin}${pathPart}`;
+}

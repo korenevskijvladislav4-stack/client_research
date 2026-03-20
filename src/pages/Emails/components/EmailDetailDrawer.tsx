@@ -1,8 +1,16 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button, Card, Descriptions, Drawer, Dropdown, Image, Select, Space, Tag, Tooltip, Typography, message, theme } from 'antd';
-import { BulbOutlined, CameraOutlined, DownOutlined, EyeOutlined, LoadingOutlined, RobotOutlined } from '@ant-design/icons';
-import { getApiBaseUrl } from '../../../config/api';
+import {
+  BulbOutlined,
+  CameraOutlined,
+  CheckCircleOutlined,
+  DownOutlined,
+  EyeOutlined,
+  LoadingOutlined,
+  RobotOutlined,
+} from '@ant-design/icons';
+import { resolvePublicUploadUrl } from '../../../config/api';
 import dayjs from 'dayjs';
 import type { Email } from '../../../store/api/emailApi';
 import {
@@ -112,9 +120,7 @@ export default function EmailDetailDrawer({
     }
   };
 
-  const screenshotSrc = email?.screenshot_url
-    ? `${getApiBaseUrl().replace(/\/api\/?$/, '')}${email.screenshot_url}`
-    : '';
+  const screenshotSrc = email?.screenshot_url ? resolvePublicUploadUrl(email.screenshot_url) : '';
 
   return (
     <Drawer
@@ -127,23 +133,21 @@ export default function EmailDetailDrawer({
         <Space size={4}>
           <Tooltip title={email?.ai_summary ? 'Пересоздать саммари' : 'Запросить саммари'}>
             <Button
+              type="text"
               size="small"
               icon={summaryLoading ? <LoadingOutlined /> : <RobotOutlined />}
               loading={summaryLoading}
               onClick={handleRequestSummary}
-            >
-              Саммари
-            </Button>
+            />
           </Tooltip>
           <Tooltip title={email?.screenshot_url ? 'Пересоздать скриншот' : 'Сделать скриншот'}>
             <Button
+              type="text"
               size="small"
               icon={screenshotLoading ? <LoadingOutlined /> : <CameraOutlined />}
               loading={screenshotLoading}
               onClick={handleRequestScreenshot}
-            >
-              Скриншот
-            </Button>
+            />
           </Tooltip>
           {isAdmin ? (
             <Dropdown
@@ -164,30 +168,24 @@ export default function EmailDetailDrawer({
                 },
               }}
             >
-              <Tooltip title="Создать запись на странице «Предложения ИИ» по скрину письма (нужен скрин и тема с действием ИИ)">
-                <Button
-                  size="small"
-                  icon={proposalLoading ? <LoadingOutlined /> : <BulbOutlined />}
-                  loading={proposalLoading}
-                >
-                  Предложение ИИ <DownOutlined />
-                </Button>
-              </Tooltip>
+              <Button
+                size="small"
+                icon={proposalLoading ? <LoadingOutlined /> : <BulbOutlined />}
+                loading={proposalLoading}
+              >
+                Предложение ИИ <DownOutlined />
+              </Button>
             </Dropdown>
           ) : null}
           {email?.screenshot_url && (
             <Tooltip title="Посмотреть скриншот">
-              <Button
-                size="small"
-                icon={<EyeOutlined />}
-                onClick={() => setScreenshotVisible(true)}
-              />
+              <Button type="text" size="small" icon={<EyeOutlined />} onClick={() => setScreenshotVisible(true)} />
             </Tooltip>
           )}
           {email && !email.is_read && (
-            <Button size="small" onClick={handleMarkAsRead}>
-              Прочитано
-            </Button>
+            <Tooltip title="Прочитано">
+              <Button type="text" size="small" icon={<CheckCircleOutlined />} onClick={handleMarkAsRead} />
+            </Tooltip>
           )}
         </Space>
       }

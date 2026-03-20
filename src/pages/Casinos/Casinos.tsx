@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import type { DescriptionsProps } from 'antd';
 import {
   Alert,
   Avatar,
@@ -7,6 +8,7 @@ import {
   Button,
   Card,
   Col,
+  Descriptions,
   Drawer,
   Empty,
   Form,
@@ -31,6 +33,7 @@ import {
   LinkOutlined,
   PlusOutlined,
   SearchOutlined,
+  SortAscendingOutlined,
 } from '@ant-design/icons';
 import {
   useCreateCasinoMutation,
@@ -75,18 +78,52 @@ const STATUS_COLORS: Record<string, string> = {
   pending: 'warning',
 };
 
-const SORT_OPTIONS: { value: string; label: string }[] = [
-  { value: 'created_at:desc', label: 'Дата добавления (новые первые)' },
-  { value: 'created_at:asc', label: 'Дата добавления (старые первые)' },
-  { value: 'updated_at:desc', label: 'Дата обновления (свежие)' },
-  { value: 'updated_at:asc', label: 'Дата обновления (старые)' },
-  { value: 'name:asc', label: 'Название А → Я' },
-  { value: 'name:desc', label: 'Название Я → А' },
-  { value: 'status:asc', label: 'Статус (А → Я)' },
-  { value: 'status:desc', label: 'Статус (Я → А)' },
-  { value: 'id:desc', label: 'ID (по убыванию)' },
-  { value: 'id:asc', label: 'ID (по возрастанию)' },
+/** Группы в выпадающем списке (без сортировки по статусу) */
+const CASINO_SORT_GROUPS: { label: string; options: { value: string; label: string }[] }[] = [
+  {
+    label: 'Дата',
+    options: [
+      { value: 'created_at:desc', label: 'Добавлено · сначала новые' },
+      { value: 'created_at:asc', label: 'Добавлено · сначала старые' },
+      { value: 'updated_at:desc', label: 'Обновлено · сначала свежие' },
+      { value: 'updated_at:asc', label: 'Обновлено · сначала старые' },
+    ],
+  },
+  {
+    label: 'Название',
+    options: [
+      { value: 'name:asc', label: 'По алфавиту А → Я' },
+      { value: 'name:desc', label: 'По алфавиту Я → А' },
+    ],
+  },
+  {
+    label: 'ID записи',
+    options: [
+      { value: 'id:desc', label: 'От большего к меньшему' },
+      { value: 'id:asc', label: 'От меньшего к большему' },
+    ],
+  },
 ];
+
+const CASINO_SORT_VALUES = new Set(
+  CASINO_SORT_GROUPS.flatMap((g) => g.options.map((o) => o.value)),
+);
+
+type DescriptionItem = NonNullable<DescriptionsProps['items']>[number];
+
+/** Как в предложениях ИИ / анкете казино */
+function profileStyleFieldLabel(text: string) {
+  return (
+    <Typography.Text strong style={{ fontSize: 13, color: 'inherit' }}>
+      {text}
+    </Typography.Text>
+  );
+}
+
+const casinoListDescriptionsStyles = {
+  label: { width: 200, minWidth: 200 },
+  content: { minWidth: 0 },
+} as const;
 
 function renderFieldValue(field: ProfileField, value: any): React.ReactNode {
   if (value == null || value === '') return '—';
@@ -118,6 +155,115 @@ function renderFieldValue(field: ProfileField, value: any): React.ReactNode {
   }
 }
 
+function buildCasinoCardDescriptionItems(params: {
+  record: Casino;
+  tags: TagType[];
+  isVisible: (key: string) => boolean;
+  profileFields: ProfileField[] | undefined;
+  allProfileValues: Record<number, Record<string, unknown>> | undefined;
+}): DescriptionItem[] {
+  const { record, tags, isVisible, profileFields, allProfileValues } = params;
+  const items: DescriptionItem[] = [];
+
+  if (isVisible('name')) {
+    items.push({
+      key: 'name',
+      label: profileStyleFieldLabel('Название'),
+      children: record.name || '—',
+    });
+  }
+
+  if (isVisible('meta')) {
+    items.push({
+      key: 'status',
+      label: profileStyleFieldLabel('Статус'),
+      children: (
+        <Tag color={STATUS_COLORS[record.status] ?? 'default'}>
+          {STATUS_LABELS[record.status] ?? record.status}
+        </Tag>
+      ),
+    });
+    items.push({
+      key: 'our',
+      label: profileStyleFieldLabel('Наш'),
+      children: record.is_our ? <Tag color="blue">Да</Tag> : <Tag>Нет</Tag>,
+    });
+  }
+
+  if (isVisible('tags')) {
+    items.push({
+      key: 'tags',
+      label: profileStyleFieldLabel('Теги'),
+      children:
+        tags.length === 0 ? (
+          '—'
+        ) : (
+          <Space wrap size={[4, 4]}>
+            {tags.map((t) => (
+              <Tag key={t.id} color={t.color} style={{ margin: 0 }}>
+                {t.name}
+              </Tag>
+            ))}
+          </Space>
+        ),
+    });
+  }
+
+  if (isVisible('geo')) {
+    items.push({
+      key: 'geo',
+      label: profileStyleFieldLabel('GEO'),
+      children:
+        record.geo && record.geo.length > 0 ? (
+          <Space wrap size={[4, 4]}>
+            {record.geo.map((g) => (
+              <Tag key={g} style={{ margin: 0 }}>
+                {g}
+              </Tag>
+            ))}
+          </Space>
+        ) : (
+          '—'
+        ),
+    });
+  }
+
+  if (isVisible('website')) {
+    items.push({
+      key: 'website',
+      label: profileStyleFieldLabel('Сайт'),
+      children: record.website ? (
+        <a href={record.website} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
+          {record.website.replace(/^https?:\/\//i, '')}
+        </a>
+      ) : (
+        '—'
+      ),
+    });
+  }
+
+  if (isVisible('description')) {
+    items.push({
+      key: 'description',
+      label: profileStyleFieldLabel('Описание'),
+      children: record.description?.trim() ? record.description : '—',
+    });
+  }
+
+  for (const field of profileFields ?? []) {
+    if (!field.is_active || !isVisible(`field_${field.key_name}`)) continue;
+    const casinoValues = allProfileValues?.[record.id];
+    const value = casinoValues?.[field.key_name];
+    items.push({
+      key: field.key_name,
+      label: profileStyleFieldLabel(field.label),
+      children: renderFieldValue(field, value),
+    });
+  }
+
+  return items;
+}
+
 export default function Casinos() {
   const nav = useNavigate();
   const { token } = theme.useToken();
@@ -127,6 +273,19 @@ export default function Casinos() {
     defaultSortField: 'created_at',
     defaultSortOrder: 'desc',
   });
+
+  const sortSelectValue = useMemo(() => {
+    const v = `${table.sortField ?? 'created_at'}:${table.sortOrder ?? 'desc'}`;
+    return CASINO_SORT_VALUES.has(v) ? v : 'created_at:desc';
+  }, [table.sortField, table.sortOrder]);
+
+  useEffect(() => {
+    const v = `${table.sortField ?? ''}:${table.sortOrder ?? ''}`;
+    if (!CASINO_SORT_VALUES.has(v)) {
+      table.setSorting('created_at', 'desc');
+      table.setPage(1);
+    }
+  }, [table.sortField, table.sortOrder, table.setSorting, table.setPage]);
 
   // API queries
   const { data: response, isLoading } = useGetCasinosQuery(table.params);
@@ -292,14 +451,43 @@ export default function Casinos() {
       {/* Карточки (как блоки анкеты) */}
       <Card size="small">
         <Space direction="vertical" size={16} style={{ width: '100%' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: 14,
+            }}
+          >
             <Typography.Text type="secondary">
               {isLoading ? 'Загрузка…' : `Найдено: ${total}`}
             </Typography.Text>
             <Select
-              style={{ minWidth: 280 }}
-              value={`${table.sortField ?? 'created_at'}:${table.sortOrder ?? 'desc'}`}
-              options={SORT_OPTIONS}
+              value={sortSelectValue}
+              options={CASINO_SORT_GROUPS}
+              variant="filled"
+              size="middle"
+              popupMatchSelectWidth={false}
+              placement="bottomRight"
+              prefix={
+                <SortAscendingOutlined
+                  style={{ color: token.colorTextSecondary, fontSize: 15, marginInlineEnd: 2 }}
+                />
+              }
+              style={{
+                minWidth: 300,
+                borderRadius: token.borderRadiusLG,
+              }}
+              styles={{
+                popup: {
+                  root: {
+                    borderRadius: token.borderRadiusLG,
+                    minWidth: 300,
+                    padding: 4,
+                  },
+                },
+              }}
               onChange={(v) => {
                 const [field, order] = v.split(':') as [string, 'asc' | 'desc'];
                 table.setSorting(field, order);
@@ -312,28 +500,37 @@ export default function Casinos() {
             {rows.length === 0 && !isLoading ? (
               <Empty description="Нет казино по заданным условиям" />
             ) : (
-              <Row gutter={[16, 16]}>
+              <Row gutter={[18, 18]}>
                 {rows.map((record) => {
                   const tags = allCasinoTags[record.id] ?? [];
                   const showName = columnSettings.isVisible('name');
                   const titleText = showName ? record.name : `Казино #${record.id}`;
+                  const descItemsRaw = buildCasinoCardDescriptionItems({
+                    record,
+                    tags,
+                    isVisible: columnSettings.isVisible,
+                    profileFields,
+                    allProfileValues,
+                  });
+                  const descItems = showName
+                    ? descItemsRaw.filter((it) => it.key !== 'name')
+                    : descItemsRaw;
 
                   return (
                     <Col key={record.id} xs={24} sm={12} lg={8} xl={6}>
                       <Card
-                        size="small"
                         hoverable
-                        styles={{ body: { padding: '12px 16px' } }}
-                        style={{
-                          height: '100%',
-                          cursor: 'pointer',
-                          borderColor: token.colorBorderSecondary,
-                        }}
+                        size="small"
+                        onClick={() => nav(`/casinos/${record.id}`)}
                         title={
                           <Typography.Text
                             strong
                             ellipsis={{ tooltip: titleText }}
-                            style={{ display: 'block', maxWidth: columnSettings.isVisible('actions') ? 'calc(100% - 72px)' : '100%' }}
+                            style={{
+                              display: 'block',
+                              maxWidth: columnSettings.isVisible('actions') ? 'calc(100% - 72px)' : '100%',
+                              fontSize: 14,
+                            }}
                           >
                             {titleText}
                           </Typography.Text>
@@ -362,82 +559,37 @@ export default function Casinos() {
                             </Space>
                           ) : undefined
                         }
-                        onClick={() => nav(`/casinos/${record.id}`)}
+                        styles={{
+                          header: {
+                            minHeight: 40,
+                            padding: '8px 12px',
+                            borderBottom: `1px solid ${token.colorBorderSecondary}`,
+                          },
+                          body: { padding: 0 },
+                        }}
+                        style={{
+                          height: '100%',
+                          cursor: 'pointer',
+                          borderRadius: token.borderRadiusLG,
+                          borderColor: token.colorBorderSecondary,
+                        }}
                       >
-                        <Space direction="vertical" size={10} style={{ width: '100%' }}>
-                          {columnSettings.isVisible('meta') && (
-                            <Space wrap size={[6, 6]}>
-                              <Tag color={STATUS_COLORS[record.status] ?? 'default'}>
-                                {STATUS_LABELS[record.status] ?? record.status}
-                              </Tag>
-                              {record.is_our ? <Tag color="blue">Наш</Tag> : <Tag>Не наш</Tag>}
-                            </Space>
-                          )}
-
-                          {columnSettings.isVisible('tags') &&
-                            (tags.length === 0 ? (
-                              <Typography.Text type="secondary">Теги: —</Typography.Text>
-                            ) : (
-                              <Space wrap size={[4, 4]}>
-                                <Typography.Text type="secondary" style={{ marginRight: 4 }}>Теги:</Typography.Text>
-                                {tags.map((t: TagType) => (
-                                  <Tag key={t.id} color={t.color} style={{ margin: 0 }}>{t.name}</Tag>
-                                ))}
-                              </Space>
-                            ))}
-
-                          {columnSettings.isVisible('geo') &&
-                            (record.geo && record.geo.length > 0 ? (
-                              <Space wrap size={[4, 4]}>
-                                <Typography.Text type="secondary" style={{ marginRight: 4 }}>GEO:</Typography.Text>
-                                {record.geo.map((g) => (
-                                  <Tag key={g} style={{ margin: 0 }}>{g}</Tag>
-                                ))}
-                              </Space>
-                            ) : (
-                              <Typography.Text type="secondary">GEO: —</Typography.Text>
-                            ))}
-
-                          {columnSettings.isVisible('website') && (
-                            <div>
-                              <Typography.Text type="secondary">Сайт: </Typography.Text>
-                              {record.website ? (
-                                <a href={record.website} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
-                                  {record.website.replace(/^https?:\/\//i, '').slice(0, 40)}
-                                  {record.website.replace(/^https?:\/\//i, '').length > 40 ? '…' : ''}
-                                </a>
-                              ) : (
-                                <Typography.Text type="secondary">—</Typography.Text>
-                              )}
-                            </div>
-                          )}
-
-                          {columnSettings.isVisible('description') &&
-                            (record.description ? (
-                              <Typography.Paragraph
-                                type="secondary"
-                                ellipsis={{ rows: 3 }}
-                                style={{ marginBottom: 0, fontSize: 13 }}
-                              >
-                                {record.description}
-                              </Typography.Paragraph>
-                            ) : (
-                              <Typography.Text type="secondary">Описание: —</Typography.Text>
-                            ))}
-
-                          {(profileFields ?? [])
-                            .filter((f) => f.is_active && columnSettings.isVisible(`field_${f.key_name}`))
-                            .map((field) => {
-                              const casinoValues = allProfileValues?.[record.id];
-                              const value = casinoValues?.[field.key_name];
-                              return (
-                                <div key={field.key_name} style={{ fontSize: 13 }}>
-                                  <Typography.Text type="secondary">{field.label}: </Typography.Text>
-                                  <span>{renderFieldValue(field, value)}</span>
-                                </div>
-                              );
-                            })}
-                        </Space>
+                        {descItems.length > 0 ? (
+                          <Descriptions
+                            bordered
+                            column={1}
+                            size="small"
+                            colon
+                            styles={casinoListDescriptionsStyles}
+                            items={descItems}
+                          />
+                        ) : (
+                          <div style={{ padding: 12 }}>
+                            <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+                              Все поля скрыты в настройках колонок — включите хотя бы одно, чтобы видеть данные здесь.
+                            </Typography.Text>
+                          </div>
+                        )}
                       </Card>
                     </Col>
                   );

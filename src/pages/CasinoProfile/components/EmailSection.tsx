@@ -20,6 +20,7 @@ import {
 import {
   BulbOutlined,
   CameraOutlined,
+  CheckCircleOutlined,
   DownOutlined,
   EyeOutlined,
   LoadingOutlined,
@@ -34,7 +35,7 @@ import {
   useRequestEmailScreenshotMutation,
   Email,
 } from '../../../store/api/emailApi';
-import { getApiBaseUrl } from '../../../config/api';
+import { resolvePublicUploadUrl } from '../../../config/api';
 import dayjs from 'dayjs';
 import { useAppSelector } from '../../../hooks/redux';
 import { useDevTriggerAiEmailProposalMutation } from '../../../store/api/aiEmailProposalsApi';
@@ -141,6 +142,7 @@ export default function EmailSection({ casinoId }: EmailSectionProps) {
             <Space size={4}>
               <Tooltip title={selectedEmail?.ai_summary ? 'Пересоздать саммари' : 'Запросить саммари'}>
                 <Button
+                  type="text"
                   size="small"
                   icon={summaryLoading ? <LoadingOutlined /> : <RobotOutlined />}
                   loading={summaryLoading}
@@ -150,12 +152,15 @@ export default function EmailSection({ casinoId }: EmailSectionProps) {
                       setSelectedEmail(updated);
                       refetchEmails();
                       message.success('Саммари получено');
-                    } catch { message.error('Ошибка получения саммари'); }
+                    } catch {
+                      message.error('Ошибка получения саммари');
+                    }
                   }}
-                >Саммари</Button>
+                />
               </Tooltip>
               <Tooltip title={selectedEmail?.screenshot_url ? 'Пересоздать скриншот' : 'Сделать скриншот'}>
                 <Button
+                  type="text"
                   size="small"
                   icon={screenshotLoading ? <LoadingOutlined /> : <CameraOutlined />}
                   loading={screenshotLoading}
@@ -165,9 +170,11 @@ export default function EmailSection({ casinoId }: EmailSectionProps) {
                       setSelectedEmail(updated);
                       refetchEmails();
                       message.success('Скриншот создан');
-                    } catch { message.error('Ошибка создания скриншота'); }
+                    } catch {
+                      message.error('Ошибка создания скриншота');
+                    }
                   }}
-                >Скриншот</Button>
+                />
               </Tooltip>
               {isAdmin ? (
                 <Dropdown
@@ -207,26 +214,36 @@ export default function EmailSection({ casinoId }: EmailSectionProps) {
                     },
                   }}
                 >
-                  <Tooltip title="Создать запись на странице «Предложения ИИ» по скрину письма">
-                    <Button
-                      size="small"
-                      icon={proposalLoading ? <LoadingOutlined /> : <BulbOutlined />}
-                      loading={proposalLoading}
-                    >
-                      Предложение ИИ <DownOutlined />
-                    </Button>
-                  </Tooltip>
+                  <Button
+                    size="small"
+                    icon={proposalLoading ? <LoadingOutlined /> : <BulbOutlined />}
+                    loading={proposalLoading}
+                  >
+                    Предложение ИИ <DownOutlined />
+                  </Button>
                 </Dropdown>
               ) : null}
               {selectedEmail?.screenshot_url && (
                 <Tooltip title="Посмотреть скриншот">
-                  <Button size="small" icon={<EyeOutlined />} onClick={() => setScreenshotVisible(true)} />
+                  <Button type="text" size="small" icon={<EyeOutlined />} onClick={() => setScreenshotVisible(true)} />
                 </Tooltip>
               )}
               {selectedEmail && !selectedEmail.is_read && (
-                <Button size="small" onClick={async () => { try { await markAsRead(selectedEmail.id).unwrap(); refetchEmails(); } catch { /* ignore */ } }}>
-                  Прочитано
-                </Button>
+                <Tooltip title="Прочитано">
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<CheckCircleOutlined />}
+                    onClick={async () => {
+                      try {
+                        await markAsRead(selectedEmail.id).unwrap();
+                        refetchEmails();
+                      } catch {
+                        /* ignore */
+                      }
+                    }}
+                  />
+                </Tooltip>
               )}
             </Space>
           }
@@ -251,7 +268,7 @@ export default function EmailSection({ casinoId }: EmailSectionProps) {
 
             {selectedEmail.screenshot_url && (
               <Image
-                src={`${getApiBaseUrl().replace(/\/api\/?$/, '')}${selectedEmail.screenshot_url}`}
+                src={resolvePublicUploadUrl(selectedEmail.screenshot_url)}
                 alt="Email screenshot"
                 style={{ display: 'none' }}
                 preview={{ visible: screenshotVisible, onVisibleChange: (v) => setScreenshotVisible(v) }}

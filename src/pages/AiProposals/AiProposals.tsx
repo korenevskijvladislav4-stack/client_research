@@ -6,22 +6,32 @@ import {
   Checkbox,
   Col,
   Collapse,
+  Descriptions,
   Drawer,
   Form,
   Image,
   Input,
   InputNumber,
   Row,
+  Segmented,
   Select,
   Space,
-  Tabs,
   Tag,
   Typography,
   message,
+  theme,
 } from 'antd';
-import { CheckOutlined, CloseOutlined, BulbOutlined, ExperimentOutlined } from '@ant-design/icons';
+import type { DescriptionsProps } from 'antd';
+import {
+  CheckOutlined,
+  CloseOutlined,
+  BulbOutlined,
+  ExperimentOutlined,
+  EyeOutlined,
+  InboxOutlined,
+} from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { getApiBaseUrl } from '../../config/api';
+import { resolvePublicUploadUrl } from '../../config/api';
 import { PageHeaderCard } from '../../components/PageHeaderCard';
 import { useGetAllCasinosQuery } from '../../store/api/casinoApi';
 import { useGetGeosQuery } from '../../store/api/geoApi';
@@ -41,25 +51,136 @@ import {
   type AiEmailProposalType,
 } from '../../store/api/aiEmailProposalsApi';
 
-function screenshotFullUrl(pathOrUrl: string | null | undefined): string | undefined {
-  if (!pathOrUrl) return undefined;
-  if (pathOrUrl.startsWith('http')) return pathOrUrl;
-  const origin = getApiBaseUrl().replace(/\/api\/v1\/?$/, '');
-  return `${origin}${pathOrUrl.startsWith('/') ? '' : '/'}${pathOrUrl}`;
+type DescriptionItem = NonNullable<DescriptionsProps['items']>[number];
+
+/** Подписи полей как в анкете казино («Дополнительные поля») */
+function profileStyleFieldLabel(text: string) {
+  return (
+    <Typography.Text strong style={{ fontSize: 13, color: 'inherit' }}>
+      {text}
+    </Typography.Text>
+  );
 }
 
-function statusTag(status: string) {
-  if (status === 'pending') return <Tag>Ожидает</Tag>;
-  if (status === 'approved') return <Tag color="success">Принято</Tag>;
+function viewedStateTag(viewedAt: string | null | undefined) {
+  if (viewedAt) {
+    return <Tag color="processing">Просмотрено</Tag>;
+  }
+  return <Tag>Не просмотрено</Tag>;
+}
+
+function proposalWorkflowStatusTag(status: string) {
+  if (status === 'pending') {
+    return <Tag color="gold">Ожидает</Tag>;
+  }
+  if (status === 'approved') {
+    return <Tag color="success">Принято</Tag>;
+  }
   return <Tag color="error">Отклонено</Tag>;
 }
 
-function viewedLabel(viewedAt: string | null | undefined) {
-  if (viewedAt) return <Tag color="processing">Просмотрено</Tag>;
-  return <Tag color="default">Не просмотрено</Tag>;
+function screenshotFullUrl(pathOrUrl: string | null | undefined): string | undefined {
+  const u = resolvePublicUploadUrl(pathOrUrl);
+  return u || undefined;
 }
 
+function formatProposalKind(type: AiEmailProposalType): string {
+  return type === 'bonus' ? 'Бонусы' : 'Промо';
+}
+
+function proposalKindTag(type: AiEmailProposalType) {
+  return <Tag color={type === 'bonus' ? 'blue' : 'purple'}>{formatProposalKind(type)}</Tag>;
+}
+
+function formatProposalDate(iso: string | null | undefined): string {
+  if (!iso) return '—';
+  return dayjs(iso).format('DD.MM.YYYY HH:mm');
+}
+
+function formatGeoFromEmail(
+  code: string | null | undefined,
+  geos: { code: string; name: string }[],
+): string {
+  if (!code?.trim()) return '—';
+  const row = geos.find((g) => g.code === code);
+  return row ? `${row.code} — ${row.name}` : code;
+}
+
+/** GEO в форме бонуса/промо: сначала ящик из письма, затем подсказка ИИ (игнорируем «ALL» как «нет данных»). */
+function resolveGeoFormValue(
+  detail: {
+    suggested_geo?: string | null;
+    emails?: { geo?: string | null } | null;
+  },
+  payload: Record<string, unknown>,
+): string[] {
+  const emailGeo = detail.emails?.geo?.trim();
+  if (emailGeo) {
+    return [emailGeo.toUpperCase()];
+  }
+  const suggested = detail.suggested_geo?.trim();
+  if (suggested && suggested.toUpperCase() !== 'ALL') {
+    return [suggested.toUpperCase()];
+  }
+  const pg = payload.geo;
+  if (typeof pg === 'string' && pg.trim() && pg.trim().toUpperCase() !== 'ALL') {
+    return [pg.trim().toUpperCase()];
+  }
+  if (Array.isArray(pg)) {
+    const codes = pg
+      .map((x) => String(x).trim().toUpperCase())
+      .filter((c) => c.length > 0 && c !== 'ALL');
+    if (codes.length > 0) return codes;
+  }
+  if (suggested) {
+    return [suggested.toUpperCase()];
+  }
+  return ['ALL'];
+}
+
+function proposalMetaItems(params: {
+  casinoName: string;
+  proposalType: AiEmailProposalType;
+  viewedAt: string | null | undefined;
+  status: string;
+  createdAt: string | null | undefined;
+  emailGeoLabel: string;
+}): DescriptionItem[] {
+  return [
+    { key: 'casino', label: profileStyleFieldLabel('Казино'), children: params.casinoName || '—' },
+    { key: 'kind', label: profileStyleFieldLabel('Предложение'), children: proposalKindTag(params.proposalType) },
+    {
+      key: 'viewed',
+      label: profileStyleFieldLabel('Состояние'),
+      children: viewedStateTag(params.viewedAt),
+    },
+    {
+      key: 'status',
+      label: profileStyleFieldLabel('Статус'),
+      children: proposalWorkflowStatusTag(params.status),
+    },
+    {
+      key: 'created',
+      label: profileStyleFieldLabel('Дата предложения'),
+      children: formatProposalDate(params.createdAt),
+    },
+    { key: 'geo', label: profileStyleFieldLabel('ГЕО из письма'), children: params.emailGeoLabel },
+  ];
+}
+
+/** Как в CasinoProfileView: «Дополнительные поля» */
+const proposalListDescriptionsStyles = {
+  label: { width: 200, minWidth: 200 },
+  content: { minWidth: 0 },
+} as const;
+
+const proposalDrawerDescriptionsStyles = {
+  label: { width: 200, minWidth: 200 },
+  content: { minWidth: 300 },
+} as const;
+
 export default function AiProposals() {
+  const { token } = theme.useToken();
   const isAdmin = useAppSelector((s) => s.auth.user?.role === 'admin');
   const [tab, setTab] = useState<string>('new');
   const viewed = tab === 'seen';
@@ -80,7 +201,8 @@ export default function AiProposals() {
   const [devTrigger, { isLoading: devLoading }] = useDevTriggerAiEmailProposalMutation();
 
   const [form] = Form.useForm();
-  const seededProposalId = useRef<number | null>(null);
+  /** Повторный сев при появлении GEO в письме после первого ответа API */
+  const proposalSeedKeyRef = useRef<string>('');
 
   const [bonusCategory, setBonusCategory] = useState<BonusCategory>('casino');
   const [selectedBonusKind, setSelectedBonusKind] = useState<BonusKind | undefined>();
@@ -100,15 +222,18 @@ export default function AiProposals() {
   );
 
   useEffect(() => {
-    if (drawerId == null) seededProposalId.current = null;
+    if (drawerId == null) proposalSeedKeyRef.current = '';
   }, [drawerId]);
 
   useEffect(() => {
     if (!detail || detail.id !== drawerId) return;
-    if (seededProposalId.current === detail.id) return;
-    seededProposalId.current = detail.id;
 
     const p = (detail.payload_json || {}) as Record<string, unknown>;
+    const emailGeoKey = detail.emails?.geo?.trim() ?? '';
+    const suggestedKey = detail.suggested_geo?.trim() ?? '';
+    const seedKey = `${detail.id}|eg:${emailGeoKey}|sg:${suggestedKey}`;
+    if (proposalSeedKeyRef.current === seedKey) return;
+    proposalSeedKeyRef.current = seedKey;
 
     if (detail.proposal_type === 'bonus') {
       setBonusCategory((p.bonus_category as BonusCategory) || 'casino');
@@ -118,13 +243,7 @@ export default function AiProposals() {
       form.setFieldsValue({
         ...restPayload,
         casino_id: detail.suggested_casino_id ?? undefined,
-        geo: detail.suggested_geo
-          ? [detail.suggested_geo]
-          : typeof p.geo === 'string'
-            ? [p.geo]
-            : Array.isArray(p.geo)
-              ? p.geo
-              : ['ALL'],
+        geo: resolveGeoFormValue(detail, p),
         name:
           typeof p.name === 'string' && p.name
             ? [p.name]
@@ -145,11 +264,7 @@ export default function AiProposals() {
       form.setFieldsValue({
         ...restPayload,
         casino_id: detail.suggested_casino_id ?? undefined,
-        geo: detail.suggested_geo
-          ? [detail.suggested_geo]
-          : typeof p.geo === 'string'
-            ? [p.geo]
-            : ['ALL'],
+        geo: resolveGeoFormValue(detail, p),
         name: (typeof p.name === 'string' && p.name) || detail.emails?.subject || 'Из письма',
         promo_type: typeof p.promo_type === 'string' && p.promo_type ? [p.promo_type] : undefined,
         period: ps && pe ? [dayjs(ps), dayjs(pe)] : undefined,
@@ -275,7 +390,6 @@ export default function AiProposals() {
             <span>Предложения ИИ</span>
           </Space>
         }
-        description="Письма по темам с действием «Бонусы» или «Промо»: ИИ анализирует скриншот и заполняет форму как в анкете казино. Администратор может принять запись в CRM; все пользователи могут просматривать."
       />
 
       {isAdmin ? (
@@ -316,77 +430,141 @@ export default function AiProposals() {
         </Card>
       ) : null}
 
-      <Card>
-        <Tabs
-          activeKey={tab}
-          onChange={setTab}
-          items={[
-            { key: 'new', label: 'Не просмотрены' },
-            { key: 'seen', label: 'Просмотрены' },
+      <div
+        style={{
+          padding: 6,
+          marginBottom: 20,
+          background: token.colorFillAlter,
+          borderRadius: token.borderRadiusLG * 1.25,
+          border: `1px solid ${token.colorBorderSecondary}`,
+          boxShadow: `0 1px 2px ${token.colorFillSecondary}`,
+        }}
+      >
+        <Segmented
+          block
+          size="large"
+          value={tab}
+          onChange={(v) => setTab(String(v))}
+          options={[
+            {
+              value: 'new',
+              label: (
+                <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                  <InboxOutlined />
+                  Не просмотрены
+                </span>
+              ),
+            },
+            {
+              value: 'seen',
+              label: (
+                <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                  <EyeOutlined />
+                  Просмотрены
+                </span>
+              ),
+            },
           ]}
         />
-        {isLoading ? (
-          <Typography.Text type="secondary">Загрузка…</Typography.Text>
-        ) : rows.length === 0 ? (
-          <Typography.Text type="secondary">Нет предложений</Typography.Text>
-        ) : (
-          <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
-            {rows.map((r: AiEmailProposalListItem) => {
-              const thumb = screenshotFullUrl(r.emails?.screenshot_url);
-              const casinoLabel = r.casinos?.name || r.casino_name_guess || '—';
-              return (
-                <Col xs={24} sm={12} lg={8} key={r.id}>
-                  <Card
-                    hoverable
-                    onClick={() => openDrawer(r.id)}
-                    styles={{ body: { padding: 12 } }}
+      </div>
+
+      {isLoading ? (
+        <Typography.Text type="secondary">Загрузка…</Typography.Text>
+      ) : rows.length === 0 ? (
+        <Card styles={{ body: { padding: 32, textAlign: 'center' } }}>
+          <Typography.Text type="secondary">Нет предложений в этой вкладке</Typography.Text>
+        </Card>
+      ) : (
+        <Row gutter={[18, 18]}>
+          {rows.map((r: AiEmailProposalListItem) => {
+            const thumb = screenshotFullUrl(r.emails?.screenshot_url);
+            const casinoLabel = r.casinos?.name || r.casino_name_guess || '—';
+            const emailGeoLabel = formatGeoFromEmail(r.emails?.geo, geos);
+            const meta = proposalMetaItems({
+              casinoName: casinoLabel,
+              proposalType: r.proposal_type,
+              viewedAt: r.viewed_at,
+              status: r.status,
+              createdAt: r.created_at,
+              emailGeoLabel,
+            });
+            return (
+              <Col xs={24} sm={12} lg={8} xl={6} key={r.id}>
+                <Card
+                  hoverable
+                  onClick={() => openDrawer(r.id)}
+                  styles={{
+                    body: { padding: 0 },
+                  }}
+                  style={{
+                    borderRadius: token.borderRadiusLG,
+                    overflow: 'hidden',
+                    borderColor: token.colorBorderSecondary,
+                  }}
+                >
+                  <div
+                    style={{
+                      position: 'relative',
+                      minHeight: 132,
+                      background: token.colorFillQuaternary,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
                   >
-                    <Space direction="vertical" size={10} style={{ width: '100%' }}>
-                      <Typography.Text strong ellipsis style={{ width: '100%' }}>
-                        {casinoLabel}
+                    {thumb ? (
+                      <Image
+                        src={thumb}
+                        alt=""
+                        preview={false}
+                        style={{ width: '100%', height: 148, objectFit: 'cover' }}
+                      />
+                    ) : (
+                      <Typography.Text type="secondary" style={{ padding: 20 }}>
+                        Нет скриншота
                       </Typography.Text>
-                      <Space wrap size={6}>
-                        <Tag color={r.proposal_type === 'bonus' ? 'blue' : 'purple'}>
-                          {r.proposal_type === 'bonus' ? 'Бонус' : 'Промо'}
-                        </Tag>
-                        {statusTag(r.status)}
-                        {viewedLabel(r.viewed_at)}
-                      </Space>
-                      <div
-                        style={{
-                          borderRadius: 8,
-                          overflow: 'hidden',
-                          background: 'var(--ant-color-fill-quaternary, #f5f5f5)',
-                          minHeight: 120,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        {thumb ? (
-                          <Image
-                            src={thumb}
-                            alt=""
-                            preview={false}
-                            style={{ width: '100%', maxHeight: 200, objectFit: 'cover' }}
-                          />
-                        ) : (
-                          <Typography.Text type="secondary" style={{ padding: 16 }}>
-                            Нет скриншота
-                          </Typography.Text>
-                        )}
-                      </div>
-                      <Typography.Text type="secondary" ellipsis style={{ fontSize: 12, width: '100%' }}>
-                        {r.emails?.subject || 'Без темы'}
-                      </Typography.Text>
-                    </Space>
-                  </Card>
-                </Col>
-              );
-            })}
-          </Row>
-        )}
-      </Card>
+                    )}
+                  </div>
+                  <div style={{ padding: 12 }}>
+                    <Card
+                      size="small"
+                      title={
+                        <Typography.Text strong style={{ fontSize: 14 }}>
+                          Данные предложения
+                        </Typography.Text>
+                      }
+                      styles={{
+                        header: {
+                          minHeight: 40,
+                          padding: '8px 12px',
+                          borderBottom: `1px solid ${token.colorBorderSecondary}`,
+                        },
+                        body: { padding: 0 },
+                      }}
+                    >
+                      <Descriptions
+                        bordered
+                        column={1}
+                        size="small"
+                        colon
+                        styles={proposalListDescriptionsStyles}
+                        items={meta}
+                      />
+                    </Card>
+                    <Typography.Paragraph
+                      type="secondary"
+                      ellipsis={{ rows: 2 }}
+                      style={{ marginTop: 12, marginBottom: 0, fontSize: 12, lineHeight: 1.45 }}
+                    >
+                      {r.emails?.subject || 'Без темы'}
+                    </Typography.Paragraph>
+                  </div>
+                </Card>
+              </Col>
+            );
+          })}
+        </Row>
+      )}
 
       <Drawer
         title={detail ? `Предложение #${detail.id}` : 'Предложение'}
@@ -426,13 +604,54 @@ export default function AiProposals() {
             ) : null}
             {detail.error_message ? <Alert type="warning" message={detail.error_message} /> : null}
 
-            <Typography.Paragraph style={{ marginBottom: 0 }}>
-              <Typography.Text strong>Письмо: </Typography.Text>
-              {detail.emails?.subject || '—'}
-            </Typography.Paragraph>
-            <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-              От: {detail.emails?.from_name} &lt;{detail.emails?.from_email}&gt;
-            </Typography.Text>
+            <Card
+              size="small"
+              title={
+                <Typography.Text strong style={{ fontSize: 15 }}>
+                  Сведения о предложении
+                </Typography.Text>
+              }
+              styles={{
+                header: {
+                  fontWeight: 600,
+                  borderBottom: `1px solid ${token.colorBorderSecondary}`,
+                },
+                body: { padding: 0 },
+              }}
+            >
+              <Descriptions
+                bordered
+                size="small"
+                column={1}
+                colon
+                styles={proposalDrawerDescriptionsStyles}
+                items={[
+                  ...proposalMetaItems({
+                    casinoName: detail.casinos?.name || detail.casino_name_guess || '—',
+                    proposalType: detail.proposal_type,
+                    viewedAt: detail.viewed_at,
+                    status: detail.status,
+                    createdAt: detail.created_at,
+                    emailGeoLabel: formatGeoFromEmail(detail.emails?.geo, geos),
+                  }),
+                  {
+                    key: 'subject',
+                    label: profileStyleFieldLabel('Тема письма'),
+                    children: detail.emails?.subject || '—',
+                  },
+                  {
+                    key: 'from',
+                    label: profileStyleFieldLabel('Отправитель'),
+                    children: (() => {
+                      const fn = detail.emails?.from_name?.trim();
+                      const fe = detail.emails?.from_email?.trim();
+                      if (fn && fe) return `${fn} <${fe}>`;
+                      return fn || fe || '—';
+                    })(),
+                  },
+                ]}
+              />
+            </Card>
 
             {imgSrc ? (
               <div>

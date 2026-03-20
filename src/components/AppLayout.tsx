@@ -154,6 +154,7 @@ export function AppLayout() {
   };
 
   const selectedKey = findSelectedKey();
+  const isChatPage = location.pathname === '/chat';
   
   // Determine which submenu should be open
   const getOpenKeys = () => {
@@ -268,7 +269,15 @@ export function AppLayout() {
   );
 
   return (
-    <Layout style={{ minHeight: '100vh', background: token.colorBgLayout }}>
+    <Layout
+      style={{
+        minHeight: '100vh',
+        background: token.colorBgLayout,
+        ...(isMobile && isChatPage
+          ? { display: 'flex', flexDirection: 'column' as const }
+          : {}),
+      }}
+    >
       {isMobile ? (
         <>
           <div
@@ -328,8 +337,37 @@ export function AppLayout() {
           >
             {menuContent}
           </Drawer>
-          <Content style={{ padding: '76px 12px 16px', minHeight: '100vh', marginLeft: 0 }}>
-            <div className="page-shell">
+          <Content
+            style={{
+              padding: '76px 12px 16px',
+              minHeight: '100vh',
+              marginLeft: 0,
+              ...(isChatPage
+                ? {
+                    display: 'flex',
+                    flexDirection: 'column',
+                    flex: 1,
+                    minHeight: 0,
+                    overflow: 'auto',
+                    boxSizing: 'border-box',
+                  }
+                : {}),
+            }}
+          >
+            <div
+              className="page-shell"
+              style={
+                isChatPage
+                  ? {
+                      flex: 1,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      minHeight: 0,
+                      overflow: 'hidden',
+                    }
+                  : undefined
+              }
+            >
               <Outlet context={outletContext} />
             </div>
           </Content>
@@ -386,9 +424,51 @@ export function AppLayout() {
               <MenuOutlined style={{ color: siderSecondaryTextColor, fontSize: 16 }} />
             </div>
           </Sider>
-          <Layout style={{ marginLeft: collapsed ? 80 : 200, transition: 'margin-left 0.2s' }}>
-            <Content style={{ padding: '20px 40px 32px', minHeight: '100vh' }}>
-              <div className="page-shell">
+          <Layout
+            style={{
+              marginLeft: collapsed ? 80 : 200,
+              transition: 'margin-left 0.2s',
+              ...(isChatPage
+                ? {
+                    display: 'flex',
+                    flexDirection: 'column',
+                    flex: 1,
+                    minHeight: '100vh',
+                    overflow: 'hidden',
+                  }
+                : {}),
+            }}
+          >
+            <Content
+              style={{
+                padding: '20px 40px 32px',
+                minHeight: '100vh',
+                ...(isChatPage
+                  ? {
+                      flex: 1,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      minHeight: 0,
+                      overflow: 'auto',
+                      boxSizing: 'border-box',
+                    }
+                  : {}),
+              }}
+            >
+              <div
+                className="page-shell"
+                style={
+                  isChatPage
+                    ? {
+                        flex: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        minHeight: 0,
+                        overflow: 'hidden',
+                      }
+                    : undefined
+                }
+              >
                 {workspaceBannerExpanded ? (
                   <div
                     className="app-topbar"

@@ -7,7 +7,6 @@ import {
   type ComponentProps,
 } from 'react';
 import {
-  Alert,
   Button,
   Card,
   Collapse,
@@ -32,7 +31,6 @@ import {
   UserOutlined,
   RobotOutlined,
   BulbOutlined,
-  ThunderboltOutlined,
   ImportOutlined,
   ExportOutlined,
 } from '@ant-design/icons';
@@ -47,11 +45,9 @@ import {
   type ChatModelOption,
 } from '../../store/api/chatApi';
 import dayjs from 'dayjs';
-import { useOutletContext } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../hooks/redux';
 import { chatApi, type ChatSessionWithMessages } from '../../store/api/chatApi';
 import { getApiBaseUrl } from '../../config/api';
-import { PageHeaderCard } from '../../components/PageHeaderCard';
 import { readChatNdjsonStream } from './chatStream';
 
 const SIDEBAR_WIDTH = 280;
@@ -236,22 +232,10 @@ function chatStreamUrl(sessionId: number): string {
   return `${base}/chat/sessions/${sessionId}/messages/stream`;
 }
 
-type AppLayoutOutletContext = {
-  workspaceBannerExpanded?: boolean;
-  layoutVariant?: 'mobile' | 'desktop';
-};
-
 export default function Chat() {
   const { token } = theme.useToken();
   const dispatch = useAppDispatch();
   const authToken = useAppSelector((s) => s.auth.token);
-  const layoutCtx = useOutletContext<AppLayoutOutletContext>();
-  const workspaceBannerExpanded = layoutCtx?.workspaceBannerExpanded ?? true;
-  /** Смещение от верха viewport до области страницы (плашка CRM / моб. хедер + padding) */
-  const chatPageTopReservePx =
-    layoutCtx?.layoutVariant === 'mobile'
-      ? 92
-      : 52 + (workspaceBannerExpanded ? 96 : 50) + (workspaceBannerExpanded ? 20 : 12);
 
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [inputValue, setInputValue] = useState('');
@@ -419,8 +403,6 @@ export default function Chat() {
     return map;
   }, [chatConfig?.models]);
 
-  const configSource = chatConfig?.source ?? 'env';
-
   const mdComponents = {
     h1: ({ ...props }: ComponentProps<'h1'>) => (
       <Typography.Title level={3} style={{ marginTop: 0, marginBottom: 8 }} {...props} />
@@ -480,106 +462,17 @@ export default function Chat() {
   return (
     <div
       style={{
-        height: `calc(100dvh - ${chatPageTopReservePx}px)`,
-        maxHeight: `calc(100dvh - ${chatPageTopReservePx}px)`,
-        minHeight: 320,
-        padding: '0 4px 16px',
+        flex: 1,
+        minHeight: 700,
+        minWidth: 0,
+        padding: '0 4px 10px',
         boxSizing: 'border-box',
         display: 'flex',
         flexDirection: 'column',
-        gap: 16,
+        gap: 0,
         overflow: 'hidden',
-        background: `
-          radial-gradient(circle at 0 0, ${token.colorPrimary}18, transparent 50%),
-          radial-gradient(circle at 100% 80%, ${token.colorInfo}12, transparent 45%)
-        `,
       }}
     >
-      <div style={{ flexShrink: 0 }}>
-      <PageHeaderCard
-        title={
-          <Space size={8}>
-            <ThunderboltOutlined />
-            <span>Ассистент CRM</span>
-          </Space>
-        }
-        description="Ответы только по данным из вашей базы: казино, бонусы, платежи, промо, письма, провайдеры. Выберите модель перед отправкой."
-        actions={
-          <Space wrap>
-            <Select<string, ModelSelectOption>
-              prefix={<RobotOutlined style={{ color: token.colorTextSecondary }} />}
-              showSearch={{
-                filterOption: (input, option) => {
-                  const hay = (option?.searchText ?? '').toLowerCase();
-                  return hay.includes(input.trim().toLowerCase());
-                },
-              }}
-              loading={chatConfigLoading}
-              placeholder="Выберите модель"
-              style={{ minWidth: 380, maxWidth: 'min(100%, 560px)' }}
-              popupMatchSelectWidth={false}
-              listItemHeight={88}
-              virtual
-              popupRender={(menu) => (
-                <div>
-                  <div
-                    style={{
-                      padding: '8px 12px 6px',
-                      borderBottom: `1px solid ${token.colorBorderSecondary}`,
-                      fontSize: 12,
-                      color: token.colorTextSecondary,
-                    }}
-                  >
-                    Модель · идентификатор · стоимость за 1M токенов (USD)
-                  </div>
-                  {menu}
-                </div>
-              )}
-              styles={{
-                popup: {
-                  root: { minWidth: 440, padding: 4 },
-                  list: { padding: '4px 0' },
-                  listItem: { padding: '6px 10px', borderRadius: 8 },
-                },
-              }}
-              value={selectedModelId || undefined}
-              options={modelOptions}
-              optionRender={(oriOption) => (
-                <ChatModelDropdownRow model={oriOption.data.model} />
-              )}
-              labelRender={({ value }) => {
-                const m = modelById.get(String(value));
-                if (!m) return <span>{String(value)}</span>;
-                return <ChatModelSelectedLabel model={m} />;
-              }}
-              onChange={(v) => {
-                setSelectedModelId(v);
-                localStorage.setItem(CHAT_MODEL_STORAGE_KEY, v);
-              }}
-              disabled={chatConfigLoading || modelOptions.length === 0}
-            />
-          </Space>
-        }
-      />
-      </div>
-
-      {configSource === 'env' && (
-        <div style={{ flexShrink: 0 }}>
-          <Alert
-            type="info"
-            showIcon
-            style={{ margin: '0 4px' }}
-            message="Список моделей из .env"
-            description={
-              <>
-                Чтобы задавать модели и цены в интерфейсе, добавьте записи в разделе{' '}
-                <Typography.Text strong>Настройки → Модели чата</Typography.Text> (нужна роль администратора).
-              </>
-            }
-          />
-        </div>
-      )}
-
       <div
         style={{
           flex: 1,
@@ -623,6 +516,63 @@ export default function Chat() {
           <Typography.Text type="secondary" style={{ fontSize: 12 }}>
             Вопросы по данным CRM: казино, бонусы, платежи, провайдеры, письма, комментарии и т.д.
           </Typography.Text>
+          <div style={{ marginTop: 4 }}>
+            <Typography.Text type="secondary" style={{ fontSize: 11, display: 'block', marginBottom: 6 }}>
+              Модель
+            </Typography.Text>
+            <Select<string, ModelSelectOption>
+              prefix={<RobotOutlined style={{ color: token.colorTextSecondary }} />}
+              showSearch={{
+                filterOption: (input, option) => {
+                  const hay = (option?.searchText ?? '').toLowerCase();
+                  return hay.includes(input.trim().toLowerCase());
+                },
+              }}
+              loading={chatConfigLoading}
+              placeholder="Выберите модель"
+              style={{ width: '100%' }}
+              popupMatchSelectWidth={false}
+              listItemHeight={88}
+              virtual
+              popupRender={(menu) => (
+                <div>
+                  <div
+                    style={{
+                      padding: '8px 12px 6px',
+                      borderBottom: `1px solid ${token.colorBorderSecondary}`,
+                      fontSize: 12,
+                      color: token.colorTextSecondary,
+                    }}
+                  >
+                    Модель · идентификатор · стоимость за 1M токенов (USD)
+                  </div>
+                  {menu}
+                </div>
+              )}
+              styles={{
+                popup: {
+                  root: { minWidth: 440, padding: 4 },
+                  list: { padding: '4px 0' },
+                  listItem: { padding: '6px 10px', borderRadius: 8 },
+                },
+              }}
+              value={selectedModelId || undefined}
+              options={modelOptions}
+              optionRender={(oriOption) => (
+                <ChatModelDropdownRow model={oriOption.data.model} />
+              )}
+              labelRender={({ value }) => {
+                const m = modelById.get(String(value));
+                if (!m) return <span>{String(value)}</span>;
+                return <ChatModelSelectedLabel model={m} />;
+              }}
+              onChange={(v) => {
+                setSelectedModelId(v);
+                localStorage.setItem(CHAT_MODEL_STORAGE_KEY, v);
+              }}
+              disabled={chatConfigLoading || modelOptions.length === 0}
+            />
+          </div>
           <Button
             type="primary"
             icon={<PlusOutlined />}
@@ -630,7 +580,7 @@ export default function Chat() {
             size="middle"
             onClick={handleNewChat}
             loading={creating}
-            style={{ marginTop: 4 }}
+            style={{ marginTop: 10 }}
           >
             Новый чат
           </Button>
@@ -717,7 +667,7 @@ export default function Chat() {
           flex: 1,
           borderRadius: token.borderRadiusLG,
           border: `1px solid ${token.colorBorderSecondary}`,
-          background: `linear-gradient(135deg, ${token.colorBgContainer}, ${token.colorBgLayout})`,
+          background: token.colorBgContainer,
           display: 'flex',
           flexDirection: 'column',
           minWidth: 0,
