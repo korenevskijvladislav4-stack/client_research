@@ -29,8 +29,14 @@ import {
 import dayjs from 'dayjs';
 import { useAppDispatch, useAppSelector } from '../../hooks/redux';
 import { chatApi, type ChatSessionWithMessages } from '../../store/api/chatApi';
+import { getApiBaseUrl } from '../../config/api';
 
 const SIDEBAR_WIDTH = 280;
+
+function chatStreamUrl(sessionId: number): string {
+  const base = getApiBaseUrl().replace(/\/+$/, '');
+  return `${base}/chat/sessions/${sessionId}/messages/stream`;
+}
 
 export default function Chat() {
   const { token } = theme.useToken();
@@ -114,7 +120,7 @@ export default function Chat() {
     }
 
     try {
-      const response = await fetch(`/api/chat/sessions/${selectedId}/messages/stream`, {
+      const response = await fetch(chatStreamUrl(selectedId), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
