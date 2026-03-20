@@ -1,4 +1,5 @@
-import { Table, Popconfirm, Typography, Button, Space } from 'antd';
+import { Popconfirm, Typography, Button, Space } from 'antd';
+import { CasinoProfileTable } from './CasinoProfileTable';
 import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { CasinoAccount } from '../store/api/casinoAccountApi';
 import dayjs from 'dayjs';
@@ -16,12 +17,10 @@ interface AccountsTableProps {
 export function AccountsTable({ accounts, isLoading, onEdit, onDelete, onAddTransaction, readOnly = false }: AccountsTableProps) {
 
   return (
-    <Table
+    <CasinoProfileTable
       dataSource={accounts}
       rowKey="id"
       loading={isLoading}
-      size="small"
-      pagination={{ pageSize: 20 }}
       columns={[
         {
           title: 'GEO',
@@ -145,3 +144,4 @@ export function AccountsTable({ accounts, isLoading, onEdit, onDelete, onAddTran
     />
   );
 }
+

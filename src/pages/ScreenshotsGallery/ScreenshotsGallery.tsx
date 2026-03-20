@@ -16,6 +16,7 @@ import { FilterOutlined } from '@ant-design/icons';
 import { useGetAllScreenshotsQuery, ScreenshotFilters } from '../../store/api/slotSelectorApi';
 import { useGetAllCasinosQuery } from '../../store/api/casinoApi';
 import { useGetGeosQuery } from '../../store/api/geoApi';
+import { PageHeaderCard } from '../../components/PageHeaderCard';
 import dayjs, { Dayjs } from 'dayjs';
 
 const { Title } = Typography;
@@ -79,9 +80,10 @@ export default function ScreenshotsGallery() {
   return (
     <div style={{ padding: '24px' }}>
       <Space direction="vertical" size="large" style={{ width: '100%' }}>
-        <Card size="small">
-          <Typography.Title level={4} style={{ margin: 0 }}>Галерея скриншотов</Typography.Title>
-        </Card>
+        <PageHeaderCard
+          title="Галерея скриншотов"
+          description="Скриншоты страниц казино. Ниже можно отфильтровать по проекту, GEO, разделу и дате."
+        />
 
         {/* Filters */}
         <Card>

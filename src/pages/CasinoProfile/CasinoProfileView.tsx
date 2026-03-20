@@ -8,7 +8,6 @@ import {
   Dropdown,
   Space,
   Spin,
-  Table,
   Tabs,
   Tag,
   Tooltip,
@@ -37,6 +36,7 @@ import {
 } from '@ant-design/icons';
 import { ProfileSettingsTable } from '../../components/ProfileSettingsTable';
 import { AccountsTable } from '../../components/AccountsTable';
+import { CasinoProfileTable } from '../../components/CasinoProfileTable';
 
 import CasinoActivity from './components/CasinoActivity';
 import CasinoTags from './components/CasinoTags';
@@ -486,12 +486,10 @@ export default function CasinoProfileView() {
       </Card>
 
       <Card size="small" title={<Space><CameraOutlined /><span>Скриншоты</span></Space>}>
-        <Table<SlotScreenshot>
+        <CasinoProfileTable<SlotScreenshot>
           rowKey="selector_id"
-          size="small"
           loading={screenshotsLoading}
           dataSource={screenshots.filter((s) => (activeGeo ? s.geo === activeGeo : true))}
-          pagination={{ pageSize: 20 }}
           scroll={{ x: 1200 }}
           columns={[
             { title: 'GEO', dataIndex: 'geo', width: 80 },
@@ -608,12 +606,10 @@ export default function CasinoProfileView() {
       label: <Space size={6}><CameraOutlined />Скриншоты</Space>,
       children: (
         <Card size="small" title={<Space><CameraOutlined /><span>Скриншоты</span></Space>}>
-          <Table<SlotScreenshot>
+          <CasinoProfileTable<SlotScreenshot>
             rowKey="selector_id"
-            size="small"
             loading={screenshotsLoading}
             dataSource={screenshots.filter((s) => (activeGeo ? s.geo === activeGeo : true))}
-            pagination={{ pageSize: 20 }}
             scroll={{ x: 1200 }}
             columns={[
               { title: 'GEO', dataIndex: 'geo', width: 80 },

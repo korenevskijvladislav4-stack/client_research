@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Button, Card, Input, Select, Space, Table, Typography } from 'antd';
+import { Button, Card, Input, Select, Space, Tag, Typography } from 'antd';
 import dayjs from 'dayjs';
 import { SearchOutlined } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
@@ -9,6 +9,8 @@ import { useGetGeosQuery } from '../../store/api/geoApi';
 import { useGetUsersQuery } from '../../store/api/userApi';
 import { useServerTable } from '../../hooks/useServerTable';
 import { TransactionModal } from './TransactionModal';
+import { CasinoProfileTable } from '../../components/CasinoProfileTable';
+import { PageHeaderCard } from '../../components/PageHeaderCard';
 
 interface AccountFilters {
   casino_id?: number;
@@ -55,21 +57,15 @@ export default function Accounts() {
   return (
     <>
     <Space direction="vertical" size={24} style={{ width: '100%' }}>
-      <Card size="small">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
-          <Space direction="vertical" size={0} style={{ flex: 1, minWidth: 200 }}>
-            <Typography.Title level={4} style={{ margin: 0 }}>Аккаунты</Typography.Title>
-            <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-              Аккаунты казино. Депозиты и выводы по каждому аккаунту. Всего: {total} записей.
-            </Typography.Text>
-          </Space>
-          <Space wrap>
-            <Link to="/accounts/transactions">
-              <Button>История транзакций</Button>
-            </Link>
-          </Space>
-        </div>
-      </Card>
+      <PageHeaderCard
+        title="Аккаунты"
+        description={`Аккаунты казино. Депозиты и выводы по каждому аккаунту. Всего: ${total} записей.`}
+        actions={
+          <Link to="/accounts/transactions">
+            <Button>История транзакций</Button>
+          </Link>
+        }
+      />
 
       <Card size="small">
         <Space wrap size={[12, 12]} style={{ width: '100%' }}>
@@ -85,7 +81,7 @@ export default function Accounts() {
             style={{ minWidth: 220 }}
             allowClear
             showSearch
-            placeholder="Проект (казино)"
+            placeholder="Казино"
             value={table.filters.casino_id}
             options={casinoOptions}
             onChange={(val) => table.updateFilter('casino_id', val)}
@@ -123,9 +119,8 @@ export default function Accounts() {
 
       <Card>
         <div style={{ overflowX: 'auto', width: '100%' }}>
-      <Table<CasinoAccount>
+      <CasinoProfileTable<CasinoAccount>
         rowKey="id"
-        size="small"
         loading={isLoading}
         dataSource={accounts}
         pagination={table.paginationConfig(total)}
@@ -133,14 +128,23 @@ export default function Accounts() {
         scroll={{ x: 900 }}
         columns={[
           {
-            title: 'Проект',
+            title: 'Казино',
             dataIndex: 'casino_name',
             key: 'casino_name',
             width: 220,
             sorter: true,
-            render: (v: string | null | undefined, r) => v || `#${r.casino_id}`,
+            render: (v: string | null | undefined, r) => (
+              <Typography.Text strong>{v || `#${r.casino_id}`}</Typography.Text>
+            ),
           },
-          { title: 'GEO', dataIndex: 'geo', key: 'geo', width: 80, sorter: true },
+          {
+            title: 'GEO',
+            dataIndex: 'geo',
+            key: 'geo',
+            width: 88,
+            sorter: true,
+            render: (v: string | null | undefined) => (v ? <Tag>{v}</Tag> : '—'),
+          },
           {
             title: 'Почта',
             dataIndex: 'email',

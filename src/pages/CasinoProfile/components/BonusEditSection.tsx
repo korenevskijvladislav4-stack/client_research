@@ -1,5 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import {
+  Alert,
+  Avatar,
   Button,
   Card,
   Col,
@@ -12,7 +14,6 @@ import {
   Select,
   Segmented,
   Space,
-  Table,
   Typography,
   Upload,
   message,
@@ -20,10 +21,14 @@ import {
 } from 'antd';
 import {
   DeleteOutlined,
+  DollarOutlined,
   EditOutlined,
+  GiftOutlined,
+  GlobalOutlined,
   PictureOutlined,
-  RobotOutlined,
   PlusOutlined,
+  RobotOutlined,
+  TrophyOutlined,
 } from '@ant-design/icons';
 import {
   useGetCasinoBonusesQuery,
@@ -45,6 +50,7 @@ import {
   useCreateBonusNameMutation,
 } from '../../../store/api/referenceApi';
 import { useGetGeosQuery, useCreateGeoMutation } from '../../../store/api/geoApi';
+import { CasinoProfileTable } from '../../../components/CasinoProfileTable';
 
 interface BonusEditSectionProps {
   casinoId: number;
@@ -63,6 +69,112 @@ const fmtAmount = (value: unknown, currency?: string | null) => {
   const formatted = fmt(value);
   return currency ? `${formatted} ${currency}` : formatted;
 };
+
+function GalleryDropZone({ onAddFiles }: { onAddFiles: (files: File[]) => void }) {
+  const { token } = theme.useToken();
+  const [over, setOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const addFromList = (files: File[]) => {
+    const images = files.filter((f) => f.type.startsWith('image/'));
+    if (images.length === 0) {
+      message.warning('Нужны файлы изображений');
+      return;
+    }
+    onAddFiles(images);
+  };
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={() => fileInputRef.current?.click()}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          fileInputRef.current?.click();
+        }
+      }}
+      style={{
+        border: `2px dashed ${over ? token.colorPrimary : token.colorBorder}`,
+        borderRadius: token.borderRadiusLG,
+        padding: 20,
+        textAlign: 'center',
+        background: over ? token.colorPrimaryBg : token.colorFillAlter,
+        cursor: 'pointer',
+        outline: 'none',
+        transition: 'border-color 0.2s, background 0.2s',
+      }}
+      onDragEnter={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setOver(true);
+      }}
+      onDragLeave={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setOver(false);
+      }}
+      onDragOver={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setOver(true);
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setOver(false);
+        addFromList(Array.from(e.dataTransfer.files));
+      }}
+      onPaste={(e) => {
+        const files: File[] = [];
+        for (const item of Array.from(e.clipboardData.items || [])) {
+          if (item.type.startsWith('image/')) {
+            const f = item.getAsFile();
+            if (f) files.push(f);
+          }
+        }
+        if (files.length > 0) {
+          e.stopPropagation();
+          addFromList(files);
+        }
+      }}
+      data-bonus-gallery-drop=""
+    >
+      <PictureOutlined style={{ fontSize: 28, color: token.colorTextQuaternary, marginBottom: 8 }} />
+      <Typography.Text strong style={{ display: 'block', lineHeight: 1.4 }}>
+        Перетащите файлы сюда
+      </Typography.Text>
+      <Typography.Text type="secondary" style={{ display: 'block', marginTop: 4, fontSize: 13, lineHeight: 1.5 }}>
+        Клик по области — выбор файлов; можно вставить изображение Ctrl+V
+      </Typography.Text>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        style={{ display: 'none' }}
+        onChange={(e) => {
+          const list = e.target.files;
+          if (list?.length) addFromList(Array.from(list));
+          e.target.value = '';
+        }}
+      />
+      <Button
+        type="primary"
+        ghost
+        icon={<PictureOutlined />}
+        style={{ marginTop: 12 }}
+        onClick={(e) => {
+          e.stopPropagation();
+          fileInputRef.current?.click();
+        }}
+      >
+        Выбрать файлы
+      </Button>
+    </div>
+  );
+}
 
 export default function BonusEditSection({ casinoId, activeGeo, geoOptions }: BonusEditSectionProps) {
   const { token } = theme.useToken();
@@ -184,6 +296,42 @@ export default function BonusEditSection({ casinoId, activeGeo, geoOptions }: Bo
     }
   };
 
+  const analyzeImageRef = useRef<(file: File) => Promise<void>>(async () => {});
+  analyzeImageRef.current = handleAnalyzeImage;
+
+  /** Ctrl+V с картинкой по всей панели (не перехватываем ввод в полях). */
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const onPaste = (e: ClipboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (el?.closest?.('input, textarea, [contenteditable="true"]')) return;
+      if (el?.closest?.('[data-bonus-gallery-drop]')) return;
+      const items = e.clipboardData?.items;
+      if (!items?.length) return;
+      for (const item of Array.from(items)) {
+        if (item.type.startsWith('image/')) {
+          const file = item.getAsFile();
+          if (file) {
+            e.preventDefault();
+            void analyzeImageRef.current(file);
+            return;
+          }
+        }
+      }
+    };
+    window.addEventListener('paste', onPaste);
+    return () => window.removeEventListener('paste', onPaste);
+  }, [drawerOpen]);
+
+  const [pendingThumbUrls, setPendingThumbUrls] = useState<string[]>([]);
+  useEffect(() => {
+    const urls = pendingImages.map((f) => URL.createObjectURL(f));
+    setPendingThumbUrls(urls);
+    return () => urls.forEach((u) => URL.revokeObjectURL(u));
+  }, [pendingImages]);
+
+  const [aiDragOver, setAiDragOver] = useState(false);
+
   const handleSubmit = async (values: any) => {
     try {
       const geoVal = Array.isArray(values.geo) ? values.geo[values.geo.length - 1] || values.geo[0] : values.geo;
@@ -243,12 +391,10 @@ export default function BonusEditSection({ casinoId, activeGeo, geoOptions }: Bo
         </Button>
       </div>
 
-      <Table<CasinoBonus>
+      <CasinoProfileTable<CasinoBonus>
         rowKey="id"
-        size="small"
         loading={bonusesLoading}
         dataSource={bonuses ?? []}
-        pagination={{ pageSize: 20 }}
         scroll={{ x: 800 }}
         columns={[
           { title: 'GEO', dataIndex: 'geo', width: 60 },
@@ -316,132 +462,353 @@ export default function BonusEditSection({ casinoId, activeGeo, geoOptions }: Bo
       />
 
       <Drawer
-        title={editingBonus ? 'Редактировать бонус' : 'Новый бонус'}
         open={drawerOpen}
         onClose={closeDrawer}
-        width={620}
+        width={640}
         destroyOnClose
-        footer={
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-            <Button onClick={closeDrawer}>Отмена</Button>
-            <Button type="primary" onClick={() => bonusForm.submit()}>
-              {editingBonus ? 'Сохранить' : 'Создать'}
-            </Button>
+        styles={{
+          header: { alignItems: 'flex-start' },
+          body: { paddingTop: 16 },
+          footer: { borderTop: `1px solid ${token.colorBorderSecondary}` },
+        }}
+        title={
+          <div
+            style={{
+              display: 'flex',
+              gap: 14,
+              alignItems: 'flex-start',
+              paddingRight: 28,
+              maxWidth: '100%',
+            }}
+          >
+            <Avatar
+              size={48}
+              style={{
+                background: editingBonus ? token.colorWarning : token.colorPrimary,
+                flexShrink: 0,
+              }}
+              icon={editingBonus ? <EditOutlined /> : <GiftOutlined />}
+            />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <Typography.Title level={4} style={{ margin: 0, lineHeight: 1.35 }}>
+                {editingBonus ? 'Редактировать бонус' : 'Новый бонус'}
+              </Typography.Title>
+              <Typography.Text
+                type="secondary"
+                style={{ display: 'block', marginTop: 6, fontSize: 13, lineHeight: 1.5 }}
+              >
+                {editingBonus
+                  ? 'Измените условия и сохраните. Картинки внизу — превью галереи и новые файлы к загрузке.'
+                  : 'Заполните вручную или начните с картинки промо — AI подставит поля. Сохранение прикрепит выбранные изображения.'}
+              </Typography.Text>
+            </div>
           </div>
         }
+        footer={
+          <Space wrap style={{ width: '100%', justifyContent: 'flex-end', rowGap: 8 }}>
+            <Button onClick={closeDrawer}>Отмена</Button>
+            <Button type="primary" style={{ minWidth: 160 }} onClick={() => bonusForm.submit()}>
+              {editingBonus ? 'Сохранить' : 'Создать бонус'}
+            </Button>
+          </Space>
+        }
       >
-        <Form layout="vertical" form={bonusForm} onFinish={handleSubmit}>
+        {editingBonus ? (
+          <Alert
+            type="info"
+            showIcon
+            icon={<EditOutlined />}
+            message="Редактирование"
+            description={
+              <Typography.Text type="secondary" style={{ fontSize: 13, lineHeight: 1.6 }}>
+                Поля ниже отражают текущее предложение. Для массового ввода удобнее сначала картинку в блоке AI — тогда пустые поля заполнятся автоматически.
+              </Typography.Text>
+            }
+            style={{ marginBottom: 20 }}
+          />
+        ) : (
+          <Alert
+            type="info"
+            showIcon
+            message="Как создать бонус"
+            description={
+              <div style={{ fontSize: 13, lineHeight: 1.6, color: token.colorTextSecondary }}>
+                <p style={{ margin: '0 0 10px' }}>
+                  Укажите GEO и название, выберите <strong>казино</strong> или <strong>спорт</strong>, затем вид и тип — от этого зависят поля сумм и вейджера.
+                </p>
+                <ul style={{ margin: 0, paddingLeft: 18 }}>
+                  <li style={{ marginBottom: 6 }}>
+                    <strong>AI по картинке</strong> — перетащите скрин промо, вставьте Ctrl+V (вне полей ввода) или выберите файл; модель заполнит пустые поля, картинка попадёт в очередь загрузки.
+                  </li>
+                  <li style={{ marginBottom: 6 }}>
+                    <strong>GEO и валюта</strong> — рынок и валюта отображения сумм.
+                  </li>
+                  <li style={{ marginBottom: 6 }}>
+                    <strong>Название</strong> — из справочника или новое (создастся в списке названий).
+                  </li>
+                  <li style={{ marginBottom: 0 }}>
+                    <strong>Изображения внизу</strong> — drag-and-drop, Ctrl+V в области или кнопка; файлы прикрепятся при нажатии «Создать бонус».
+                  </li>
+                </ul>
+              </div>
+            }
+            style={{ marginBottom: 20 }}
+          />
+        )}
+
+        <Form layout="vertical" form={bonusForm} onFinish={handleSubmit} requiredMark={true}>
           {/* AI Auto-fill */}
-          <Card size="small" style={{ marginBottom: 16, borderStyle: 'dashed' }}>
+          <Card
+            size="small"
+            title={
+              <Space size={8}>
+                <RobotOutlined style={{ color: token.colorPrimary }} />
+                <span>Заполнение по картинке (AI)</span>
+              </Space>
+            }
+            style={{
+              marginBottom: 16,
+              borderStyle: 'dashed',
+              borderColor: aiDragOver ? token.colorPrimary : token.colorBorderSecondary,
+              background: aiDragOver ? token.colorPrimaryBg : undefined,
+            }}
+            styles={{ body: { paddingBottom: 12 } }}
+          >
+            <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 12, fontSize: 13, lineHeight: 1.6 }}>
+              Перетащите изображение промо в рамку, вставьте <Typography.Text keyboard>Ctrl+V</Typography.Text> (фокус на рамке или в любой зоне панели вне полей) или выберите файл. Пустые поля формы дополнятся распознанными значениями.
+            </Typography.Text>
             <div
-              style={{ textAlign: 'center', padding: 8 }}
-              onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  (e.currentTarget.querySelector('input[type="file"]') as HTMLInputElement | null)?.click();
+                }
+              }}
+              style={{
+                textAlign: 'center',
+                padding: 16,
+                borderRadius: token.borderRadiusLG,
+                border: `1px dashed ${aiDragOver ? token.colorPrimary : token.colorBorder}`,
+                background: token.colorFillAlter,
+                cursor: 'pointer',
+                outline: 'none',
+              }}
+              onDragEnter={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setAiDragOver(true);
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setAiDragOver(false);
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setAiDragOver(true);
+              }}
               onDrop={async (e) => {
-                e.preventDefault(); e.stopPropagation();
+                e.preventDefault();
+                e.stopPropagation();
+                setAiDragOver(false);
                 const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith('image/'));
                 if (files.length > 0) await handleAnalyzeImage(files[0]);
+                else message.warning('Нужен файл изображения');
               }}
               onPaste={async (e) => {
                 const items = Array.from(e.clipboardData.items || []);
                 for (const item of items) {
                   if (item.type.startsWith('image/')) {
                     const file = item.getAsFile();
-                    if (file) { await handleAnalyzeImage(file); break; }
+                    if (file) {
+                      e.stopPropagation();
+                      await handleAnalyzeImage(file);
+                      break;
+                    }
                   }
                 }
               }}
             >
-              <RobotOutlined style={{ fontSize: 20, color: token.colorPrimary, marginBottom: 4 }} />
-              <div>
-                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                  Перетащите картинку бонуса — AI заполнит форму автоматически
+              <RobotOutlined style={{ fontSize: 32, color: token.colorTextQuaternary, marginBottom: 8 }} />
+              <div style={{ lineHeight: 1.5 }}>
+                <Typography.Text strong style={{ display: 'block', marginBottom: 4 }}>
+                  Картинка бонуса
+                </Typography.Text>
+                <Typography.Text type="secondary" style={{ fontSize: 13, display: 'block' }}>
+                  Отпустите файл здесь или нажмите кнопку ниже
                 </Typography.Text>
               </div>
-              <Upload accept="image/*" showUploadList={false}
-                beforeUpload={async (file) => { await handleAnalyzeImage(file); return false; }}
+              <Upload
+                accept="image/*"
+                showUploadList={false}
+                beforeUpload={async (file) => {
+                  await handleAnalyzeImage(file);
+                  return false;
+                }}
               >
-                <Button size="small" icon={<RobotOutlined />} loading={analyzingImage} style={{ marginTop: 8 }}>
+                <Button type="primary" ghost icon={<RobotOutlined />} loading={analyzingImage} style={{ marginTop: 12 }}>
                   Выбрать картинку
                 </Button>
               </Upload>
             </div>
           </Card>
 
-          {/* GEO + Currency */}
-          <Row gutter={12}>
-            <Col span={14}>
-              <Form.Item name="geo" label="GEO" rules={[{ required: true, message: 'Укажите GEO' }]}>
-                <Select mode="tags" placeholder="RU, DE, BR..." tokenSeparators={[',', ';', ' ']} options={geoOptions}
-                  onChange={async (values: string[]) => {
-                    if (!values?.length) return;
-                    const codes = (geos ?? []).map((g) => g.code);
-                    for (const v of values.map((v) => v.toUpperCase().trim()).filter((v) => v && !codes.includes(v))) {
-                      try { await createGeo({ code: v, name: v }).unwrap(); } catch {}
+          <Card
+            size="small"
+            title={
+              <Space size={8}>
+                <GiftOutlined style={{ color: token.colorPrimary }} />
+                <span>Основное</span>
+              </Space>
+            }
+            style={{ marginBottom: 16, borderColor: token.colorBorderSecondary }}
+            styles={{ body: { paddingBottom: 8 } }}
+          >
+            <Row gutter={[12, 12]}>
+              <Col xs={24} sm={14}>
+                <Form.Item
+                  name="geo"
+                  label="GEO"
+                  rules={[{ required: true, message: 'Укажите GEO' }]}
+                  extra="Код страны или рынка; новые коды можно добавить вручную — они попадут в справочник."
+                >
+                  <Select
+                    mode="tags"
+                    placeholder="RU, DE, BR…"
+                    tokenSeparators={[',', ';', ' ']}
+                    options={geoOptions}
+                    suffixIcon={<GlobalOutlined style={{ color: token.colorTextQuaternary }} />}
+                    onChange={async (values: string[]) => {
+                      if (!values?.length) return;
+                      const codes = (geos ?? []).map((g) => g.code);
+                      for (const v of values.map((x) => x.toUpperCase().trim()).filter((x) => x && !codes.includes(x))) {
+                        try {
+                          await createGeo({ code: v, name: v }).unwrap();
+                        } catch {
+                          /* ignore */
+                        }
+                      }
+                    }}
+                  />
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={10}>
+                <Form.Item
+                  name="currency"
+                  label="Валюта"
+                  required={false}
+                  extra="Например EUR, USD — для отображения сумм в таблице."
+                >
+                  <Input placeholder="EUR" prefix={<DollarOutlined style={{ color: token.colorTextQuaternary }} />} allowClear />
+                </Form.Item>
+              </Col>
+            </Row>
+
+            <Form.Item
+              name="name"
+              label="Название бонуса"
+              rules={[{ required: true, message: 'Укажите название' }]}
+              extra="Один вариант из справочника или новое имя — оно сохранится в списке названий."
+            >
+              <Select
+                mode="tags"
+                placeholder="Выберите или введите"
+                maxCount={1}
+                options={bonusNameOptions}
+                onChange={async (values: string[]) => {
+                  if (!values?.length) return;
+                  const existing = (bonusNames ?? []).map((b) => b.name);
+                  for (const name of values.filter((v) => v && !existing.includes(v))) {
+                    try {
+                      await createBonusName({ name }).unwrap();
+                    } catch {
+                      /* ignore */
                     }
-                  }}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={10}>
-              <Form.Item name="currency" label="Валюта">
-                <Input placeholder="EUR" />
-              </Form.Item>
-            </Col>
-          </Row>
+                  }
+                }}
+              />
+            </Form.Item>
 
-          {/* Name */}
-          <Form.Item name="name" label="Название бонуса" rules={[{ required: true }]}>
-            <Select mode="tags" placeholder="Выберите или введите" maxCount={1} options={bonusNameOptions}
-              onChange={async (values: string[]) => {
-                if (!values?.length) return;
-                const existing = (bonusNames ?? []).map((b) => b.name);
-                for (const name of values.filter((v) => v && !existing.includes(v))) {
-                  try { await createBonusName({ name }).unwrap(); } catch {}
-                }
-              }}
-            />
-          </Form.Item>
-
-          {/* Category */}
-          <Form.Item name="bonus_category" label="Категория" initialValue="casino">
-            <Segmented
-              value={bonusCategory}
-              options={[
-                { value: 'casino', label: 'Казино' },
-                { value: 'sport', label: 'Спорт' },
-              ]}
-              onChange={(val) => {
-                const cat = val as BonusCategory;
-                setBonusCategory(cat);
-                bonusForm.setFieldsValue({ bonus_category: cat, bonus_kind: undefined, bonus_type: undefined });
-                setSelectedBonusKind(undefined);
-                setSelectedBonusType(undefined);
-              }}
-            />
-          </Form.Item>
-
-          {/* Kind + Type */}
-          <Row gutter={12}>
-            <Col span={12}>
-              <Form.Item name="bonus_kind" label="Вид бонуса" rules={[{ required: true, message: 'Выберите вид' }]}>
-                <Select placeholder="Вид" onChange={(val: BonusKind) => setSelectedBonusKind(val)} options={casinoKindOptions} />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="bonus_type" label="Тип бонуса"
-                rules={[{
-                  validator: (_, value) => {
-                    if (selectedBonusKind === 'cashback' || selectedBonusKind === 'rakeback') return Promise.resolve();
-                    return !value ? Promise.reject(new Error('Выберите тип')) : Promise.resolve();
+            <Form.Item
+              name="bonus_category"
+              label="Категория"
+              initialValue="casino"
+              rules={[{ required: true, message: 'Выберите категорию' }]}
+              extra="От категории зависят доступные типы бонуса (казино или спорт)."
+            >
+              <Segmented
+                block
+                value={bonusCategory}
+                options={[
+                  {
+                    value: 'casino',
+                    label: (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                        <GiftOutlined />
+                        Казино
+                      </span>
+                    ),
                   },
-                }]}
-              >
-                <Select placeholder="Тип" onChange={(val: BonusType) => setSelectedBonusType(val)}
-                  options={bonusCategory === 'casino' ? casinoTypeOptions : sportTypeOptions}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
+                  {
+                    value: 'sport',
+                    label: (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                        <TrophyOutlined />
+                        Спорт
+                      </span>
+                    ),
+                  },
+                ]}
+                onChange={(val) => {
+                  const cat = val as BonusCategory;
+                  setBonusCategory(cat);
+                  bonusForm.setFieldsValue({ bonus_category: cat, bonus_kind: undefined, bonus_type: undefined });
+                  setSelectedBonusKind(undefined);
+                  setSelectedBonusType(undefined);
+                }}
+              />
+            </Form.Item>
+
+            <Row gutter={[12, 12]}>
+              <Col xs={24} sm={12}>
+                <Form.Item name="bonus_kind" label="Вид бонуса" rules={[{ required: true, message: 'Выберите вид' }]}>
+                  <Select
+                    placeholder="Вид"
+                    onChange={(val: BonusKind) => setSelectedBonusKind(val)}
+                    options={casinoKindOptions}
+                  />
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={12}>
+                <Form.Item
+                  name="bonus_type"
+                  label="Тип бонуса"
+                  required={
+                    !!selectedBonusKind &&
+                    selectedBonusKind !== 'cashback' &&
+                    selectedBonusKind !== 'rakeback'
+                  }
+                  rules={[
+                    {
+                      validator: (_, value) => {
+                        if (selectedBonusKind === 'cashback' || selectedBonusKind === 'rakeback') return Promise.resolve();
+                        return !value ? Promise.reject(new Error('Выберите тип')) : Promise.resolve();
+                      },
+                    },
+                  ]}
+                >
+                  <Select
+                    placeholder="Тип"
+                    onChange={(val: BonusType) => setSelectedBonusType(val)}
+                    options={bonusCategory === 'casino' ? casinoTypeOptions : sportTypeOptions}
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+          </Card>
 
           {/* Cashback / Rakeback params */}
           {(selectedBonusKind === 'cashback' || selectedBonusKind === 'rakeback') && (
@@ -666,23 +1033,59 @@ export default function BonusEditSection({ casinoId, activeGeo, geoOptions }: Bo
             </Row>
           )}
 
-          <Form.Item name="notes" label="Заметки">
-            <Input.TextArea rows={2} />
-          </Form.Item>
+          <Card
+            size="small"
+            title={<Typography.Text strong>Заметки</Typography.Text>}
+            style={{ marginBottom: 16, borderColor: token.colorBorderSecondary }}
+          >
+            <Form.Item
+              name="notes"
+              label="Текст"
+              required={false}
+              style={{ marginBottom: 0 }}
+              extra="Внутренние пометки, не показываются игроку."
+            >
+              <Input.TextArea rows={3} placeholder="Условия акции, исключения, ссылки на правила…" />
+            </Form.Item>
+          </Card>
 
           {/* Images */}
-          <Card size="small" title="Изображения" style={{ marginBottom: 16 }}>
+          <Card
+            size="small"
+            title={
+              <Space size={8}>
+                <PictureOutlined style={{ color: token.colorPrimary }} />
+                <span>Изображения бонуса</span>
+              </Space>
+            }
+            style={{ marginBottom: 16, borderColor: token.colorBorderSecondary }}
+            styles={{ body: { paddingBottom: 12 } }}
+          >
+            <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 12, fontSize: 13, lineHeight: 1.6 }}>
+              Файлы отправятся на сервер при сохранении бонуса. Перетащите в рамку, нажмите на рамку и вставьте <Typography.Text keyboard>Ctrl+V</Typography.Text> или выберите несколько файлов.
+            </Typography.Text>
             {editingBonus && bonusImages.length > 0 && (
               <Image.PreviewGroup>
-                <Space wrap size={[8, 8]} style={{ marginBottom: 12 }}>
+                <Typography.Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 8 }}>
+                  Уже загружено
+                </Typography.Text>
+                <Space wrap size={[8, 8]} style={{ marginBottom: 16 }}>
                   {bonusImages.map((img: CasinoBonusImage) => (
                     <div key={img.id} style={{ position: 'relative' }}>
                       <Image src={img.url} alt={img.original_name || ''} width={80} height={80} style={{ objectFit: 'cover', borderRadius: 4 }} />
-                      <Button type="text" size="small" danger icon={<DeleteOutlined />}
+                      <Button
+                        type="text"
+                        size="small"
+                        danger
+                        icon={<DeleteOutlined />}
                         style={{ position: 'absolute', top: 2, right: 2 }}
                         onClick={async () => {
-                          try { await deleteBonusImage({ casinoId, bonusId: editingBonus.id, imageId: img.id }).unwrap(); message.success('Удалено'); }
-                          catch (e: any) { message.error(e?.data?.error ?? 'Ошибка удаления'); }
+                          try {
+                            await deleteBonusImage({ casinoId, bonusId: editingBonus.id, imageId: img.id }).unwrap();
+                            message.success('Удалено');
+                          } catch (e: any) {
+                            message.error(e?.data?.error ?? 'Ошибка удаления');
+                          }
                         }}
                       />
                     </div>
@@ -690,38 +1093,32 @@ export default function BonusEditSection({ casinoId, activeGeo, geoOptions }: Bo
                 </Space>
               </Image.PreviewGroup>
             )}
-            <div
-              style={{ border: `2px dashed ${token.colorBorder}`, borderRadius: 6, padding: 12, textAlign: 'center' }}
-              onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
-              onDrop={(e) => {
-                e.preventDefault(); e.stopPropagation();
-                const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith('image/'));
-                if (files.length > 0) { setPendingImages((prev) => [...prev, ...files]); message.info('Добавлены к загрузке'); }
+            <GalleryDropZone
+              onAddFiles={(files) => {
+                setPendingImages((prev) => [...prev, ...files]);
+                if (files.length) message.success(`Добавлено файлов: ${files.length}`);
               }}
-              onPaste={(e) => {
-                const files: File[] = [];
-                for (const item of Array.from(e.clipboardData.items || [])) {
-                  if (item.type.startsWith('image/')) { const f = item.getAsFile(); if (f) files.push(f); }
-                }
-                if (files.length > 0) { setPendingImages((prev) => [...prev, ...files]); }
-              }}
-            >
-              <PictureOutlined style={{ fontSize: 20, color: token.colorTextTertiary }} />
-              <div><Typography.Text type="secondary" style={{ fontSize: 12 }}>Drag & Drop / Ctrl+V / кнопка</Typography.Text></div>
-              <Upload multiple accept="image/*" showUploadList={false}
-                beforeUpload={(file) => { setPendingImages((prev) => [...prev, file]); return false; }}
-              >
-                <Button size="small" icon={<PictureOutlined />} style={{ marginTop: 6 }}>Выбрать</Button>
-              </Upload>
-            </div>
+            />
             {pendingImages.length > 0 && (
               <div style={{ marginTop: 12 }}>
-                <Typography.Text strong style={{ fontSize: 12 }}>К загрузке ({pendingImages.length}):</Typography.Text>
+                <Typography.Text strong style={{ fontSize: 12 }}>
+                  К загрузке ({pendingImages.length}):
+                </Typography.Text>
                 <Space wrap size={[6, 6]} style={{ marginTop: 6 }}>
                   {pendingImages.map((file, idx) => (
-                    <div key={idx} style={{ position: 'relative' }}>
-                      <img src={URL.createObjectURL(file)} alt={file.name} width={60} height={60} style={{ objectFit: 'cover', borderRadius: 4 }} />
-                      <Button type="text" size="small" danger icon={<DeleteOutlined />}
+                    <div key={`${file.name}-${idx}`} style={{ position: 'relative' }}>
+                      <img
+                        src={pendingThumbUrls[idx] ?? ''}
+                        alt={file.name}
+                        width={60}
+                        height={60}
+                        style={{ objectFit: 'cover', borderRadius: 4 }}
+                      />
+                      <Button
+                        type="text"
+                        size="small"
+                        danger
+                        icon={<DeleteOutlined />}
                         style={{ position: 'absolute', top: 0, right: 0 }}
                         onClick={() => setPendingImages((prev) => prev.filter((_, i) => i !== idx))}
                       />

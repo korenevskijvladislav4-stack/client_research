@@ -6,7 +6,6 @@ import {
   Image,
   Modal,
   Space,
-  Table,
   Tag,
   Typography,
 } from 'antd';
@@ -18,6 +17,7 @@ import {
   CasinoBonusImage,
 } from '../../../store/api/casinoBonusApi';
 import ImageUploadArea from './ImageUploadArea';
+import { CasinoProfileTable } from '../../../components/CasinoProfileTable';
 
 const fmt = (n: unknown): string | number => {
   const num = Number(n);
@@ -49,12 +49,10 @@ export default function BonusSection({ casinoId, bonuses, isLoading, activeGeo }
 
   return (
     <Card size="small" title={<Space><GiftOutlined /><span>Бонусы{activeGeo ? ` (${activeGeo})` : ''}</span></Space>}>
-      <Table<CasinoBonus>
+      <CasinoProfileTable<CasinoBonus>
         rowKey="id"
-        size="small"
         loading={isLoading}
         dataSource={(bonuses ?? []).filter((b) => (activeGeo ? b.geo === activeGeo : true))}
-        pagination={{ pageSize: 20 }}
         scroll={{ x: 700 }}
         columns={[
           { title: 'GEO', dataIndex: 'geo', width: 60 },

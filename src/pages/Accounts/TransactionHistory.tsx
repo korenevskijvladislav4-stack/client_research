@@ -1,10 +1,12 @@
-import { Button, Card, DatePicker, Select, Space, Table, Tag, Typography, message } from 'antd';
+import { Button, Card, DatePicker, Select, Space, Tag, Typography, message } from 'antd';
 import dayjs from 'dayjs';
 import { useGetTransactionsQuery, AccountTransaction } from '../../store/api/casinoAccountApi';
 import { useGetAllCasinosQuery } from '../../store/api/casinoApi';
 import { useServerTable } from '../../hooks/useServerTable';
 import { getApiBaseUrl } from '../../config/api';
 import { useAppSelector } from '../../hooks/redux';
+import { CasinoProfileTable } from '../../components/CasinoProfileTable';
+import { PageHeaderCard } from '../../components/PageHeaderCard';
 
 export default function TransactionHistory() {
   const table = useServerTable<{ casino_id?: number; account_id?: number; type?: 'deposit' | 'withdrawal'; date_from?: string; date_to?: string }>({
@@ -53,24 +55,16 @@ export default function TransactionHistory() {
 
   return (
     <Space direction="vertical" size={24} style={{ width: '100%' }}>
-      <Card size="small">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
-          <Space direction="vertical" size={0} style={{ flex: 1, minWidth: 200 }}>
-            <Typography.Title level={4} style={{ margin: 0 }}>История транзакций</Typography.Title>
-            <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-              Депозиты и выводы по аккаунтам. Экспорт в XLSX с учётом фильтров.
-            </Typography.Text>
-          </Space>
-          <Space wrap>
-            <Button type="primary" onClick={handleExport}>Выгрузить XLSX</Button>
-          </Space>
-        </div>
-      </Card>
+      <PageHeaderCard
+        title="История транзакций"
+        description="Депозиты и выводы по аккаунтам. Экспорт в XLSX с учётом фильтров."
+        actions={<Button type="primary" onClick={handleExport}>Выгрузить XLSX</Button>}
+      />
 
       <Card size="small">
         <Space wrap size={[12, 12]} style={{ width: '100%' }}>
           <Select
-            placeholder="Проект (казино)"
+            placeholder="Казино"
             allowClear
             style={{ minWidth: 200 }}
             value={table.filters.casino_id}
@@ -112,42 +106,52 @@ export default function TransactionHistory() {
 
       <Card>
         <div style={{ overflowX: 'auto', width: '100%' }}>
-      <Table<AccountTransaction>
+      <CasinoProfileTable<AccountTransaction>
         rowKey="id"
-        size="small"
         loading={isLoading}
         dataSource={transactions}
         pagination={table.paginationConfig(total)}
         onChange={table.handleTableChange}
-        scroll={{ x: 1000 }}
-        tableLayout="fixed"
+        scroll={{ x: 1100 }}
         columns={[
+          {
+            title: 'Казино',
+            dataIndex: 'casino_name',
+            key: 'casino_name',
+            width: 180,
+            ellipsis: true,
+            render: (v: string | null | undefined) => (
+              <Typography.Text strong>{v || '—'}</Typography.Text>
+            ),
+          },
+          {
+            title: 'GEO',
+            dataIndex: 'geo',
+            key: 'geo',
+            width: 80,
+            render: (v: string | null | undefined) => (v ? <Tag>{v}</Tag> : '—'),
+          },
           {
             title: 'Дата',
             dataIndex: 'transaction_date',
-            width: '14%',
+            key: 'transaction_date',
+            width: 120,
             sorter: true,
             render: (d: string) => (d ? dayjs(d).format('DD.MM.YYYY') : '—'),
           },
           {
-            title: 'Проект',
-            dataIndex: 'casino_name',
-            width: '14%',
-            ellipsis: true,
-            render: (v: string) => v || '—',
-          },
-          { title: 'GEO', dataIndex: 'geo', width: '12%', ellipsis: true, render: (v: string) => v || '—' },
-          {
             title: 'Аккаунт (email)',
             dataIndex: 'email',
-            width: '16%',
+            key: 'email',
+            width: 200,
             ellipsis: true,
             render: (v: string) => v || '—',
           },
           {
             title: 'Тип',
             dataIndex: 'type',
-            width: '12%',
+            key: 'type',
+            width: 120,
             render: (t: string) => (
               <Tag color={t === 'deposit' ? 'green' : 'orange'}>
                 {t === 'deposit' ? 'Депозит' : 'Вывод'}
@@ -156,13 +160,15 @@ export default function TransactionHistory() {
           },
           {
             title: 'Сумма',
-            width: '14%',
+            key: 'amount',
+            width: 140,
             render: (_, r) => fmt(r.amount, r.currency),
           },
           {
             title: 'Заметки',
             dataIndex: 'notes',
-            width: '14%',
+            key: 'notes',
+            width: 180,
             ellipsis: true,
             render: (v: string) => v || '—',
           },

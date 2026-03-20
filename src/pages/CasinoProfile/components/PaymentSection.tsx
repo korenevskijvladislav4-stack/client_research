@@ -6,7 +6,6 @@ import {
   Image,
   Modal,
   Space,
-  Table,
   Typography,
 } from 'antd';
 import { EyeOutlined, CreditCardOutlined } from '@ant-design/icons';
@@ -17,6 +16,7 @@ import {
   CasinoPaymentImage,
 } from '../../../store/api/casinoPaymentApi';
 import ImageUploadArea from './ImageUploadArea';
+import { CasinoProfileTable } from '../../../components/CasinoProfileTable';
 
 interface PaymentSectionProps {
   casinoId: number;
@@ -36,12 +36,10 @@ export default function PaymentSection({ casinoId, payments, isLoading }: Paymen
 
   return (
     <Card size="small" title={<Space><CreditCardOutlined /><span>Платёжные решения</span></Space>}>
-      <Table<CasinoPayment>
+      <CasinoProfileTable<CasinoPayment>
         rowKey="id"
-        size="small"
         loading={isLoading}
         dataSource={payments ?? []}
-        pagination={{ pageSize: 20 }}
         columns={[
           { title: 'Направление', dataIndex: 'direction', width: 100, render: (v: string) => v === 'withdrawal' ? 'Выплата' : 'Депозит' },
           { title: 'GEO', dataIndex: 'geo', width: 60 },

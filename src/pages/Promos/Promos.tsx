@@ -10,7 +10,6 @@ import {
   Modal,
   Select,
   Space,
-  Table,
   Tag,
   Typography,
   Upload,
@@ -38,10 +37,12 @@ import { ColumnSelector } from '../../components/ColumnSelector';
 import { useServerTable } from '../../hooks/useServerTable';
 import { getApiBaseUrl } from '../../config/api';
 import { useAppSelector } from '../../hooks/redux';
+import { CasinoProfileTable } from '../../components/CasinoProfileTable';
+import { PageHeaderCard } from '../../components/PageHeaderCard';
 
 const COLUMN_CONFIG: ColumnConfig[] = [
+  { key: 'casino_name', title: 'Казино' },
   { key: 'geo', title: 'GEO' },
-  { key: 'casino_name', title: 'Конкурент' },
   { key: 'promo_category', title: 'Турнир / Акция' },
   { key: 'promo_type', title: 'Тип турнира' },
   { key: 'name', title: 'Название турнира' },
@@ -150,19 +151,19 @@ export default function Promos() {
 
   const allColumns: ColumnsType<any> = [
     {
+      key: 'casino_name',
+      title: 'Казино',
+      dataIndex: 'casino_name',
+      width: 160,
+      ellipsis: true,
+      render: (v: string) => <Typography.Text strong>{v || '—'}</Typography.Text>,
+    },
+    {
       key: 'geo',
       title: 'GEO',
       dataIndex: 'geo',
-      width: 64,
-      render: (v: string) => <Tag>{v}</Tag>,
-    },
-    {
-      key: 'casino_name',
-      title: 'Конкурент',
-      dataIndex: 'casino_name',
-      width: 140,
-      ellipsis: true,
-      render: (v: string) => <Typography.Text strong>{v || '—'}</Typography.Text>,
+      width: 72,
+      render: (v: string) => (v ? <Tag>{v}</Tag> : '—'),
     },
     {
       key: 'promo_category',
@@ -277,20 +278,16 @@ export default function Promos() {
 
   return (
     <Flex vertical gap={24} style={{ width: '100%' }}>
-      <Card size="small">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
-          <div style={{ flex: 1, minWidth: 200 }}>
-            <Typography.Title level={4} style={{ margin: 0 }}>Промо</Typography.Title>
-            <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-              Турниры и акции по казино. Нажмите на строку, чтобы открыть казино.
-            </Typography.Text>
-          </div>
-          <Space wrap>
+      <PageHeaderCard
+        title="Промо"
+        description="Турниры и акции по казино. Нажмите на строку, чтобы открыть казино."
+        actions={
+          <>
             <Button onClick={handleExport}>Выгрузить XLSX</Button>
             <ColumnSelector {...columnSettings} />
-          </Space>
-        </div>
-      </Card>
+          </>
+        }
+      />
 
       <Card size="small">
         <Space wrap size={[12, 12]} style={{ width: '100%' }}>
@@ -368,9 +365,8 @@ export default function Promos() {
 
       <Card>
         <div style={{ overflowX: 'auto', width: '100%' }}>
-          <Table
+          <CasinoProfileTable
             rowKey="id"
-            size="small"
             loading={isLoading}
             dataSource={promosResp?.data ?? []}
             pagination={{
@@ -416,11 +412,11 @@ export default function Promos() {
         {selectedPromo && (
           <>
             <Descriptions column={1} bordered size="small" labelStyle={{ fontWeight: 500, width: 200 }}>
+              <Descriptions.Item label="Казино">
+                <Typography.Text strong>{selectedPromo.casino_name || '—'}</Typography.Text>
+              </Descriptions.Item>
               <Descriptions.Item label="GEO">
                 <Tag>{selectedPromo.geo}</Tag>
-              </Descriptions.Item>
-              <Descriptions.Item label="Конкурент">
-                {selectedPromo.casino_name || '—'}
               </Descriptions.Item>
               <Descriptions.Item label="Турнир / Акция">
                 <Tag color={selectedPromo.promo_category === 'tournament' ? 'blue' : 'purple'}>

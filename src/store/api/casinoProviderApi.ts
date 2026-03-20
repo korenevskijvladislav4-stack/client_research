@@ -27,6 +27,10 @@ export interface ExtractAndAddResult {
   message?: string;
 }
 
+export interface PreviewExtractResult {
+  names: string[];
+}
+
 export const casinoProviderApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getProviderAnalytics: builder.query<ProviderAnalyticsResponse, ProviderAnalyticsParams | void>({
@@ -100,6 +104,32 @@ export const casinoProviderApi = baseApi.injectEndpoints({
         'Providers',
       ],
     }),
+
+    previewExtractProviders: builder.mutation<
+      PreviewExtractResult,
+      { casinoId: number; text: string }
+    >({
+      query: ({ casinoId, text }) => ({
+        url: `/casinos/${casinoId}/providers/extract-preview`,
+        method: 'POST',
+        body: { text },
+      }),
+    }),
+
+    applyProviderNames: builder.mutation<
+      ExtractAndAddResult,
+      { casinoId: number; geo: string; names: string[] }
+    >({
+      query: ({ casinoId, ...body }) => ({
+        url: `/casinos/${casinoId}/providers/apply-names`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: (_result, _error, { casinoId }) => [
+        { type: 'Casino', id: `PROVIDERS_${casinoId}` },
+        'Providers',
+      ],
+    }),
   }),
 });
 
@@ -109,4 +139,6 @@ export const {
   useAddProviderToCasinoMutation,
   useRemoveProviderFromCasinoMutation,
   useExtractAndAddProvidersMutation,
+  usePreviewExtractProvidersMutation,
+  useApplyProviderNamesMutation,
 } = casinoProviderApi;

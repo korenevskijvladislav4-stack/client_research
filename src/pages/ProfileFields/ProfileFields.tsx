@@ -1,19 +1,19 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Button,
   Card,
-  Drawer,
+  Col,
   Form,
   Input,
   InputNumber,
+  Row,
   Select,
   Space,
   Switch,
-  Table,
-  Typography,
+  Tag,
   message,
 } from 'antd';
-import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { EditOutlined, DeleteOutlined, FormOutlined } from '@ant-design/icons';
 import {
   useCreateProfileFieldMutation,
   useDeleteProfileFieldMutation,
@@ -21,6 +21,14 @@ import {
   useUpdateProfileFieldMutation,
   ProfileField,
 } from '../../store/api/casinoProfileApi';
+import { SettingsEntityDrawer } from '../../components/settings/SettingsEntityDrawer';
+import { PageHeaderCard } from '../../components/PageHeaderCard';
+import { CasinoProfileTable } from '../../components/CasinoProfileTable';
+import {
+  SelectOptionsKeyValueList,
+  optionsJsonFromPairs,
+  pairsFromOptionsJson,
+} from '../../components/settings/SelectOptionsKeyValueList';
 
 const FIELD_TYPES = [
   { value: 'text', label: 'Текст' },
@@ -53,6 +61,7 @@ export default function ProfileFields() {
   const [form] = Form.useForm();
 
   const rows = data ?? [];
+  const fieldType = Form.useWatch('field_type', form);
 
   const groups = useMemo(() => {
     const s = new Set<string>();
@@ -60,10 +69,26 @@ export default function ProfileFields() {
     return Array.from(s).sort();
   }, [rows]);
 
+  useEffect(() => {
+    if (!open) return;
+    if (fieldType === 'select' || fieldType === 'multiselect') {
+      const pairs = form.getFieldValue('option_pairs');
+      if (!pairs?.length) {
+        form.setFieldValue('option_pairs', [{ entry_key: '', entry_value: '' }]);
+      }
+    }
+  }, [open, fieldType, form]);
+
   const showCreate = () => {
     setEditing(null);
     form.resetFields();
-    form.setFieldsValue({ is_active: true, is_required: false, sort_order: 0, field_type: 'text' });
+    form.setFieldsValue({
+      is_active: true,
+      is_required: false,
+      sort_order: 0,
+      field_type: 'text',
+      option_pairs: [{ entry_key: '', entry_value: '' }],
+    });
     setOpen(true);
   };
 
@@ -72,7 +97,7 @@ export default function ProfileFields() {
     form.resetFields();
     form.setFieldsValue({
       ...field,
-      options_json: field.options_json ? JSON.stringify(field.options_json, null, 2) : '',
+      option_pairs: pairsFromOptionsJson(field.options_json),
     });
     setOpen(true);
   };
@@ -82,12 +107,19 @@ export default function ProfileFields() {
     const normalizedGroup =
       Array.isArray(rawGroup) && rawGroup.length > 0 ? rawGroup[0] : rawGroup || null;
 
+    const { option_pairs, ...rest } = values;
+    let options_json: ReturnType<typeof optionsJsonFromPairs> = null;
+    if (rest.field_type === 'select' || rest.field_type === 'multiselect') {
+      options_json = optionsJsonFromPairs(option_pairs);
+    }
+
     const payload = {
-      ...values,
-      key_name: normalizeKey(values.key_name),
-      options_json: values.options_json ? JSON.parse(values.options_json) : null,
+      ...rest,
+      key_name: normalizeKey(rest.key_name),
+      options_json,
       group_name: normalizedGroup,
     };
+
     try {
       if (editing) {
         await updateField({ id: editing.id, patch: payload }).unwrap();
@@ -104,160 +136,196 @@ export default function ProfileFields() {
 
   return (
     <Space direction="vertical" size={24} style={{ width: '100%' }}>
-      <Card size="small">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography.Title level={4} style={{ margin: 0 }}>
-            Поля профиля казино
-          </Typography.Title>
+      <PageHeaderCard
+        title="Поля профиля казино"
+        description="Схема анкеты: группы, типы полей, порядок и варианты для списков."
+        actions={
           <Button type="primary" onClick={showCreate}>
             Добавить поле
           </Button>
+        }
+      />
+      <Card>
+        <div style={{ overflowX: 'auto', width: '100%' }}>
+          <CasinoProfileTable<ProfileField>
+            rowKey="id"
+            loading={isLoading}
+            dataSource={rows}
+            scroll={{ x: 'max-content' }}
+            columns={[
+              { title: 'Группа', dataIndex: 'group_name', key: 'group_name', width: 120, render: (v) => v || '—' },
+              { title: 'Label', dataIndex: 'label', key: 'label', width: 180, ellipsis: true },
+              { title: 'Key', dataIndex: 'key_name', key: 'key_name', width: 180, ellipsis: true },
+              {
+                title: 'Тип',
+                dataIndex: 'field_type',
+                key: 'field_type',
+                width: 120,
+                render: (v: string) => {
+                  const type = FIELD_TYPES.find((t) => t.value === v);
+                  return type?.label || v;
+                },
+              },
+              {
+                title: 'Обяз.',
+                dataIndex: 'is_required',
+                key: 'is_required',
+                width: 80,
+                align: 'center',
+                render: (v: boolean) =>
+                  v ? <Tag color="success">Да</Tag> : <Tag color="default">Нет</Tag>,
+              },
+              {
+                title: 'Активно',
+                dataIndex: 'is_active',
+                key: 'is_active',
+                width: 90,
+                align: 'center',
+                render: (v: boolean) =>
+                  v ? <Tag color="success">Да</Tag> : <Tag color="default">Нет</Tag>,
+              },
+              { title: 'Порядок', dataIndex: 'sort_order', key: 'sort_order', width: 90, align: 'center' },
+              {
+                title: 'Действия',
+                key: 'actions',
+                width: 100,
+                align: 'right',
+                fixed: 'right',
+                render: (_, r) => (
+                  <Space size="small">
+                    <Button type="link" size="small" icon={<EditOutlined />} onClick={() => showEdit(r)} />
+                    <Button
+                      type="link"
+                      size="small"
+                      danger
+                      icon={<DeleteOutlined />}
+                      onClick={async () => {
+                        try {
+                          await deleteField(r.id).unwrap();
+                          message.success('Удалено');
+                        } catch (e: any) {
+                          message.error(e?.data?.error ?? 'Ошибка удаления');
+                        }
+                      }}
+                    />
+                  </Space>
+                ),
+              },
+            ]}
+          />
         </div>
       </Card>
-      <Card>
-      <Table
-        rowKey="id"
-        size="small"
-        loading={isLoading}
-        dataSource={rows}
-        pagination={{ pageSize: 20, showSizeChanger: true, responsive: true }}
-        scroll={{ x: 'max-content' }}
-        columns={[
-          { title: 'Группа', dataIndex: 'group_name', width: 120, render: (v) => v || '—' },
-          { title: 'Label', dataIndex: 'label', width: 180, ellipsis: true },
-          { title: 'Key', dataIndex: 'key_name', width: 180, ellipsis: true },
-          { 
-            title: 'Тип', 
-            dataIndex: 'field_type', 
-            width: 120,
-            render: (v: string) => {
-              const type = FIELD_TYPES.find(t => t.value === v);
-              return type?.label || v;
-            }
-          },
-          {
-            title: 'Обяз.',
-            dataIndex: 'is_required',
-            width: 70,
-            align: 'center',
-            render: (v) => (v ? 'Да' : 'Нет'),
-          },
-          {
-            title: 'Активно',
-            dataIndex: 'is_active',
-            width: 70,
-            align: 'center',
-            render: (v) => (v ? 'Да' : 'Нет'),
-          },
-          { title: 'Порядок', dataIndex: 'sort_order', width: 80, align: 'center' },
-          {
-            title: 'Действия',
-            key: 'actions',
-            width: 100,
-            align: 'right',
-            fixed: 'right',
-            render: (_, r) => (
-              <Space size="small">
-                <Button
-                  type="link"
-                  size="small"
-                  icon={<EditOutlined />}
-                  onClick={() => showEdit(r)}
-                />
-                <Button
-                  type="link"
-                  danger
-                  size="small"
-                  icon={<DeleteOutlined />}
-                  onClick={async () => {
-                    try {
-                      await deleteField(r.id).unwrap();
-                      message.success('Удалено');
-                    } catch (e: any) {
-                      message.error(e?.data?.error ?? 'Ошибка удаления');
-                    }
-                  }}
-                />
-              </Space>
+
+      <SettingsEntityDrawer
+          open={open}
+          onClose={() => setOpen(false)}
+          width={640}
+          editing={!!editing}
+          icon={<FormOutlined />}
+          titleCreate="Новое поле профиля"
+          titleEdit="Редактировать поле"
+          subtitleCreate="Поле появится в анкете казино: тип определяет вид ввода, для списков задайте варианты строками «ключ / подпись»."
+          subtitleEdit="Изменения применятся ко всем анкетам; проверьте key и тип, если уже есть заполненные значения."
+          alertCreate={{
+            message: 'Как заполнить',
+            description: (
+              <ul style={{ margin: 0, paddingLeft: 18 }}>
+                <li style={{ marginBottom: 6 }}>
+                  <strong>Key</strong> — латиница и подчёркивания, уникален в системе (например{' '}
+                  <code>welcome_bonus</code>).
+                </li>
+                <li style={{ marginBottom: 6 }}>
+                  <strong>Тип «Список»</strong> — добавьте пары ключ + подпись; JSON для API формируется сам.
+                </li>
+                <li style={{ marginBottom: 0 }}>
+                  <strong>Группа</strong> — для визуального блока в анкете; можно ввести новую или выбрать из существующих.
+                </li>
+              </ul>
             ),
-          },
-        ]}
-      />
+          }}
+          alertEdit={{
+            message: 'Редактирование',
+            description:
+              'Смена типа или key может повлиять на уже сохранённые данные. Для списков обновите варианты в блоке ниже.',
+          }}
+          onPrimaryClick={() => form.submit()}
+          primaryLabelCreate="Создать поле"
+          primaryLabelEdit="Сохранить"
+        >
+          <Form layout="vertical" form={form} onFinish={onFinish} requiredMark="optional">
+            <Card
+              size="small"
+              title="Идентификаторы и тип"
+              style={{ marginBottom: 16 }}
+              styles={{ header: { fontWeight: 600 } }}
+            >
+              <Form.Item
+                label="Key (латиница, уникально)"
+                name="key_name"
+                rules={[{ required: true, message: 'Укажите key' }]}
+                extra="Например: welcome_bonus, has_gamification"
+              >
+                <Input
+                  placeholder="welcome_bonus"
+                  onBlur={(e) => form.setFieldValue('key_name', normalizeKey(e.target.value))}
+                />
+              </Form.Item>
 
-      <Drawer
-        title={
-          <Typography.Title level={4} style={{ margin: 0 }}>
-            {editing ? 'Редактировать поле' : 'Создать поле'}
-          </Typography.Title>
-        }
-        open={open}
-        onClose={() => setOpen(false)}
-        width={600}
-        destroyOnClose
-      >
-        <Form layout="vertical" form={form} onFinish={onFinish} size="large">
-          <Form.Item
-            label="Key (латиница, уникально)"
-            name="key_name"
-            rules={[{ required: true, message: 'Укажите key' }]}
-            extra="Например: welcome_bonus, has_gamification, vip_program_quality"
-          >
-            <Input placeholder="welcome_bonus" onBlur={(e) => form.setFieldValue('key_name', normalizeKey(e.target.value))} />
-          </Form.Item>
+              <Form.Item label="Название (label)" name="label" rules={[{ required: true, message: 'Укажите название' }]}>
+                <Input placeholder="Приветственный бонус" />
+              </Form.Item>
 
-          <Form.Item label="Название (label)" name="label" rules={[{ required: true }]}>
-            <Input placeholder="Приветственный бонус" />
-          </Form.Item>
+              <Form.Item label="Группа" name="group_name">
+                <Select
+                  allowClear
+                  showSearch
+                  mode="tags"
+                  maxCount={1}
+                  tokenSeparators={[',', ';']}
+                  placeholder="Например: Bonuses / Product / UX"
+                  options={groups.map((g) => ({ value: g, label: g }))}
+                />
+              </Form.Item>
 
-          <Form.Item label="Группа" name="group_name">
-            <Select
-              allowClear
-              showSearch
-              mode="tags"
-              tokenSeparators={[',', ';']}
-              placeholder="Например: Bonuses / Product / Payments / UX"
-              options={groups.map((g) => ({ value: g, label: g }))}
-            />
-          </Form.Item>
+              <Form.Item label="Тип поля" name="field_type" rules={[{ required: true, message: 'Выберите тип' }]}>
+                <Select options={FIELD_TYPES} placeholder="Тип" />
+              </Form.Item>
+            </Card>
 
-          <Form.Item label="Тип" name="field_type" rules={[{ required: true }]}>
-            <Select options={FIELD_TYPES} />
-          </Form.Item>
+            <SelectOptionsKeyValueList />
 
-          <Form.Item label="Описание" name="description">
-            <Input.TextArea rows={3} placeholder="Как оценивать/что считать источником" />
-          </Form.Item>
+            <Card
+              size="small"
+              title="Подсказка в анкете"
+              style={{ marginBottom: 16 }}
+              styles={{ header: { fontWeight: 600 } }}
+            >
+              <Form.Item label="Описание" name="description">
+                <Input.TextArea rows={3} placeholder="Как оценивать поле, откуда брать данные" />
+              </Form.Item>
+            </Card>
 
-          <Form.Item
-            label="Options (JSON) — для select/multiselect"
-            name="options_json"
-            extra='Пример: {"options":[{"value":"high","label":"Высокий"},{"value":"low","label":"Низкий"}]}'
-          >
-            <Input.TextArea rows={6} placeholder='{"options":[{"value":"yes","label":"Да"}]}' />
-          </Form.Item>
-
-          <Space>
-            <Form.Item label="Порядок" name="sort_order">
-              <InputNumber min={0} />
-            </Form.Item>
-            <Form.Item label="Обязательное" name="is_required" valuePropName="checked">
-              <Switch />
-            </Form.Item>
-            <Form.Item label="Активное" name="is_active" valuePropName="checked">
-              <Switch />
-            </Form.Item>
-          </Space>
-
-          <Space style={{ width: '100%', justifyContent: 'flex-end', marginTop: 24 }}>
-            <Button onClick={() => setOpen(false)}>Отмена</Button>
-            <Button type="primary" htmlType="submit" style={{ minWidth: 120 }}>
-              Сохранить
-            </Button>
-          </Space>
-        </Form>
-      </Drawer>
-      </Card>
+            <Card size="small" title="Порядок и правила" styles={{ header: { fontWeight: 600 } }}>
+              <Row gutter={[16, 8]}>
+                <Col xs={24} sm={8}>
+                  <Form.Item label="Порядок" name="sort_order">
+                    <InputNumber min={0} style={{ width: '100%' }} />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} sm={8}>
+                  <Form.Item label="Обязательное" name="is_required" valuePropName="checked">
+                    <Switch />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} sm={8}>
+                  <Form.Item label="Активное" name="is_active" valuePropName="checked">
+                    <Switch />
+                  </Form.Item>
+                </Col>
+              </Row>
+            </Card>
+          </Form>
+        </SettingsEntityDrawer>
     </Space>
   );
 }
-

@@ -1,4 +1,4 @@
-import { Button, Checkbox, Dropdown, Typography } from 'antd';
+import { Button, Checkbox, Dropdown, Typography, type ButtonProps } from 'antd';
 import { SettingOutlined } from '@ant-design/icons';
 import type { ColumnConfig } from '../hooks/useColumnSettings';
 
@@ -7,6 +7,8 @@ interface ColumnSelectorProps {
   visibleKeys: string[];
   toggleColumn: (key: string) => void;
   resetToDefault: () => void;
+  /** По умолчанию как у обычных кнопок страницы (middle), не small */
+  buttonProps?: ButtonProps;
 }
 
 export function ColumnSelector({
@@ -14,6 +16,7 @@ export function ColumnSelector({
   visibleKeys,
   toggleColumn,
   resetToDefault,
+  buttonProps,
 }: ColumnSelectorProps) {
   const menu = (
     <div
@@ -53,7 +56,7 @@ export function ColumnSelector({
 
   return (
     <Dropdown popupRender={() => menu} trigger={['click']} placement="bottomRight">
-      <Button icon={<SettingOutlined />} size="small">
+      <Button type="default" icon={<SettingOutlined />} {...buttonProps}>
         Колонки
       </Button>
     </Dropdown>

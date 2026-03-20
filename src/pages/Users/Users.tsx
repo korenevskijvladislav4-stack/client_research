@@ -2,19 +2,18 @@ import { useState } from 'react';
 import {
   Button,
   Card,
-  Drawer,
+  Col,
   Form,
   Input,
+  Row,
   Select,
   Space,
-  Table,
   Popconfirm,
-  Typography,
   Tag,
   Switch,
   message,
 } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, UserOutlined } from '@ant-design/icons';
 import {
   useGetUsersQuery,
   useCreateUserMutation,
@@ -24,6 +23,9 @@ import {
   UpdateUserDto,
 } from '../../store/api/userApi';
 import { useServerTable } from '../../hooks/useServerTable';
+import { PageHeaderCard } from '../../components/PageHeaderCard';
+import { CasinoProfileTable } from '../../components/CasinoProfileTable';
+import { SettingsEntityDrawer } from '../../components/settings/SettingsEntityDrawer';
 import dayjs from 'dayjs';
 
 export default function Users() {
@@ -98,62 +100,65 @@ export default function Users() {
 
   return (
     <Space direction="vertical" size={24} style={{ width: '100%' }}>
+      <PageHeaderCard
+        title="Пользователи"
+        description="Учётные записи системы: роли, статус активности и доступ в CRM."
+        actions={
+          <Button type="primary" icon={<PlusOutlined />} onClick={showCreate}>
+            Добавить пользователя
+          </Button>
+        }
+      />
+
+      <Card size="small">
+        <Space wrap size={[12, 12]} style={{ width: '100%' }}>
+          <Input
+            placeholder="Поиск по имени или email"
+            prefix={<SearchOutlined />}
+            value={table.search}
+            onChange={(e) => table.setSearch(e.target.value)}
+            style={{ width: 250 }}
+            allowClear
+          />
+          <Select
+            placeholder="Роль"
+            value={table.filters.role}
+            onChange={(val) => table.updateFilter('role', val)}
+            allowClear
+            style={{ width: 150 }}
+            options={roleOptions}
+          />
+          <Select
+            placeholder="Статус"
+            value={
+              table.filters.is_active === undefined
+                ? undefined
+                : table.filters.is_active
+                ? 'active'
+                : 'inactive'
+            }
+            onChange={(val) =>
+              table.updateFilter('is_active', val === undefined ? undefined : val === 'active')
+            }
+            allowClear
+            style={{ width: 150 }}
+            options={[
+              { value: 'active', label: 'Активные' },
+              { value: 'inactive', label: 'Неактивные' },
+            ]}
+          />
+        </Space>
+      </Card>
+
       <Card>
-        <Space direction="vertical" size={16} style={{ width: '100%' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
-            <Typography.Title level={4} style={{ margin: 0 }}>
-              Пользователи
-            </Typography.Title>
-            <Button type="primary" icon={<PlusOutlined />} onClick={showCreate}>
-              Добавить пользователя
-            </Button>
-          </div>
-
-          <Space wrap>
-            <Input
-              placeholder="Поиск по имени или email"
-              prefix={<SearchOutlined />}
-              value={table.search}
-              onChange={(e) => table.setSearch(e.target.value)}
-              style={{ width: 250 }}
-              allowClear
-            />
-            <Select
-              placeholder="Роль"
-              value={table.filters.role}
-              onChange={(val) => table.updateFilter('role', val)}
-              allowClear
-              style={{ width: 150 }}
-              options={roleOptions}
-            />
-            <Select
-              placeholder="Статус"
-              value={
-                table.filters.is_active === undefined
-                  ? undefined
-                  : table.filters.is_active
-                  ? 'active'
-                  : 'inactive'
-              }
-              onChange={(val) =>
-                table.updateFilter('is_active', val === undefined ? undefined : val === 'active')
-              }
-              allowClear
-              style={{ width: 150 }}
-              options={[
-                { value: 'active', label: 'Активные' },
-                { value: 'inactive', label: 'Неактивные' },
-              ]}
-            />
-          </Space>
-
-          <Table
+        <div style={{ overflowX: 'auto', width: '100%' }}>
+          <CasinoProfileTable<User>
             dataSource={users}
             rowKey="id"
             loading={isLoading}
-            size="small"
             pagination={table.paginationConfig(usersResp?.pagination?.total ?? 0)}
             onChange={table.handleTableChange}
+            scroll={{ x: 1100 }}
             columns={[
               {
                 title: 'ID',
@@ -254,87 +259,116 @@ export default function Users() {
               },
             ]}
           />
-        </Space>
+        </div>
       </Card>
 
-      <Drawer
-        title={editingUser ? 'Редактировать пользователя' : 'Создать пользователя'}
+      <SettingsEntityDrawer
         open={drawerOpen}
         onClose={() => {
           setDrawerOpen(false);
           setEditingUser(null);
           form.resetFields();
         }}
-        width={500}
-        destroyOnClose
+        width={560}
+        editing={!!editingUser}
+        icon={<UserOutlined />}
+        titleCreate="Новый пользователь"
+        titleEdit="Редактировать пользователя"
+        subtitleCreate="Логин и email для входа в CRM. Пароль не хранится в открытом виде — задайте надёжный при создании."
+        subtitleEdit="Пароль меняется только если заполнить поле ниже. Роль и статус вступают в силу после сохранения."
+        alertCreate={{
+          message: 'Создание учётной записи',
+          description: (
+            <ul style={{ margin: 0, paddingLeft: 18 }}>
+              <li style={{ marginBottom: 6 }}>
+                <strong>Имя пользователя</strong> — уникальный логин (латиница, без пробелов).
+              </li>
+              <li style={{ marginBottom: 6 }}>
+                <strong>Администратор</strong> — полный доступ; <strong>Пользователь</strong> — ограниченный набор прав.
+              </li>
+              <li style={{ marginBottom: 0 }}>
+                Неактивный пользователь не сможет войти, пока его снова не активируют.
+              </li>
+            </ul>
+          ),
+        }}
+        alertEdit={{
+          message: 'Редактирование',
+          description:
+            'Пустое поле пароля означает «оставить текущий». Смена роли или деактивация действуют для следующих входов в систему.',
+        }}
+        onPrimaryClick={() => form.submit()}
+        primaryLabelCreate="Создать пользователя"
+        primaryLabelEdit="Сохранить"
       >
         <Form
           form={form}
           layout="vertical"
           onFinish={onFinish}
+          requiredMark="optional"
           initialValues={{
             role: 'user',
             is_active: true,
           }}
         >
-          <Form.Item
-            name="username"
-            label="Имя пользователя"
-            rules={[{ required: true, message: 'Введите имя пользователя' }]}
-          >
-            <Input placeholder="username" />
-          </Form.Item>
+          <Card size="small" title="Учётная запись" style={{ marginBottom: 16 }} styles={{ header: { fontWeight: 600 } }}>
+            <Form.Item
+              name="username"
+              label="Имя пользователя"
+              rules={[{ required: true, message: 'Введите имя пользователя' }]}
+            >
+              <Input placeholder="username" autoComplete="username" />
+            </Form.Item>
 
-          <Form.Item
-            name="email"
-            label="Email"
-            rules={[
-              { required: true, message: 'Введите email' },
-              { type: 'email', message: 'Некорректный email' },
-            ]}
-          >
-            <Input placeholder="email@example.com" type="email" />
-          </Form.Item>
+            <Form.Item
+              name="email"
+              label="Email"
+              rules={[
+                { required: true, message: 'Введите email' },
+                { type: 'email', message: 'Некорректный email' },
+              ]}
+            >
+              <Input placeholder="email@example.com" type="email" autoComplete="email" />
+            </Form.Item>
 
-          <Form.Item
-            name="password"
-            label="Пароль"
-            rules={
-              editingUser
-                ? []
-                : [{ required: true, message: 'Введите пароль' }, { min: 6, message: 'Минимум 6 символов' }]
-            }
-            help={editingUser ? 'Оставьте пустым, чтобы не менять пароль' : undefined}
-          >
-            <Input.Password placeholder={editingUser ? 'Оставить без изменений' : 'Пароль'} />
-          </Form.Item>
+            <Form.Item
+              name="password"
+              label="Пароль"
+              rules={
+                editingUser
+                  ? []
+                  : [
+                      { required: true, message: 'Введите пароль' },
+                      { min: 6, message: 'Минимум 6 символов' },
+                    ]
+              }
+              extra={
+                editingUser ? 'Оставьте пустым, чтобы не менять пароль' : 'Минимум 6 символов'
+              }
+            >
+              <Input.Password
+                placeholder={editingUser ? 'Оставить без изменений' : 'Задайте пароль'}
+                autoComplete="new-password"
+              />
+            </Form.Item>
+          </Card>
 
-          <Form.Item name="role" label="Роль" rules={[{ required: true, message: 'Выберите роль' }]}>
-            <Select options={roleOptions} />
-          </Form.Item>
-
-          <Form.Item name="is_active" label="Статус" valuePropName="checked">
-            <Switch checkedChildren="Активен" unCheckedChildren="Неактивен" />
-          </Form.Item>
-
-          <Form.Item>
-            <Space>
-              <Button type="primary" htmlType="submit">
-                {editingUser ? 'Сохранить' : 'Создать'}
-              </Button>
-              <Button
-                onClick={() => {
-                  setDrawerOpen(false);
-                  setEditingUser(null);
-                  form.resetFields();
-                }}
-              >
-                Отмена
-              </Button>
-            </Space>
-          </Form.Item>
+          <Card size="small" title="Роль и доступ" styles={{ header: { fontWeight: 600 } }}>
+            <Row gutter={[16, 8]}>
+              <Col xs={24} sm={14}>
+                <Form.Item name="role" label="Роль" rules={[{ required: true, message: 'Выберите роль' }]}>
+                  <Select options={roleOptions} placeholder="Роль" />
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={10}>
+                <Form.Item name="is_active" label="Статус" valuePropName="checked">
+                  <Switch checkedChildren="Активен" unCheckedChildren="Неактивен" />
+                </Form.Item>
+              </Col>
+            </Row>
+          </Card>
         </Form>
-      </Drawer>
+      </SettingsEntityDrawer>
     </Space>
   );
 }

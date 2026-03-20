@@ -8,7 +8,6 @@ import {
   Modal,
   Select,
   Space,
-  Table,
   Tag,
   Typography,
   Image,
@@ -34,6 +33,8 @@ import { ColumnSelector } from '../../components/ColumnSelector';
 import { useServerTable } from '../../hooks/useServerTable';
 import { getApiBaseUrl } from '../../config/api';
 import { useAppSelector } from '../../hooks/redux';
+import { CasinoProfileTable } from '../../components/CasinoProfileTable';
+import { PageHeaderCard } from '../../components/PageHeaderCard';
 
 const COLUMN_CONFIG: ColumnConfig[] = [
   { key: 'casino_name', title: 'Казино' },
@@ -189,20 +190,16 @@ export default function Bonuses() {
 
   return (
     <Space direction="vertical" size={24} style={{ width: '100%' }}>
-      <Card size="small">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
-          <Space direction="vertical" size={0} style={{ flex: 1, minWidth: 200 }}>
-            <Typography.Title level={4} style={{ margin: 0 }}>Бонусы</Typography.Title>
-            <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-              Список бонусов по казино. Нажмите на строку, чтобы открыть казино.
-            </Typography.Text>
-          </Space>
-          <Space wrap>
+      <PageHeaderCard
+        title="Бонусы"
+        description="Список бонусов по казино. Нажмите на строку, чтобы открыть казино."
+        actions={
+          <>
             <Button onClick={handleExport}>Выгрузить XLSX</Button>
             <ColumnSelector {...columnSettings} />
-          </Space>
-        </div>
-      </Card>
+          </>
+        }
+      />
 
       <Card size="small">
         <Space wrap size={[12, 12]} style={{ width: '100%' }}>
@@ -270,9 +267,8 @@ export default function Bonuses() {
 
       <Card>
         <div style={{ overflowX: 'auto', width: '100%' }}>
-            <Table<CasinoBonus>
+            <CasinoProfileTable<CasinoBonus>
               rowKey="id"
-              size="small"
               loading={isLoading}
               dataSource={bonusesResp?.data ?? []}
               pagination={{
@@ -288,25 +284,29 @@ export default function Bonuses() {
               columns={[
               columnSettings.isVisible('casino_name') && {
                 title: 'Казино',
+                key: 'casino_name',
                 dataIndex: 'casino_name',
-                width: 140,
+                width: 160,
                 ellipsis: true,
                 render: (v: string) => <Typography.Text strong>{v || '—'}</Typography.Text>,
               },
               columnSettings.isVisible('geo') && {
                 title: 'GEO',
+                key: 'geo',
                 dataIndex: 'geo',
-                width: 60,
-                render: (v: string) => <Tag>{v}</Tag>,
+                width: 72,
+                render: (v: string) => (v ? <Tag>{v}</Tag> : '—'),
               },
               columnSettings.isVisible('name') && {
                 title: 'Название',
+                key: 'name',
                 dataIndex: 'name',
                 width: 150,
                 ellipsis: true,
               },
               columnSettings.isVisible('bonus_category') && {
                 title: 'Категория',
+                key: 'bonus_category',
                 dataIndex: 'bonus_category',
                 width: 80,
                 render: (v: BonusCategory) => {
@@ -316,6 +316,7 @@ export default function Bonuses() {
               },
               columnSettings.isVisible('bonus_kind') && {
                 title: 'Вид',
+                key: 'bonus_kind',
                 dataIndex: 'bonus_kind',
                 width: 100,
                 render: (v: BonusKind) => (
@@ -336,6 +337,7 @@ export default function Bonuses() {
               },
               columnSettings.isVisible('bonus_type') && {
                 title: 'Тип',
+                key: 'bonus_type',
                 dataIndex: 'bonus_type',
                 width: 120,
                 render: (v: BonusType) => {
@@ -345,6 +347,7 @@ export default function Bonuses() {
               },
               columnSettings.isVisible('bonus') && {
                 title: 'Бонус',
+                key: 'bonus',
                 width: 120,
                 render: (_: any, b: CasinoBonus) => {
                   const parts: string[] = [];
@@ -366,11 +369,13 @@ export default function Bonuses() {
               },
               columnSettings.isVisible('min_deposit') && {
                 title: 'Мин.',
+                key: 'min_deposit',
                 width: 80,
                 render: (_: any, b: CasinoBonus) => fmtAmount(b.min_deposit, b.currency),
               },
               columnSettings.isVisible('wagering') && {
                 title: 'Вейджер',
+                key: 'wagering',
                 width: 100,
                 render: (_: any, b: CasinoBonus) => {
                   const parts: string[] = [];
@@ -381,6 +386,7 @@ export default function Bonuses() {
               },
               columnSettings.isVisible('actions') && {
                 title: '',
+                key: 'actions',
                 width: 40,
                 align: 'right',
                 render: (_: any, b: CasinoBonus) => (
@@ -415,7 +421,7 @@ export default function Bonuses() {
               <>
               <Descriptions column={1} bordered size="small">
                 <Descriptions.Item label="Казино">
-                  {selectedBonus.casino_name || '—'}
+                  <Typography.Text strong>{selectedBonus.casino_name || '—'}</Typography.Text>
                 </Descriptions.Item>
                 <Descriptions.Item label="GEO">
                   <Tag>{selectedBonus.geo}</Tag>

@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import { Button, Table, message, theme } from 'antd';
+import { Button, message, theme } from 'antd';
+import { CasinoProfileTable } from './CasinoProfileTable';
 import {
   useGetSettingsFieldsQuery,
   useGetProfileContextsQuery,
@@ -132,12 +133,9 @@ export function ProfileSettingsTable({ casinoId, activeGeo, readOnly }: ProfileS
 
   return (
     <div>
-      <Table
+      <CasinoProfileTable
         dataSource={dataSource}
         columns={columns}
-        pagination={{ pageSize: 20 }}
-        size="small"
-        bordered
         scroll={{ x: 'max-content' }}
       />
     </div>

@@ -8,7 +8,6 @@ import {
   Modal,
   Select,
   Space,
-  Table,
   Tag,
   Typography,
   Image,
@@ -34,11 +33,13 @@ import { ColumnSelector } from '../../components/ColumnSelector';
 import { useServerTable } from '../../hooks/useServerTable';
 import { getApiBaseUrl } from '../../config/api';
 import { useAppSelector } from '../../hooks/redux';
+import { CasinoProfileTable } from '../../components/CasinoProfileTable';
+import { PageHeaderCard } from '../../components/PageHeaderCard';
 
 const COLUMN_CONFIG: ColumnConfig[] = [
-  { key: 'direction', title: 'Направление' },
   { key: 'casino_name', title: 'Казино' },
   { key: 'geo', title: 'GEO' },
+  { key: 'direction', title: 'Направление' },
   { key: 'type', title: 'Тип' },
   { key: 'method', title: 'Метод' },
   { key: 'min_amount', title: 'Мин.' },
@@ -160,20 +161,16 @@ export default function Payments() {
 
   return (
     <Space direction="vertical" size={24} style={{ width: '100%' }}>
-      <Card size="small">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
-          <Space direction="vertical" size={0} style={{ flex: 1, minWidth: 200 }}>
-            <Typography.Title level={4} style={{ margin: 0 }}>Платежи</Typography.Title>
-            <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-              Платёжные решения по казино. Нажмите на строку, чтобы открыть казино.
-            </Typography.Text>
-          </Space>
-          <Space wrap>
+      <PageHeaderCard
+        title="Платежи"
+        description="Платёжные решения по казино. Нажмите на строку, чтобы открыть казино."
+        actions={
+          <>
             <Button onClick={handleExport}>Выгрузить XLSX</Button>
             <ColumnSelector {...columnSettings} />
-          </Space>
-        </div>
-      </Card>
+          </>
+        }
+      />
 
       <Card size="small">
         <Space wrap size={[12, 12]} style={{ width: '100%' }}>
@@ -249,9 +246,8 @@ export default function Payments() {
 
       <Card>
         <div style={{ overflowX: 'auto', width: '100%' }}>
-          <Table<(CasinoPayment & { casino_name?: string })>
+          <CasinoProfileTable<(CasinoPayment & { casino_name?: string })>
             rowKey="id"
-            size="small"
             loading={isLoading}
             dataSource={paymentsResp?.data ?? []}
             pagination={table.paginationConfig(paymentsResp?.pagination?.total ?? paymentsResp?.total ?? 0)}
@@ -262,59 +258,68 @@ export default function Payments() {
               style: { cursor: 'pointer' },
             })}
             columns={[
+              columnSettings.isVisible('casino_name') && {
+                title: 'Казино',
+                key: 'casino_name',
+                dataIndex: 'casino_name',
+                width: 160,
+                ellipsis: true,
+                render: (v: string) => <Typography.Text strong>{v || '—'}</Typography.Text>,
+              },
+              columnSettings.isVisible('geo') && {
+                title: 'GEO',
+                key: 'geo',
+                dataIndex: 'geo',
+                width: 72,
+                render: (v: string) => (v ? <Tag>{v}</Tag> : '—'),
+              },
               columnSettings.isVisible('direction') && {
                 title: 'Направление',
+                key: 'direction',
                 dataIndex: 'direction',
-                width: 100,
+                width: 110,
                 render: (v: string) => (
                   <Tag color={v === 'withdrawal' ? 'orange' : 'green'}>
                     {v === 'withdrawal' ? 'Выплата' : 'Депозит'}
                   </Tag>
                 ),
               },
-              columnSettings.isVisible('casino_name') && {
-                title: 'Казино',
-                dataIndex: 'casino_name',
-                width: 140,
-                ellipsis: true,
-                render: (v: string) => <Typography.Text strong>{v || '—'}</Typography.Text>,
-              },
-              columnSettings.isVisible('geo') && {
-                title: 'GEO',
-                dataIndex: 'geo',
-                width: 60,
-                render: (v: string) => <Tag>{v}</Tag>,
-              },
               columnSettings.isVisible('type') && {
                 title: 'Тип',
+                key: 'type',
                 dataIndex: 'type',
                 width: 140,
                 ellipsis: true,
               },
               columnSettings.isVisible('method') && {
                 title: 'Метод',
+                key: 'method',
                 dataIndex: 'method',
                 width: 140,
                 ellipsis: true,
               },
               columnSettings.isVisible('min_amount') && {
                 title: 'Мин.',
+                key: 'min_amount',
                 width: 100,
                 render: (_: any, p: CasinoPayment) => fmtAmount(p.min_amount, p.currency),
               },
               columnSettings.isVisible('max_amount') && {
                 title: 'Макс.',
+                key: 'max_amount',
                 width: 100,
                 render: (_: any, p: CasinoPayment) => fmtAmount(p.max_amount, p.currency),
               },
               columnSettings.isVisible('currency') && {
                 title: 'Валюта',
+                key: 'currency',
                 dataIndex: 'currency',
                 width: 80,
                 render: (v: string) => v || '—',
               },
               columnSettings.isVisible('actions') && {
                 title: '',
+                key: 'actions',
                 width: 40,
                 align: 'right',
                 render: (_: any, p: CasinoPayment & { casino_name?: string }) => (
@@ -349,7 +354,7 @@ export default function Payments() {
               <>
                 <Descriptions column={1} bordered size="small">
                   <Descriptions.Item label="Казино">
-                    {selectedPayment.casino_name || '—'}
+                    <Typography.Text strong>{selectedPayment.casino_name || '—'}</Typography.Text>
                   </Descriptions.Item>
                   <Descriptions.Item label="GEO">
                     <Tag>{selectedPayment.geo}</Tag>

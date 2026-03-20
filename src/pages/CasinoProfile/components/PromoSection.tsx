@@ -6,7 +6,6 @@ import {
   Image,
   Modal,
   Space,
-  Table,
   Tag,
   Typography,
 } from 'antd';
@@ -21,6 +20,7 @@ import {
 } from '../../../store/api/casinoPromoApi';
 import ImageUploadArea from './ImageUploadArea';
 import dayjs from 'dayjs';
+import { CasinoProfileTable } from '../../../components/CasinoProfileTable';
 
 interface PromoSectionProps {
   casinoId: number;
@@ -68,12 +68,10 @@ export default function PromoSection({ casinoId, casinoName, promos, isLoading, 
   return (
     <>
       <Card size="small" title={<Space><ThunderboltOutlined /><span>Промо{activeGeo ? ` (${activeGeo})` : ''}</span></Space>}>
-        <Table<CasinoPromo>
+        <CasinoProfileTable<CasinoPromo>
           rowKey="id"
-          size="small"
           loading={isLoading}
           dataSource={(promos ?? []).filter((p) => (activeGeo ? p.geo === activeGeo : true))}
-          pagination={{ pageSize: 20 }}
           scroll={{ x: 1000 }}
           columns={[
             { title: 'GEO', dataIndex: 'geo', width: 60 },
