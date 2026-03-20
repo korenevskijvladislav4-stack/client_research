@@ -273,8 +273,20 @@ export function AppLayout() {
       style={{
         minHeight: '100vh',
         background: token.colorBgLayout,
-        ...(isMobile && isChatPage
-          ? { display: 'flex', flexDirection: 'column' as const }
+        ...(isChatPage
+          ? {
+              height: '100vh',
+              maxHeight: '100vh',
+              overflow: 'hidden',
+              // Только мобилка: вертикальный стек. На десктопе Sider + контент — ряд (row),
+              // иначе Sider первым в column забирает всю высоту и колонка с чатом схлопывается.
+              ...(isMobile
+                ? {
+                    display: 'flex',
+                    flexDirection: 'column' as const,
+                  }
+                : {}),
+            }
           : {}),
       }}
     >
@@ -346,7 +358,7 @@ export function AppLayout() {
                 ? {
                     display: 'flex',
                     flexDirection: 'column',
-                    flex: 1,
+                    flex: '1 1 0%',
                     minHeight: 0,
                     overflow: 'hidden',
                     boxSizing: 'border-box',
@@ -359,7 +371,7 @@ export function AppLayout() {
               style={
                 isChatPage
                   ? {
-                      flex: 1,
+                      flex: '1 1 0%',
                       display: 'flex',
                       flexDirection: 'column',
                       minHeight: 0,
@@ -368,7 +380,21 @@ export function AppLayout() {
                   : undefined
               }
             >
-              <Outlet context={outletContext} />
+              <div
+                style={
+                  isChatPage
+                    ? {
+                        flex: '1 1 0%',
+                        minHeight: 0,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        overflow: 'hidden',
+                      }
+                    : { display: 'contents' as const }
+                }
+              >
+                <Outlet context={outletContext} />
+              </div>
             </div>
           </Content>
         </>
@@ -432,8 +458,9 @@ export function AppLayout() {
                 ? {
                     display: 'flex',
                     flexDirection: 'column',
-                    flex: 1,
-                    minHeight: '100vh',
+                    flex: '1 1 0%',
+                    minWidth: 0,
+                    minHeight: 0,
                     overflow: 'hidden',
                   }
                 : {}),
@@ -445,7 +472,7 @@ export function AppLayout() {
                 minHeight: '100vh',
                 ...(isChatPage
                   ? {
-                      flex: 1,
+                      flex: '1 1 0%',
                       display: 'flex',
                       flexDirection: 'column',
                       minHeight: 0,
@@ -460,7 +487,7 @@ export function AppLayout() {
                 style={
                   isChatPage
                     ? {
-                        flex: 1,
+                        flex: '1 1 0%',
                         display: 'flex',
                         flexDirection: 'column',
                         minHeight: 0,
@@ -557,7 +584,21 @@ export function AppLayout() {
                     {workspaceTopbarActions}
                   </div>
                 )}
-                <Outlet context={outletContext} />
+                <div
+                  style={
+                    isChatPage
+                      ? {
+                          flex: '1 1 0%',
+                          minHeight: 0,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          overflow: 'hidden',
+                        }
+                      : { display: 'contents' as const }
+                  }
+                >
+                  <Outlet context={outletContext} />
+                </div>
               </div>
             </Content>
           </Layout>

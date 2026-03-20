@@ -462,7 +462,7 @@ export default function Chat() {
   return (
     <div
       style={{
-        flex: 1,
+        flex: '1 1 0%',
         minHeight: 0,
         minWidth: 0,
         width: '100%',
@@ -476,7 +476,7 @@ export default function Chat() {
     >
       <div
         style={{
-          flex: 1,
+          flex: '1 1 0%',
           display: 'flex',
           alignItems: 'stretch',
           justifyContent: 'flex-start',
@@ -590,7 +590,7 @@ export default function Chat() {
 
         <div
           style={{
-            flex: 1,
+            flex: '1 1 0%',
             minHeight: 0,
             overflowY: 'auto',
             overflowX: 'hidden',
@@ -675,7 +675,7 @@ export default function Chat() {
       {/* Окно сообщений */}
       <section
         style={{
-          flex: 1,
+          flex: '1 1 0%',
           borderRadius: token.borderRadiusLG,
           border: `1px solid ${token.colorBorderSecondary}`,
           background: token.colorBgContainer,
@@ -691,7 +691,8 @@ export default function Chat() {
         {selectedId == null ? (
           <div
             style={{
-              flex: 1,
+              flex: '1 1 0%',
+              minHeight: 0,
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
@@ -707,7 +708,7 @@ export default function Chat() {
         ) : (
           <div
             style={{
-              flex: 1,
+              flex: '1 1 0%',
               minHeight: 0,
               display: 'flex',
               flexDirection: 'column',
@@ -740,7 +741,7 @@ export default function Chat() {
             {/* Лента сообщений */}
             <div
               style={{
-                flex: 1,
+                flex: '1 1 0%',
                 minHeight: 0,
                 overflowY: 'auto',
                 overflowX: 'hidden',
