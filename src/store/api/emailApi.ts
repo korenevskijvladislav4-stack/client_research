@@ -22,11 +22,14 @@ export interface Email {
   created_at: string;
 }
 
+export type EmailTopicAiTarget = 'none' | 'bonus' | 'promo';
+
 export interface EmailTopic {
   id: number;
   name: string;
   description?: string | null;
   sort_order: number;
+  ai_target?: EmailTopicAiTarget;
   created_at?: string;
   updated_at?: string;
 }
@@ -145,7 +148,10 @@ export const emailApi = baseApi.injectEndpoints({
       query: () => '/emails/topics',
       providesTags: ['EmailTopics'],
     }),
-    createEmailTopic: builder.mutation<EmailTopic, { name: string; description?: string }>({
+    createEmailTopic: builder.mutation<
+      EmailTopic,
+      { name: string; description?: string; ai_target?: EmailTopicAiTarget }
+    >({
       query: (body) => ({
         url: '/emails/topics',
         method: 'POST',
@@ -155,7 +161,13 @@ export const emailApi = baseApi.injectEndpoints({
     }),
     updateEmailTopic: builder.mutation<
       EmailTopic,
-      { id: number; name?: string; description?: string; sort_order?: number }
+      {
+        id: number;
+        name?: string;
+        description?: string;
+        sort_order?: number;
+        ai_target?: EmailTopicAiTarget;
+      }
     >({
       query: ({ id, ...body }) => ({
         url: `/emails/topics/${id}`,

@@ -75,6 +75,27 @@ export const referenceApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ['Providers'],
     }),
+
+    deleteBonusName: builder.mutation<void, number>({
+      query: (id) => ({ url: `/ref/bonus-names/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['BonusNames'],
+    }),
+    deletePaymentType: builder.mutation<void, number>({
+      query: (id) => ({ url: `/ref/payment-types/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['PaymentTypes'],
+    }),
+    deletePaymentMethod: builder.mutation<void, number>({
+      query: (id) => ({ url: `/ref/payment-methods/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['PaymentMethods'],
+    }),
+    deletePromoType: builder.mutation<void, number>({
+      query: (id) => ({ url: `/ref/promo-types/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['PromoTypes'],
+    }),
+    deleteProvider: builder.mutation<void, number>({
+      query: (id) => ({ url: `/ref/providers/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['Providers'],
+    }),
   }),
 });
 
@@ -89,4 +110,9 @@ export const {
   useCreatePromoTypeMutation,
   useGetProvidersQuery,
   useCreateProviderMutation,
+  useDeleteBonusNameMutation,
+  useDeletePaymentTypeMutation,
+  useDeletePaymentMethodMutation,
+  useDeletePromoTypeMutation,
+  useDeleteProviderMutation,
 } = referenceApi;

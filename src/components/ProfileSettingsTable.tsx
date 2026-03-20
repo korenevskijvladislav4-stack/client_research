@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import { Button, message, theme } from 'antd';
+import { Button, message, theme, Typography } from 'antd';
+import { CheckOutlined } from '@ant-design/icons';
 import { CasinoProfileTable } from './CasinoProfileTable';
 import {
   useGetSettingsFieldsQuery,
@@ -67,7 +68,11 @@ export function ProfileSettingsTable({ casinoId, activeGeo, readOnly }: ProfileS
     const value = settingsMap.get(key) ?? false;
 
     if (readOnly) {
-      return value ? 'Да' : 'Нет';
+      return value ? (
+        <CheckOutlined style={{ color: token.colorSuccess, fontSize: 16 }} aria-label="Да" />
+      ) : (
+        <Typography.Text type="secondary">—</Typography.Text>
+      );
     }
 
     return (

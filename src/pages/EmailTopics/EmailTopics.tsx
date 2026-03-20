@@ -4,6 +4,7 @@ import {
   Card,
   Form,
   Input,
+  Select,
   Space,
   message,
 } from 'antd';
@@ -14,7 +15,14 @@ import {
   useUpdateEmailTopicMutation,
   useDeleteEmailTopicMutation,
   type EmailTopic,
+  type EmailTopicAiTarget,
 } from '../../store/api/emailApi';
+
+const AI_TARGET_OPTIONS: { value: EmailTopicAiTarget; label: string }[] = [
+  { value: 'none', label: 'Нет — только классификация' },
+  { value: 'bonus', label: 'Бонусы — ИИ-предложение + скрин письма' },
+  { value: 'promo', label: 'Промо — ИИ-предложение + скрин письма' },
+];
 import { SettingsEntityDrawer } from '../../components/settings/SettingsEntityDrawer';
 import { PageHeaderCard } from '../../components/PageHeaderCard';
 import { CasinoProfileTable } from '../../components/CasinoProfileTable';
@@ -36,21 +44,34 @@ export default function EmailTopics() {
 
   const handleEdit = (topic: EmailTopic) => {
     setEditing(topic);
-    form.setFieldsValue({ name: topic.name, description: topic.description ?? '' });
+    form.setFieldsValue({
+      name: topic.name,
+      description: topic.description ?? '',
+      ai_target: topic.ai_target ?? 'none',
+    });
     setDrawerOpen(true);
   };
 
-  const handleFinish = async (values: { name: string; description?: string }) => {
+  const handleFinish = async (values: {
+    name: string;
+    description?: string;
+    ai_target?: EmailTopicAiTarget;
+  }) => {
     try {
       if (editing) {
         await updateTopic({
           id: editing.id,
           name: values.name,
           description: values.description || undefined,
+          ai_target: values.ai_target ?? 'none',
         }).unwrap();
         message.success('Тема обновлена');
       } else {
-        await createTopic({ name: values.name, description: values.description }).unwrap();
+        await createTopic({
+          name: values.name,
+          description: values.description || undefined,
+          ai_target: values.ai_target ?? 'none',
+        }).unwrap();
         message.success('Тема добавлена');
       }
       setDrawerOpen(false);
@@ -91,7 +112,7 @@ export default function EmailTopics() {
             loading={isLoading}
             dataSource={topics}
             pagination={false}
-            scroll={{ x: 560 }}
+            scroll={{ x: 880 }}
             locale={{ emptyText: 'Нет тем. Добавьте темы, чтобы ИИ мог классифицировать письма.' }}
             columns={[
               { title: 'Название', dataIndex: 'name', key: 'name', ellipsis: true },
@@ -101,6 +122,14 @@ export default function EmailTopics() {
                 key: 'description',
                 ellipsis: true,
                 render: (v: string) => v || '—',
+              },
+              {
+                title: 'ИИ после темы',
+                dataIndex: 'ai_target',
+                key: 'ai_target',
+                width: 200,
+                render: (v: EmailTopicAiTarget | undefined) =>
+                  AI_TARGET_OPTIONS.find((o) => o.value === (v ?? 'none'))?.label ?? '—',
               },
               {
                 title: 'Действия',
@@ -157,6 +186,21 @@ export default function EmailTopics() {
           <Card size="small" title="Описание для модели" styles={{ header: { fontWeight: 600 } }}>
             <Form.Item name="description" label="Какие письма относятся к теме">
               <Input.TextArea rows={4} placeholder="Опишите для ИИ: формулировки, типичные отправители, ключевые слова…" />
+            </Form.Item>
+          </Card>
+          <Card
+            size="small"
+            title="Действие ИИ после классификации"
+            style={{ marginTop: 16 }}
+            styles={{ header: { fontWeight: 600 } }}
+          >
+            <Form.Item
+              name="ai_target"
+              label="Категория"
+              initialValue="none"
+              tooltip="Если выбрано «Бонусы» или «Промо», после присвоения темы письму делается скриншот письма, ИИ заполняет поля и создаётся запись на странице «Предложения» для проверки админом."
+            >
+              <Select options={AI_TARGET_OPTIONS} optionFilterProp="label" />
             </Form.Item>
           </Card>
         </Form>

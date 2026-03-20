@@ -1,9 +1,23 @@
-import { useState, useRef, useEffect, type MouseEvent } from 'react';
 import {
+  useState,
+  useRef,
+  useEffect,
+  useMemo,
+  type MouseEvent,
+  type ComponentProps,
+} from 'react';
+import {
+  Alert,
   Button,
+  Card,
+  Collapse,
   Empty,
   Input,
+  Select,
   Skeleton,
+  Space,
+  Spin,
+  Tag,
   Typography,
   theme,
   message as antMessage,
@@ -17,38 +31,238 @@ import {
   SendOutlined,
   UserOutlined,
   RobotOutlined,
+  BulbOutlined,
+  ThunderboltOutlined,
+  ImportOutlined,
+  ExportOutlined,
 } from '@ant-design/icons';
 import {
+  useGetChatConfigQuery,
   useGetChatSessionsQuery,
   useCreateChatSessionMutation,
   useGetChatSessionQuery,
   useDeleteChatSessionMutation,
   type ChatSession,
   type ChatMessage,
+  type ChatModelOption,
 } from '../../store/api/chatApi';
 import dayjs from 'dayjs';
+import { useOutletContext } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../hooks/redux';
 import { chatApi, type ChatSessionWithMessages } from '../../store/api/chatApi';
 import { getApiBaseUrl } from '../../config/api';
+import { PageHeaderCard } from '../../components/PageHeaderCard';
+import { readChatNdjsonStream } from './chatStream';
 
 const SIDEBAR_WIDTH = 280;
+const CHAT_MODEL_STORAGE_KEY = 'crm-chat-model-id';
+
+function formatUsdPerMillion(n: number | null | undefined): string {
+  if (n == null || !Number.isFinite(n)) return '—';
+  if (n === 0) return '$0';
+  const s = n < 0.01 ? n.toFixed(6) : n.toFixed(4);
+  return `$${s.replace(/\.?0+$/, '') || '0'}`;
+}
+
+type ModelSelectOption = {
+  value: string;
+  label: string;
+  searchText: string;
+  model: ChatModelOption;
+};
+
+function buildModelSearchText(m: ChatModelOption): string {
+  return [
+    m.label,
+    m.id,
+    formatUsdPerMillion(m.input_price_per_million),
+    formatUsdPerMillion(m.output_price_per_million),
+  ]
+    .filter(Boolean)
+    .join(' ');
+}
+
+function modelHasPrices(m: ChatModelOption): boolean {
+  return (
+    m.input_price_per_million != null || m.output_price_per_million != null
+  );
+}
+
+/** Строка в выпадающем списке моделей */
+function ChatModelDropdownRow({ model }: { model: ChatModelOption }) {
+  const { token } = theme.useToken();
+  const hasPrice = modelHasPrices(model);
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        gap: 12,
+        alignItems: 'flex-start',
+        padding: '2px 0',
+        maxWidth: 440,
+      }}
+    >
+      <div
+        style={{
+          width: 36,
+          height: 36,
+          borderRadius: 10,
+          flexShrink: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: `linear-gradient(145deg, ${token.colorPrimaryBg}, ${token.colorInfoBg})`,
+          border: `1px solid ${token.colorBorderSecondary}`,
+          color: token.colorPrimary,
+          fontSize: 16,
+        }}
+      >
+        <RobotOutlined />
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <Typography.Text strong style={{ fontSize: 14, display: 'block' }} ellipsis>
+          {model.label}
+        </Typography.Text>
+        <Typography.Text
+          type="secondary"
+          ellipsis
+          style={{
+            fontSize: 12,
+            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
+            display: 'block',
+            marginTop: 2,
+          }}
+        >
+          {model.id}
+        </Typography.Text>
+        {hasPrice ? (
+          <Space size={[6, 6]} wrap style={{ marginTop: 8 }}>
+            <Tag
+              icon={<ImportOutlined />}
+              color="processing"
+              style={{ margin: 0, borderRadius: 6, fontSize: 11, lineHeight: '18px' }}
+            >
+              Вход · {formatUsdPerMillion(model.input_price_per_million)}/1M
+            </Tag>
+            <Tag
+              icon={<ExportOutlined />}
+              color="purple"
+              style={{ margin: 0, borderRadius: 6, fontSize: 11, lineHeight: '18px' }}
+            >
+              Выход · {formatUsdPerMillion(model.output_price_per_million)}/1M
+            </Tag>
+          </Space>
+        ) : (
+          <Typography.Text type="secondary" style={{ fontSize: 11, marginTop: 6, display: 'block' }}>
+            Стоимость не указана
+          </Typography.Text>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Компактная подпись выбранной модели в поле Select */
+function ChatModelSelectedLabel({ model }: { model: ChatModelOption }) {
+  const { token } = theme.useToken();
+  const hasPrice = modelHasPrices(model);
+
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 10,
+        minWidth: 0,
+        maxWidth: '100%',
+      }}
+    >
+      <span
+        style={{
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+          fontWeight: 600,
+        }}
+      >
+        {model.label}
+      </span>
+      {hasPrice ? (
+        <span
+          style={{
+            flexShrink: 0,
+            fontSize: 11,
+            color: token.colorTextSecondary,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+          }}
+        >
+          <span
+            style={{
+              padding: '1px 6px',
+              borderRadius: 4,
+              background: token.colorInfoBg,
+              color: token.colorInfo,
+              fontWeight: 500,
+            }}
+          >
+            вх {formatUsdPerMillion(model.input_price_per_million)}
+          </span>
+          <span style={{ color: token.colorTextQuaternary }}>/</span>
+          <span
+            style={{
+              padding: '1px 6px',
+              borderRadius: 4,
+              background: token.colorWarningBg,
+              color: token.colorWarning,
+              fontWeight: 500,
+            }}
+          >
+            вых {formatUsdPerMillion(model.output_price_per_million)}
+          </span>
+          <Typography.Text type="secondary" style={{ fontSize: 10 }}>
+            /1M
+          </Typography.Text>
+        </span>
+      ) : null}
+    </span>
+  );
+}
 
 function chatStreamUrl(sessionId: number): string {
   const base = getApiBaseUrl().replace(/\/+$/, '');
   return `${base}/chat/sessions/${sessionId}/messages/stream`;
 }
 
+type AppLayoutOutletContext = {
+  workspaceBannerExpanded?: boolean;
+  layoutVariant?: 'mobile' | 'desktop';
+};
+
 export default function Chat() {
   const { token } = theme.useToken();
   const dispatch = useAppDispatch();
   const authToken = useAppSelector((s) => s.auth.token);
+  const layoutCtx = useOutletContext<AppLayoutOutletContext>();
+  const workspaceBannerExpanded = layoutCtx?.workspaceBannerExpanded ?? true;
+  /** Смещение от верха viewport до области страницы (плашка CRM / моб. хедер + padding) */
+  const chatPageTopReservePx =
+    layoutCtx?.layoutVariant === 'mobile'
+      ? 92
+      : 52 + (workspaceBannerExpanded ? 96 : 50) + (workspaceBannerExpanded ? 20 : 12);
 
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [inputValue, setInputValue] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
-  const [streamedText, setStreamedText] = useState('');
+  const [streamedContent, setStreamedContent] = useState('');
+  const [streamedReasoning, setStreamedReasoning] = useState('');
+  const [streamModelId, setStreamModelId] = useState<string | null>(null);
+  const [selectedModelId, setSelectedModelId] = useState<string>('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const { data: chatConfig, isLoading: chatConfigLoading } = useGetChatConfigQuery();
   const { data: sessions = [], isLoading: sessionsLoading } = useGetChatSessionsQuery();
   const [createSession, { isLoading: creating }] = useCreateChatSessionMutation();
   const {
@@ -63,8 +277,19 @@ export default function Chat() {
   const messages = currentSession?.chat_messages ?? [];
 
   useEffect(() => {
+    if (!chatConfig?.models?.length) return;
+    const saved = localStorage.getItem(CHAT_MODEL_STORAGE_KEY);
+    const valid = saved && chatConfig.models.some((m) => m.id === saved);
+    if (valid) {
+      setSelectedModelId(saved);
+    } else {
+      setSelectedModelId(chatConfig.defaultModel);
+    }
+  }, [chatConfig]);
+
+  useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages.length, streamedText]);
+  }, [messages.length, streamedContent, streamedReasoning]);
 
   const handleNewChat = async () => {
     try {
@@ -94,8 +319,14 @@ export default function Chat() {
   const handleSend = async () => {
     const content = inputValue.trim();
     if (!content || selectedId == null || isStreaming) return;
+    if (!selectedModelId) {
+      antMessage.warning('Выберите модель в шапке страницы');
+      return;
+    }
     setInputValue('');
-    setStreamedText('');
+    setStreamedContent('');
+    setStreamedReasoning('');
+    setStreamModelId(null);
     setIsStreaming(true);
 
     // Оптимистично добавляем пользовательское сообщение в локальный кэш чата,
@@ -127,26 +358,25 @@ export default function Chat() {
           ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
         },
         credentials: 'include',
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({ content, model: selectedModelId || undefined }),
       });
 
       if (!response.ok || !response.body) {
         throw new Error('Streaming request failed');
       }
 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder('utf-8');
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        const chunk = decoder.decode(value, { stream: true });
-        if (chunk) {
-          setStreamedText((prev) => prev + chunk);
+      await readChatNdjsonStream(response.body, (evt) => {
+        if (evt.type === 'meta') {
+          setStreamModelId(evt.model);
+        } else if (evt.type === 'reasoning_delta') {
+          setStreamedReasoning((prev) => prev + evt.text);
+        } else if (evt.type === 'content_delta') {
+          setStreamedContent((prev) => prev + evt.text);
+        } else if (evt.type === 'error') {
+          antMessage.error(evt.message);
         }
-      }
+      });
 
-      // После окончания стрима синхронизируемся с сервером.
       if (selectedId != null) {
         await refetchSession();
       }
@@ -156,31 +386,211 @@ export default function Chat() {
       setInputValue(content);
     } finally {
       setIsStreaming(false);
-      setStreamedText('');
+      setStreamedContent('');
+      setStreamedReasoning('');
+      setStreamModelId(null);
     }
   };
 
   const titleDisplay = (s: ChatSession) =>
     s.title || `Чат ${s.created_at ? dayjs(s.created_at).format('DD.MM.YY HH:mm') : s.id}`;
 
-  const canSend = !!inputValue.trim() && selectedId != null && !isStreaming;
+  const canSend =
+    !!inputValue.trim() &&
+    selectedId != null &&
+    !isStreaming &&
+    !!selectedModelId &&
+    !chatConfigLoading;
+
+  const modelOptions: ModelSelectOption[] = useMemo(
+    () =>
+      (chatConfig?.models ?? []).map((m) => ({
+        value: m.id,
+        label: m.label,
+        searchText: buildModelSearchText(m),
+        model: m,
+      })),
+    [chatConfig?.models],
+  );
+
+  const modelById = useMemo(() => {
+    const map = new Map<string, ChatModelOption>();
+    for (const m of chatConfig?.models ?? []) map.set(m.id, m);
+    return map;
+  }, [chatConfig?.models]);
+
+  const configSource = chatConfig?.source ?? 'env';
+
+  const mdComponents = {
+    h1: ({ ...props }: ComponentProps<'h1'>) => (
+      <Typography.Title level={3} style={{ marginTop: 0, marginBottom: 8 }} {...props} />
+    ),
+    h2: ({ ...props }: ComponentProps<'h2'>) => (
+      <Typography.Title level={4} style={{ marginTop: 16, marginBottom: 6 }} {...props} />
+    ),
+    h3: ({ ...props }: ComponentProps<'h3'>) => (
+      <Typography.Title level={5} style={{ marginTop: 12, marginBottom: 4 }} {...props} />
+    ),
+    p: ({ ...props }: ComponentProps<'p'>) => (
+      <Typography.Paragraph style={{ marginBottom: 8 }} {...props} />
+    ),
+    ul: ({ ...props }: ComponentProps<'ul'>) => (
+      <ul style={{ paddingLeft: 20, marginBottom: 8, marginTop: 0 }} {...props} />
+    ),
+    ol: ({ ...props }: ComponentProps<'ol'>) => (
+      <ol style={{ paddingLeft: 20, marginBottom: 8, marginTop: 0 }} {...props} />
+    ),
+    li: ({ ...props }: ComponentProps<'li'>) => <li {...props} />,
+    strong: ({ ...props }: ComponentProps<'strong'>) => <Typography.Text strong {...props} />,
+  };
+
+  const reasoningPanel = (text: string, key: string, defaultOpen = false) => (
+    <Collapse
+      bordered={false}
+      style={{ marginBottom: 8, background: token.colorFillAlter, maxWidth: '100%' }}
+      defaultActiveKey={defaultOpen ? [`reasoning-${key}`] : undefined}
+      items={[
+        {
+          key: `reasoning-${key}`,
+          label: (
+            <Space size={6}>
+              <BulbOutlined style={{ color: token.colorWarning }} />
+              <span>Размышление модели</span>
+            </Space>
+          ),
+          children: (
+            <Typography.Paragraph
+              style={{
+                margin: 0,
+                fontSize: 12,
+                lineHeight: 1.55,
+                whiteSpace: 'pre-wrap',
+                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                color: token.colorTextSecondary,
+              }}
+            >
+              {text}
+            </Typography.Paragraph>
+          ),
+        },
+      ]}
+    />
+  );
 
   return (
     <div
       style={{
-        height: '100vh',
-        padding: 16,
+        height: `calc(100dvh - ${chatPageTopReservePx}px)`,
+        maxHeight: `calc(100dvh - ${chatPageTopReservePx}px)`,
+        minHeight: 320,
+        padding: '0 4px 16px',
         boxSizing: 'border-box',
         display: 'flex',
-        alignItems: 'stretch',
-        justifyContent: 'flex-start',
-        gap: 20,
+        flexDirection: 'column',
+        gap: 16,
+        overflow: 'hidden',
         background: `
-          radial-gradient(circle at 0 0, ${token.colorPrimary}22, transparent 55%),
-          radial-gradient(circle at 100% 100%, ${token.colorSuccess}22, transparent 55%)
+          radial-gradient(circle at 0 0, ${token.colorPrimary}18, transparent 50%),
+          radial-gradient(circle at 100% 80%, ${token.colorInfo}12, transparent 45%)
         `,
       }}
     >
+      <div style={{ flexShrink: 0 }}>
+      <PageHeaderCard
+        title={
+          <Space size={8}>
+            <ThunderboltOutlined />
+            <span>Ассистент CRM</span>
+          </Space>
+        }
+        description="Ответы только по данным из вашей базы: казино, бонусы, платежи, промо, письма, провайдеры. Выберите модель перед отправкой."
+        actions={
+          <Space wrap>
+            <Select<string, ModelSelectOption>
+              prefix={<RobotOutlined style={{ color: token.colorTextSecondary }} />}
+              showSearch={{
+                filterOption: (input, option) => {
+                  const hay = (option?.searchText ?? '').toLowerCase();
+                  return hay.includes(input.trim().toLowerCase());
+                },
+              }}
+              loading={chatConfigLoading}
+              placeholder="Выберите модель"
+              style={{ minWidth: 380, maxWidth: 'min(100%, 560px)' }}
+              popupMatchSelectWidth={false}
+              listItemHeight={88}
+              virtual
+              popupRender={(menu) => (
+                <div>
+                  <div
+                    style={{
+                      padding: '8px 12px 6px',
+                      borderBottom: `1px solid ${token.colorBorderSecondary}`,
+                      fontSize: 12,
+                      color: token.colorTextSecondary,
+                    }}
+                  >
+                    Модель · идентификатор · стоимость за 1M токенов (USD)
+                  </div>
+                  {menu}
+                </div>
+              )}
+              styles={{
+                popup: {
+                  root: { minWidth: 440, padding: 4 },
+                  list: { padding: '4px 0' },
+                  listItem: { padding: '6px 10px', borderRadius: 8 },
+                },
+              }}
+              value={selectedModelId || undefined}
+              options={modelOptions}
+              optionRender={(oriOption) => (
+                <ChatModelDropdownRow model={oriOption.data.model} />
+              )}
+              labelRender={({ value }) => {
+                const m = modelById.get(String(value));
+                if (!m) return <span>{String(value)}</span>;
+                return <ChatModelSelectedLabel model={m} />;
+              }}
+              onChange={(v) => {
+                setSelectedModelId(v);
+                localStorage.setItem(CHAT_MODEL_STORAGE_KEY, v);
+              }}
+              disabled={chatConfigLoading || modelOptions.length === 0}
+            />
+          </Space>
+        }
+      />
+      </div>
+
+      {configSource === 'env' && (
+        <div style={{ flexShrink: 0 }}>
+          <Alert
+            type="info"
+            showIcon
+            style={{ margin: '0 4px' }}
+            message="Список моделей из .env"
+            description={
+              <>
+                Чтобы задавать модели и цены в интерфейсе, добавьте записи в разделе{' '}
+                <Typography.Text strong>Настройки → Модели чата</Typography.Text> (нужна роль администратора).
+              </>
+            }
+          />
+        </div>
+      )}
+
+      <div
+        style={{
+          flex: 1,
+          display: 'flex',
+          alignItems: 'stretch',
+          justifyContent: 'flex-start',
+          gap: 16,
+          minHeight: 0,
+          overflow: 'hidden',
+        }}
+      >
       {/* Сайдбар с чатами */}
       <aside
         style={{
@@ -188,6 +598,8 @@ export default function Chat() {
           flexShrink: 0,
           display: 'flex',
           flexDirection: 'column',
+          minHeight: 0,
+          maxHeight: '100%',
           borderRadius: token.borderRadiusLG,
           border: `1px solid ${token.colorBorderSecondary}`,
           background: token.colorBgContainer,
@@ -309,6 +721,8 @@ export default function Chat() {
           display: 'flex',
           flexDirection: 'column',
           minWidth: 0,
+          minHeight: 0,
+          overflow: 'hidden',
           padding: 20,
           boxShadow: token.boxShadowSecondary,
         }}
@@ -405,12 +819,22 @@ export default function Chat() {
                             gap: 4,
                           }}
                         >
-                          <Typography.Text type="secondary" style={{ fontSize: 11 }}>
-                            {isUser ? 'Вы' : 'ИИ'} ·{' '}
-                            {m.created_at
-                              ? dayjs(m.created_at).format('DD.MM.YYYY HH:mm')
-                              : ''}
-                          </Typography.Text>
+                          <Space size={6} wrap style={{ fontSize: 11 }}>
+                            <Typography.Text type="secondary">
+                              {isUser ? 'Вы' : 'ИИ'} ·{' '}
+                              {m.created_at
+                                ? dayjs(m.created_at).format('DD.MM.YYYY HH:mm')
+                                : ''}
+                            </Typography.Text>
+                            {!isUser && m.model_id ? (
+                              <Tag color="blue" style={{ margin: 0, fontSize: 10, lineHeight: '18px' }}>
+                                {modelOptions.find((o) => o.value === m.model_id)?.label ?? m.model_id}
+                              </Tag>
+                            ) : null}
+                          </Space>
+                          {!isUser && m.reasoning?.trim()
+                            ? reasoningPanel(m.reasoning.trim(), `msg-${m.id}`, false)
+                            : null}
                           <div
                             style={{
                               padding: '10px 14px',
@@ -418,7 +842,8 @@ export default function Chat() {
                               background: isUser ? token.colorPrimary : token.colorBgLayout,
                               color: isUser ? token.colorTextLightSolid : token.colorText,
                               wordBreak: 'break-word',
-                              boxShadow: token.boxShadow,
+                              boxShadow: token.boxShadowTertiary,
+                              border: isUser ? 'none' : `1px solid ${token.colorBorderSecondary}`,
                               fontSize: 13,
                               lineHeight: 1.6,
                             }}
@@ -426,62 +851,7 @@ export default function Chat() {
                             {isUser ? (
                               m.content
                             ) : (
-                              <ReactMarkdown
-                                remarkPlugins={[remarkGfm]}
-                                components={{
-                                  h1: ({ node, ...props }) => (
-                                    <Typography.Title
-                                      level={3}
-                                      style={{ marginTop: 0, marginBottom: 8 }}
-                                      {...props}
-                                    />
-                                  ),
-                                  h2: ({ node, ...props }) => (
-                                    <Typography.Title
-                                      level={4}
-                                      style={{ marginTop: 16, marginBottom: 6 }}
-                                      {...props}
-                                    />
-                                  ),
-                                  h3: ({ node, ...props }) => (
-                                    <Typography.Title
-                                      level={5}
-                                      style={{ marginTop: 12, marginBottom: 4 }}
-                                      {...props}
-                                    />
-                                  ),
-                                  p: ({ node, ...props }) => (
-                                    <Typography.Paragraph
-                                      style={{ marginBottom: 8 }}
-                                      {...props}
-                                    />
-                                  ),
-                                  ul: ({ node, ...props }) => (
-                                    <ul
-                                      style={{
-                                        paddingLeft: 20,
-                                        marginBottom: 8,
-                                        marginTop: 0,
-                                      }}
-                                      {...props}
-                                    />
-                                  ),
-                                  ol: ({ node, ...props }) => (
-                                    <ol
-                                      style={{
-                                        paddingLeft: 20,
-                                        marginBottom: 8,
-                                        marginTop: 0,
-                                      }}
-                                      {...props}
-                                    />
-                                  ),
-                                  li: ({ node, ...props }) => <li {...props} />,
-                                  strong: ({ node, ...props }) => (
-                                    <Typography.Text strong {...props} />
-                                  ),
-                                }}
-                              >
+                              <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>
                                 {m.content}
                               </ReactMarkdown>
                             )}
@@ -491,7 +861,7 @@ export default function Chat() {
                     );
                   })}
 
-                  {isStreaming && streamedText && (
+                  {isStreaming && (
                     <div
                       style={{
                         display: 'flex',
@@ -505,7 +875,7 @@ export default function Chat() {
                           width: 34,
                           height: 34,
                           borderRadius: '50%',
-                          background: token.colorSuccess,
+                          background: `linear-gradient(135deg, ${token.colorSuccess}, ${token.colorPrimary})`,
                           color: token.colorTextLightSolid,
                           display: 'flex',
                           alignItems: 'center',
@@ -518,63 +888,57 @@ export default function Chat() {
                       </div>
                       <div
                         style={{
-                          maxWidth: '75%',
+                          maxWidth: '82%',
                           display: 'flex',
                           flexDirection: 'column',
                           alignItems: 'flex-start',
-                          gap: 4,
+                          gap: 6,
                         }}
                       >
-                        <Typography.Text type="secondary" style={{ fontSize: 11 }}>
-                          ИИ · сейчас отвечает...
-                        </Typography.Text>
-                        <div
-                          style={{
-                            padding: '10px 14px',
-                            borderRadius: 16,
-                            background: token.colorBgLayout,
-                            color: token.colorText,
-                            wordBreak: 'break-word',
-                            boxShadow: token.boxShadow,
-                            fontSize: 13,
-                            lineHeight: 1.6,
-                          }}
-                        >
-                          <ReactMarkdown
-                            remarkPlugins={[remarkGfm]}
-                            components={{
-                              p: ({ node, ...props }) => (
-                                <Typography.Paragraph style={{ marginBottom: 8 }} {...props} />
-                              ),
-                              ul: ({ node, ...props }) => (
-                                <ul
-                                  style={{
-                                    paddingLeft: 20,
-                                    marginBottom: 8,
-                                    marginTop: 0,
-                                  }}
-                                  {...props}
-                                />
-                              ),
-                              ol: ({ node, ...props }) => (
-                                <ol
-                                  style={{
-                                    paddingLeft: 20,
-                                    marginBottom: 8,
-                                    marginTop: 0,
-                                  }}
-                                  {...props}
-                                />
-                              ),
-                              li: ({ node, ...props }) => <li {...props} />,
-                              strong: ({ node, ...props }) => (
-                                <Typography.Text strong {...props} />
-                              ),
+                        <Space size={6} wrap align="center">
+                          <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+                            ИИ · формирует ответ
+                          </Typography.Text>
+                          {streamModelId ? (
+                            <Tag color="processing" style={{ margin: 0, fontSize: 10 }}>
+                              {modelOptions.find((o) => o.value === streamModelId)?.label ??
+                                streamModelId}
+                            </Tag>
+                          ) : null}
+                        </Space>
+                        {streamedReasoning.trim()
+                          ? reasoningPanel(streamedReasoning, 'stream-live', true)
+                          : null}
+                        {!streamedContent && !streamedReasoning ? (
+                          <Card size="small" styles={{ body: { padding: '16px 20px' } }}>
+                            <Space align="center">
+                              <Spin size="small" />
+                              <Typography.Text type="secondary">
+                                Собираю контекст из CRM и запрашиваю модель…
+                              </Typography.Text>
+                            </Space>
+                          </Card>
+                        ) : null}
+                        {streamedContent ? (
+                          <div
+                            style={{
+                              padding: '10px 14px',
+                              borderRadius: 16,
+                              background: token.colorBgLayout,
+                              color: token.colorText,
+                              wordBreak: 'break-word',
+                              boxShadow: token.boxShadowTertiary,
+                              border: `1px solid ${token.colorBorderSecondary}`,
+                              fontSize: 13,
+                              lineHeight: 1.6,
+                              width: '100%',
                             }}
                           >
-                            {streamedText}
-                          </ReactMarkdown>
-                        </div>
+                            <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>
+                              {streamedContent}
+                            </ReactMarkdown>
+                          </div>
+                        ) : null}
                       </div>
                     </div>
                   )}
@@ -631,6 +995,7 @@ export default function Chat() {
           </>
         )}
       </section>
+      </div>
     </div>
   );
 }

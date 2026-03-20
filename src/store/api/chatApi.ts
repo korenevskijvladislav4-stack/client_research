@@ -12,6 +12,24 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   created_at: string | null;
+  reasoning?: string | null;
+  model_id?: string | null;
+}
+
+export interface ChatModelOption {
+  id: string;
+  label: string;
+  /** USD за 1M токенов на вход (prompt) */
+  input_price_per_million?: number | null;
+  /** USD за 1M токенов на выход (completion) */
+  output_price_per_million?: number | null;
+}
+
+export interface ChatClientConfig {
+  defaultModel: string;
+  models: ChatModelOption[];
+  /** database — из таблицы настроек; env — из CHAT_MODEL_OPTIONS / OPENAI_MODEL */
+  source: 'database' | 'env';
 }
 
 export interface ChatSessionWithMessages extends ChatSession {
@@ -25,6 +43,10 @@ export interface SendMessageResult {
 
 export const chatApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
+    getChatConfig: builder.query<ChatClientConfig, void>({
+      query: () => '/chat/config',
+      providesTags: ['Chat'],
+    }),
     getChatSessions: builder.query<ChatSession[], void>({
       query: () => '/chat/sessions',
       providesTags: ['Chat'],
@@ -60,6 +82,7 @@ export const chatApi = baseApi.injectEndpoints({
 });
 
 export const {
+  useGetChatConfigQuery,
   useGetChatSessionsQuery,
   useCreateChatSessionMutation,
   useGetChatSessionQuery,

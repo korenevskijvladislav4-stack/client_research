@@ -19,6 +19,8 @@ import './api/slotSelectorApi';
 import './api/tagApi';
 import './api/userApi';
 import './api/chatApi';
+import './api/chatModelsApi';
+import './api/aiEmailProposalsApi';
 
 export const store = configureStore({
   reducer: {

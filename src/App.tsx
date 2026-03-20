@@ -23,8 +23,11 @@ const EmailAnalytics = lazy(() => import('./pages/EmailAnalytics/EmailAnalytics'
 const ProviderAnalytics = lazy(() => import('./pages/ProviderAnalytics/ProviderAnalytics'));
 const EmailTopics = lazy(() => import('./pages/EmailTopics/EmailTopics'));
 const Users = lazy(() => import('./pages/Users/Users'));
+const Directories = lazy(() => import('./pages/Directories/Directories'));
 const ScreenshotsGallery = lazy(() => import('./pages/ScreenshotsGallery/ScreenshotsGallery'));
 const Chat = lazy(() => import('./pages/Chat/Chat'));
+const ChatModelsSettings = lazy(() => import('./pages/ChatModels/ChatModelsSettings'));
+const AiProposals = lazy(() => import('./pages/AiProposals/AiProposals'));
 
 const PageLoader = () => (
   <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
@@ -64,8 +67,11 @@ function App() {
 
           <Route path="email-topics" element={<EmailTopics />} />
           <Route path="users" element={<Users />} />
+          <Route path="directories" element={<Directories />} />
           <Route path="screenshots" element={<ScreenshotsGallery />} />
           <Route path="chat" element={<Chat />} />
+          <Route path="chat-models" element={<ChatModelsSettings />} />
+          <Route path="ai-proposals" element={<AiProposals />} />
         </Route>
       </Routes>
     </Suspense>

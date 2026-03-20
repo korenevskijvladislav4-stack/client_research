@@ -40,7 +40,7 @@ const baseQuery = async (
 
 export const baseApi = createApi({
   baseQuery,
-  tagTypes: ['Casino', 'Email', 'EmailTopics', 'Profile', 'Bonus', 'CasinoComment', 'BonusNames', 'PaymentTypes', 'PaymentMethods', 'PromoTypes', 'Providers', 'ProfileField', 'ProfileContext', 'ProfileSetting', 'Comment', 'CasinoAccount', 'AccountTransaction', 'User', 'SlotSelector', 'SlotScreenshot', 'ScreenshotGallery', 'Geo', 'CasinoPayment', 'Slot', 'ImapAccount', 'Tag', 'CasinoTag', 'CasinoHistory', 'Promo', 'Chat'],
+  tagTypes: ['Casino', 'Email', 'EmailTopics', 'Profile', 'Bonus', 'CasinoComment', 'BonusNames', 'PaymentTypes', 'PaymentMethods', 'PromoTypes', 'Providers', 'ProfileField', 'ProfileContext', 'ProfileSetting', 'Comment', 'CasinoAccount', 'AccountTransaction', 'User', 'SlotSelector', 'SlotScreenshot', 'ScreenshotGallery', 'Geo', 'CasinoPayment', 'Slot', 'ImapAccount', 'Tag', 'CasinoTag', 'CasinoHistory', 'Promo', 'Chat', 'ChatAiModels', 'AiEmailProposals'],
   endpoints: () => ({}),
 });
 

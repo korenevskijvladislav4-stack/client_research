@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Badge,
   Button,
   Card,
   Descriptions,
   Drawer,
+  Dropdown,
   Image,
   List,
   Select,
@@ -15,7 +17,15 @@ import {
   message,
   theme,
 } from 'antd';
-import { CameraOutlined, RobotOutlined, EyeOutlined, LoadingOutlined, MailOutlined } from '@ant-design/icons';
+import {
+  BulbOutlined,
+  CameraOutlined,
+  DownOutlined,
+  EyeOutlined,
+  LoadingOutlined,
+  MailOutlined,
+  RobotOutlined,
+} from '@ant-design/icons';
 import {
   useGetEmailsForCasinoByNameQuery,
   useGetRecipientsQuery,
@@ -26,6 +36,8 @@ import {
 } from '../../../store/api/emailApi';
 import { getApiBaseUrl } from '../../../config/api';
 import dayjs from 'dayjs';
+import { useAppSelector } from '../../../hooks/redux';
+import { useDevTriggerAiEmailProposalMutation } from '../../../store/api/aiEmailProposalsApi';
 
 interface EmailSectionProps {
   casinoId: number;
@@ -55,8 +67,10 @@ export default function EmailSection({ casinoId }: EmailSectionProps) {
   const [markAsRead] = useMarkEmailAsReadMutation();
   const [reqSummary, { isLoading: summaryLoading }] = useRequestEmailSummaryMutation();
   const [reqScreenshot, { isLoading: screenshotLoading }] = useRequestEmailScreenshotMutation();
+  const [devTriggerProposal, { isLoading: proposalLoading }] = useDevTriggerAiEmailProposalMutation();
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
   const [screenshotVisible, setScreenshotVisible] = useState(false);
+  const isAdmin = useAppSelector((s) => s.auth.user?.role === 'admin');
 
   return (
     <Card size="small" title={<Space><MailOutlined /><span>Почта</span></Space>}>
@@ -155,6 +169,55 @@ export default function EmailSection({ casinoId }: EmailSectionProps) {
                   }}
                 >Скриншот</Button>
               </Tooltip>
+              {isAdmin ? (
+                <Dropdown
+                  trigger={['click']}
+                  menu={{
+                    items: [
+                      { key: 'bonus', label: 'Бонус' },
+                      { key: 'promo', label: 'Промо' },
+                      { type: 'divider' },
+                      { key: 'bonus-force', label: 'Бонус (пересоздать)' },
+                      { key: 'promo-force', label: 'Промо (пересоздать)' },
+                    ],
+                    onClick: async ({ key }) => {
+                      if (!selectedEmail) return;
+                      const type = key.includes('promo') ? 'promo' : 'bonus';
+                      const force = key.endsWith('-force');
+                      try {
+                        const res = await devTriggerProposal({
+                          emailId: selectedEmail.id,
+                          type,
+                          force,
+                        }).unwrap();
+                        if (res.skipped) {
+                          message.info(res.message ?? 'Предложение уже есть');
+                        } else {
+                          message.success(
+                            <span>
+                              ИИ создал предложение.{' '}
+                              <Link to="/ai-proposals">Открыть «Предложения ИИ»</Link>
+                            </span>,
+                          );
+                        }
+                      } catch (e: unknown) {
+                        const err = e as { data?: { error?: string } };
+                        message.error(err?.data?.error ?? 'Не удалось создать предложение ИИ');
+                      }
+                    },
+                  }}
+                >
+                  <Tooltip title="Создать запись на странице «Предложения ИИ» по скрину письма">
+                    <Button
+                      size="small"
+                      icon={proposalLoading ? <LoadingOutlined /> : <BulbOutlined />}
+                      loading={proposalLoading}
+                    >
+                      Предложение ИИ <DownOutlined />
+                    </Button>
+                  </Tooltip>
+                </Dropdown>
+              ) : null}
               {selectedEmail?.screenshot_url && (
                 <Tooltip title="Посмотреть скриншот">
                   <Button size="small" icon={<EyeOutlined />} onClick={() => setScreenshotVisible(true)} />

@@ -596,13 +596,23 @@ export default function Casinos() {
                   options={(geos ?? []).map((g) => ({ value: g.code, label: `${g.code} — ${g.name}` }))}
                   onChange={async (values: string[]) => {
                     if (!values || values.length === 0) return;
+                    const GEO_CODE_MAX = 10;
                     const geoCodes = (geos ?? []).map((g) => g.code);
-                    const newGeos = values.map((v) => v.toUpperCase().trim()).filter((v) => v && !geoCodes.includes(v));
+                    const normalized = values.map((v) => v.toUpperCase().trim()).filter(Boolean);
+                    const tooLong = normalized.filter((c) => c.length > GEO_CODE_MAX);
+                    if (tooLong.length > 0) {
+                      message.warning(
+                        `Код GEO не длиннее ${GEO_CODE_MAX} символов (как в базе CRM): ${tooLong.join(', ')}`,
+                      );
+                    }
+                    const newGeos = normalized.filter(
+                      (v) => v.length <= GEO_CODE_MAX && !geoCodes.includes(v),
+                    );
                     for (const code of newGeos) {
                       try {
                         await createGeo({ code, name: code }).unwrap();
                       } catch (e) {
-                        console.error('Failed to create geo:', e);
+                        message.error(getApiErrorMessage(e, 'Не удалось добавить GEO в справочник'));
                       }
                     }
                   }}

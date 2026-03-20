@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Button, Card, Descriptions, Drawer, Image, Select, Space, Tag, Tooltip, Typography, message, theme } from 'antd';
-import { CameraOutlined, EyeOutlined, LoadingOutlined, RobotOutlined } from '@ant-design/icons';
+import { Link } from 'react-router-dom';
+import { Button, Card, Descriptions, Drawer, Dropdown, Image, Select, Space, Tag, Tooltip, Typography, message, theme } from 'antd';
+import { BulbOutlined, CameraOutlined, DownOutlined, EyeOutlined, LoadingOutlined, RobotOutlined } from '@ant-design/icons';
 import { getApiBaseUrl } from '../../../config/api';
 import dayjs from 'dayjs';
 import type { Email } from '../../../store/api/emailApi';
@@ -10,6 +11,8 @@ import {
   useRequestEmailSummaryMutation,
   useRequestEmailScreenshotMutation,
 } from '../../../store/api/emailApi';
+import { useAppSelector } from '../../../hooks/redux';
+import { useDevTriggerAiEmailProposalMutation } from '../../../store/api/aiEmailProposalsApi';
 
 // ---------------------------------------------------------------------------
 // Props
@@ -42,7 +45,9 @@ export default function EmailDetailDrawer({
   const [linkToCasino] = useLinkEmailToCasinoMutation();
   const [requestSummary, { isLoading: summaryLoading }] = useRequestEmailSummaryMutation();
   const [requestScreenshot, { isLoading: screenshotLoading }] = useRequestEmailScreenshotMutation();
+  const [devTriggerProposal, { isLoading: proposalLoading }] = useDevTriggerAiEmailProposalMutation();
   const [screenshotVisible, setScreenshotVisible] = useState(false);
+  const isAdmin = useAppSelector((s) => s.auth.user?.role === 'admin');
 
   const handleMarkAsRead = async () => {
     if (!email) return;
@@ -87,6 +92,26 @@ export default function EmailDetailDrawer({
     }
   };
 
+  const handleAiProposal = async (type: 'bonus' | 'promo', force: boolean) => {
+    if (!email) return;
+    try {
+      const res = await devTriggerProposal({ emailId: email.id, type, force }).unwrap();
+      if (res.skipped) {
+        message.info(res.message ?? 'Предложение уже есть');
+      } else {
+        message.success(
+          <span>
+            ИИ создал предложение.{' '}
+            <Link to="/ai-proposals">Открыть «Предложения ИИ»</Link>
+          </span>,
+        );
+      }
+    } catch (e: unknown) {
+      const err = e as { data?: { error?: string } };
+      message.error(err?.data?.error ?? 'Не удалось создать предложение ИИ');
+    }
+  };
+
   const screenshotSrc = email?.screenshot_url
     ? `${getApiBaseUrl().replace(/\/api\/?$/, '')}${email.screenshot_url}`
     : '';
@@ -120,6 +145,36 @@ export default function EmailDetailDrawer({
               Скриншот
             </Button>
           </Tooltip>
+          {isAdmin ? (
+            <Dropdown
+              trigger={['click']}
+              menu={{
+                items: [
+                  { key: 'bonus', label: 'Бонус' },
+                  { key: 'promo', label: 'Промо' },
+                  { type: 'divider' },
+                  { key: 'bonus-force', label: 'Бонус (пересоздать)' },
+                  { key: 'promo-force', label: 'Промо (пересоздать)' },
+                ],
+                onClick: ({ key }) => {
+                  if (key === 'bonus') void handleAiProposal('bonus', false);
+                  else if (key === 'promo') void handleAiProposal('promo', false);
+                  else if (key === 'bonus-force') void handleAiProposal('bonus', true);
+                  else if (key === 'promo-force') void handleAiProposal('promo', true);
+                },
+              }}
+            >
+              <Tooltip title="Создать запись на странице «Предложения ИИ» по скрину письма (нужен скрин и тема с действием ИИ)">
+                <Button
+                  size="small"
+                  icon={proposalLoading ? <LoadingOutlined /> : <BulbOutlined />}
+                  loading={proposalLoading}
+                >
+                  Предложение ИИ <DownOutlined />
+                </Button>
+              </Tooltip>
+            </Dropdown>
+          ) : null}
           {email?.screenshot_url && (
             <Tooltip title="Посмотреть скриншот">
               <Button
