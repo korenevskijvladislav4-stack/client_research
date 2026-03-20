@@ -1,6 +1,5 @@
 import { useState, useMemo, useRef } from 'react';
 import {
-  Alert,
   Button,
   Card,
   Drawer,
@@ -187,18 +186,6 @@ export default function ProvidersEditSection({ casinoId, activeGeo }: ProvidersE
         }
         style={{ borderColor: token.colorBorderSecondary }}
       >
-        <Alert
-          type="info"
-          showIcon
-          message="Два шага"
-          description={
-            <Typography.Text type="secondary" style={{ fontSize: 13, lineHeight: 1.6 }}>
-              Сначала ИИ извлекает названия из HTML, JSON или простого списка. Затем вы можете править строки, удалять
-              лишнее и добавлять свои — только после этого список сохраняется в казино для GEO «{activeGeo}».
-            </Typography.Text>
-          }
-          style={{ marginBottom: 12 }}
-        />
         <Input.TextArea
           rows={4}
           placeholder="Вставьте фрагмент страницы, экспорт или перечень провайдеров…"
