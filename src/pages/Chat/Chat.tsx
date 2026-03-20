@@ -463,8 +463,9 @@ export default function Chat() {
     <div
       style={{
         flex: 1,
-        minHeight: 700,
+        minHeight: 0,
         minWidth: 0,
+        width: '100%',
         padding: '0 4px 10px',
         boxSizing: 'border-box',
         display: 'flex',
@@ -489,10 +490,10 @@ export default function Chat() {
         style={{
           width: SIDEBAR_WIDTH,
           flexShrink: 0,
+          alignSelf: 'stretch',
           display: 'flex',
           flexDirection: 'column',
           minHeight: 0,
-          maxHeight: '100%',
           borderRadius: token.borderRadiusLG,
           border: `1px solid ${token.colorBorderSecondary}`,
           background: token.colorBgContainer,
@@ -502,6 +503,7 @@ export default function Chat() {
       >
         <div
           style={{
+            flexShrink: 0,
             padding: 16,
             borderBottom: `1px solid ${token.colorBorder}`,
             display: 'flex',
@@ -586,7 +588,16 @@ export default function Chat() {
           </Button>
         </div>
 
-        <div style={{ flex: 1, overflow: 'auto', padding: '8px 8px 12px' }}>
+        <div
+          style={{
+            flex: 1,
+            minHeight: 0,
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            WebkitOverflowScrolling: 'touch',
+            padding: '8px 8px 12px',
+          }}
+        >
           {sessionsLoading ? (
             <Skeleton active paragraph={{ rows: 5 }} />
           ) : sessions.length === 0 ? (
@@ -694,10 +705,19 @@ export default function Chat() {
             />
           </div>
         ) : (
-          <>
+          <div
+            style={{
+              flex: 1,
+              minHeight: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+            }}
+          >
             {/* Шапка текущего чата (фиксирована вверху секции) */}
             <div
               style={{
+                flexShrink: 0,
                 marginBottom: 14,
                 paddingBottom: 12,
                 borderBottom: `1px solid ${token.colorBorderSecondary}`,
@@ -721,7 +741,10 @@ export default function Chat() {
             <div
               style={{
                 flex: 1,
-                overflow: 'auto',
+                minHeight: 0,
+                overflowY: 'auto',
+                overflowX: 'hidden',
+                WebkitOverflowScrolling: 'touch',
                 padding: '4px 4px 12px',
                 display: 'flex',
                 flexDirection: 'column',
@@ -900,6 +923,7 @@ export default function Chat() {
             {/* Футер с полем ввода */}
             <div
               style={{
+                flexShrink: 0,
                 borderTop: `1px solid ${token.colorBorderSecondary}`,
                 paddingTop: 10,
                 marginTop: 4,
@@ -942,7 +966,7 @@ export default function Chat() {
                 Enter — отправить, Shift + Enter — перенос строки
               </Typography.Text>
             </div>
-          </>
+          </div>
         )}
       </section>
       </div>

@@ -348,7 +348,7 @@ export function AppLayout() {
                     flexDirection: 'column',
                     flex: 1,
                     minHeight: 0,
-                    overflow: 'auto',
+                    overflow: 'hidden',
                     boxSizing: 'border-box',
                   }
                 : {}),
@@ -449,7 +449,7 @@ export function AppLayout() {
                       display: 'flex',
                       flexDirection: 'column',
                       minHeight: 0,
-                      overflow: 'auto',
+                      overflow: 'hidden',
                       boxSizing: 'border-box',
                     }
                   : {}),
@@ -473,6 +473,7 @@ export function AppLayout() {
                   <div
                     className="app-topbar"
                     style={{
+                      ...(isChatPage ? { flexShrink: 0 } : {}),
                       border: `1px solid ${token.colorBorder}`,
                       background:
                         mode === 'dark'
@@ -523,6 +524,7 @@ export function AppLayout() {
                   <div
                     className="app-topbar app-topbar--minimal"
                     style={{
+                      ...(isChatPage ? { flexShrink: 0 } : {}),
                       border: `1px solid ${token.colorBorder}`,
                       background:
                         mode === 'dark'
