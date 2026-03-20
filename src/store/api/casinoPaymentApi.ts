@@ -179,6 +179,28 @@ export const casinoPaymentApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: (_result, _error, { casinoId }) => [{ type: 'CasinoComment', id: casinoId }],
     }),
+    analyzePaymentImage: builder.mutation<
+      Partial<CasinoPayment> | Partial<CasinoPayment>[],
+      { casinoId: number; geo?: string; direction?: string; file: File }
+    >({
+      query: ({ casinoId, geo, direction, file }) => {
+        const formData = new FormData();
+        formData.append('image', file);
+        if (geo) formData.append('geo', geo);
+        if (direction) formData.append('direction', direction);
+        return {
+          url: `/casinos/${casinoId}/payments/ai-from-image`,
+          method: 'POST',
+          body: formData,
+        };
+      },
+      transformResponse: (response: any): Partial<CasinoPayment> | Partial<CasinoPayment>[] => {
+        if (response && typeof response === 'object' && response.suggestions) {
+          return response.suggestions;
+        }
+        return {};
+      },
+    }),
   }),
 });
 
@@ -191,4 +213,5 @@ export const {
   useGetPaymentImagesQuery,
   useUploadPaymentImagesMutation,
   useDeletePaymentImageMutation,
+  useAnalyzePaymentImageMutation,
 } = casinoPaymentApi;

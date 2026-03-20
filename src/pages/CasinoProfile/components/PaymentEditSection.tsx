@@ -17,7 +17,7 @@ import {
   message,
   theme,
 } from 'antd';
-import { DeleteOutlined, PictureOutlined, PlusOutlined } from '@ant-design/icons';
+import { DeleteOutlined, PictureOutlined, PlusOutlined, RobotOutlined } from '@ant-design/icons';
 import {
   useGetCasinoPaymentsQuery,
   useCreateCasinoPaymentMutation,
@@ -26,6 +26,7 @@ import {
   useGetPaymentImagesQuery,
   useUploadPaymentImagesMutation,
   useDeletePaymentImageMutation,
+  useAnalyzePaymentImageMutation,
   CasinoPayment,
   CasinoPaymentImage,
 } from '../../../store/api/casinoPaymentApi';
@@ -52,6 +53,8 @@ export default function PaymentEditSection({ casinoId, activeGeo, geoOptions }: 
   const [createPayment] = useCreateCasinoPaymentMutation();
   const [updatePayment] = useUpdateCasinoPaymentMutation();
   const [deletePayment] = useDeleteCasinoPaymentMutation();
+
+  const [analyzePaymentImage, { isLoading: analyzingImage }] = useAnalyzePaymentImageMutation();
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<CasinoPayment | null>(null);
@@ -83,6 +86,55 @@ export default function PaymentEditSection({ casinoId, activeGeo, geoOptions }: 
   );
 
   const closeDrawer = () => { setDrawerOpen(false); setEditing(null); setPendingImages([]); };
+
+  const handleAnalyzeImage = async (file: File) => {
+    setPendingImages((prev) => [...prev, file]);
+    const currentGeo = form.getFieldValue('geo');
+    const geoVal = Array.isArray(currentGeo) ? currentGeo[currentGeo.length - 1] || currentGeo[0] : currentGeo;
+    const direction = form.getFieldValue('direction') || 'deposit';
+    try {
+      const raw = await analyzePaymentImage({
+        casinoId,
+        geo: typeof geoVal === 'string' ? geoVal : undefined,
+        direction,
+        file,
+      }).unwrap();
+
+      const suggestions = Array.isArray(raw) ? raw[0] : raw;
+      if (!suggestions || Object.keys(suggestions).length === 0) {
+        message.info('Не удалось распознать данные ПС с картинки');
+        return;
+      }
+
+      const currentValues = form.getFieldsValue();
+      const patch: Record<string, unknown> = {};
+      const isEmpty = (val: unknown) =>
+        val === undefined || val === null ||
+        (typeof val === 'string' && val.trim() === '') ||
+        (Array.isArray(val) && val.length === 0);
+
+      if ((suggestions as any).type && isEmpty(currentValues.type)) {
+        patch.type = [(suggestions as any).type];
+      }
+      if ((suggestions as any).method && isEmpty(currentValues.method)) {
+        patch.method = [(suggestions as any).method];
+      }
+
+      const simpleKeys: (keyof CasinoPayment)[] = [
+        'min_amount', 'max_amount', 'currency', 'notes',
+      ];
+      simpleKeys.forEach((key) => {
+        const value = (suggestions as any)[key];
+        if (value === undefined || value === null) return;
+        if (isEmpty((currentValues as any)[key])) patch[key] = value;
+      });
+
+      if (Object.keys(patch).length > 0) form.setFieldsValue(patch);
+      message.success('Поля ПС заполнены по картинке');
+    } catch (e: any) {
+      message.error(e?.data?.error ?? 'Не удалось распознать ПС по картинке');
+    }
+  };
 
   const openCreate = () => {
     setEditing(null);
@@ -207,6 +259,44 @@ export default function PaymentEditSection({ casinoId, activeGeo, geoOptions }: 
         }
       >
         <Form layout="vertical" form={form} initialValues={{ direction: 'deposit' }} onFinish={handleSubmit}>
+          {/* AI Auto-fill */}
+          <Card size="small" style={{ marginBottom: 16, borderStyle: 'dashed' }}>
+            <div
+              style={{ textAlign: 'center', padding: 8 }}
+              onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+              onDrop={async (e) => {
+                e.preventDefault(); e.stopPropagation();
+                const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith('image/'));
+                if (files.length > 0) await handleAnalyzeImage(files[0]);
+              }}
+              onPaste={async (e) => {
+                const items = Array.from(e.clipboardData.items || []);
+                for (const item of items) {
+                  if (item.type.startsWith('image/')) {
+                    const file = item.getAsFile();
+                    if (file) { await handleAnalyzeImage(file); break; }
+                  }
+                }
+              }}
+            >
+              <RobotOutlined style={{ fontSize: 20, color: token.colorPrimary, marginBottom: 4 }} />
+              <div>
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                  Перетащите скриншот ПС — AI заполнит форму автоматически.
+                  <br />
+                  Сначала выберите направление (депозит / выплата) ниже, если нужно не «Депозит».
+                </Typography.Text>
+              </div>
+              <Upload accept="image/*" showUploadList={false}
+                beforeUpload={async (file) => { await handleAnalyzeImage(file); return false; }}
+              >
+                <Button size="small" icon={<RobotOutlined />} loading={analyzingImage} style={{ marginTop: 8 }}>
+                  Выбрать картинку
+                </Button>
+              </Upload>
+            </div>
+          </Card>
+
           <Form.Item name="direction" label="Направление" rules={[{ required: true }]}>
             <Select options={[
               { value: 'deposit', label: 'Депозит' },
