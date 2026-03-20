@@ -93,14 +93,13 @@ export default function PaymentEditSection({ casinoId, activeGeo, geoOptions }: 
     const geoVal = Array.isArray(currentGeo) ? currentGeo[currentGeo.length - 1] || currentGeo[0] : currentGeo;
     const direction = form.getFieldValue('direction') || 'deposit';
     try {
-      const raw = await analyzePaymentImage({
+      const suggestions = await analyzePaymentImage({
         casinoId,
         geo: typeof geoVal === 'string' ? geoVal : undefined,
         direction,
         file,
       }).unwrap();
 
-      const suggestions = Array.isArray(raw) ? raw[0] : raw;
       if (!suggestions || Object.keys(suggestions).length === 0) {
         message.info('Не удалось распознать данные ПС с картинки');
         return;
@@ -120,9 +119,22 @@ export default function PaymentEditSection({ casinoId, activeGeo, geoOptions }: 
         patch.method = [(suggestions as any).method];
       }
 
-      const simpleKeys: (keyof CasinoPayment)[] = [
-        'min_amount', 'max_amount', 'currency', 'notes',
-      ];
+      const notesStr = String((suggestions as any).notes ?? '').trim();
+      const noteLines = notesStr.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+      const bulletCount = (notesStr.match(/•/g) || []).length;
+      // Таблица крипты / много строк: не тащим одну пару мин/макс/валюта на всю форму
+      const multiRowOrCryptoTable =
+        noteLines.length >= 2 ||
+        bulletCount >= 2 ||
+        /криптовалют|несколько методов|см\. заметки/i.test(
+          String((suggestions as any).method ?? '') + String((suggestions as any).type ?? ''),
+        );
+
+      const amountKeys: (keyof CasinoPayment)[] = ['min_amount', 'max_amount', 'currency'];
+      const simpleKeys: (keyof CasinoPayment)[] = multiRowOrCryptoTable
+        ? ['notes']
+        : [...amountKeys, 'notes'];
+
       simpleKeys.forEach((key) => {
         const value = (suggestions as any)[key];
         if (value === undefined || value === null) return;

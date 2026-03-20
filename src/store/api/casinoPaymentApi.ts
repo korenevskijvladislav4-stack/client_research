@@ -180,7 +180,7 @@ export const casinoPaymentApi = baseApi.injectEndpoints({
       invalidatesTags: (_result, _error, { casinoId }) => [{ type: 'CasinoComment', id: casinoId }],
     }),
     analyzePaymentImage: builder.mutation<
-      Partial<CasinoPayment> | Partial<CasinoPayment>[],
+      Partial<CasinoPayment>,
       { casinoId: number; geo?: string; direction?: string; file: File }
     >({
       query: ({ casinoId, geo, direction, file }) => {
@@ -194,11 +194,30 @@ export const casinoPaymentApi = baseApi.injectEndpoints({
           body: formData,
         };
       },
-      transformResponse: (response: any): Partial<CasinoPayment> | Partial<CasinoPayment>[] => {
-        if (response && typeof response === 'object' && response.suggestions) {
-          return response.suggestions;
+      transformResponse: (response: any): Partial<CasinoPayment> => {
+        const s = response?.suggestions;
+        if (s == null) return {};
+        if (Array.isArray(s)) {
+          if (s.length === 0) return {};
+          if (s.length === 1) return s[0] as Partial<CasinoPayment>;
+          const lines = s.map((row: any, i: number) => {
+            const parts = [
+              row.method,
+              row.type && `тип: ${row.type}`,
+              row.currency && `валюта: ${row.currency}`,
+              row.min_amount != null && `мин: ${row.min_amount}`,
+              row.max_amount != null && `макс: ${row.max_amount}`,
+              row.notes,
+            ].filter(Boolean);
+            return parts.length ? `• ${parts.join(' · ')}` : `• (строка ${i + 1})`;
+          });
+          return {
+            type: 'Крипто',
+            method: 'Криптовалюты (см. заметки)',
+            notes: lines.join('\n'),
+          };
         }
-        return {};
+        return s as Partial<CasinoPayment>;
       },
     }),
   }),
