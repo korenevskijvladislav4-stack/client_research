@@ -59,6 +59,8 @@ export interface CasinoBonus {
   valid_to?: string;
   status: BonusStatus;
   notes?: string;
+  /** Создано из входящего письма (утверждение ИИ-предложения) */
+  created_from_email?: boolean;
   created_at?: string;
   updated_at?: string;
 }

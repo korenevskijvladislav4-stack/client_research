@@ -34,10 +34,18 @@ export interface AiEmailProposalListItem {
 
 export const aiEmailProposalsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-    getAiEmailProposals: builder.query<AiEmailProposalListItem[], { viewed: boolean; type?: AiEmailProposalType }>({
-      query: ({ viewed, type }) => ({
+    getAiEmailProposals: builder.query<
+      AiEmailProposalListItem[],
+      { viewed: boolean | 'all'; type?: AiEmailProposalType; geo?: string; casinoId?: number }
+    >({
+      query: ({ viewed, type, geo, casinoId }) => ({
         url: '/ai-email-proposals',
-        params: { viewed: viewed ? '1' : '0', ...(type ? { type } : {}) },
+        params: {
+          viewed: viewed === 'all' ? 'all' : viewed ? '1' : '0',
+          ...(type ? { type } : {}),
+          ...(geo?.trim() ? { geo: geo.trim() } : {}),
+          ...(casinoId != null && casinoId > 0 ? { casino_id: String(casinoId) } : {}),
+        },
       }),
       providesTags: ['AiEmailProposals'],
     }),

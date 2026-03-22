@@ -3,7 +3,6 @@ import {
   Alert,
   Button,
   Card,
-  Checkbox,
   Col,
   Collapse,
   Descriptions,
@@ -11,7 +10,6 @@ import {
   Form,
   Image,
   Input,
-  InputNumber,
   Row,
   Segmented,
   Select,
@@ -26,9 +24,9 @@ import {
   CheckOutlined,
   CloseOutlined,
   BulbOutlined,
-  ExperimentOutlined,
   EyeOutlined,
   InboxOutlined,
+  UnorderedListOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { resolvePublicUploadUrl } from '../../config/api';
@@ -46,7 +44,6 @@ import {
   useRejectAiEmailProposalMutation,
   useApproveAiEmailProposalBonusMutation,
   useApproveAiEmailProposalPromoMutation,
-  useDevTriggerAiEmailProposalMutation,
   type AiEmailProposalListItem,
   type AiEmailProposalType,
 } from '../../store/api/aiEmailProposalsApi';
@@ -184,8 +181,14 @@ export default function AiProposals() {
   const isAdmin = useAppSelector((s) => s.auth.user?.role === 'admin');
   const [tab, setTab] = useState<string>('new');
   const viewed = tab === 'seen';
+  const [filterGeo, setFilterGeo] = useState<string | undefined>(undefined);
+  const [filterCasinoId, setFilterCasinoId] = useState<number | undefined>(undefined);
 
-  const { data: rows = [], isLoading, refetch } = useGetAiEmailProposalsQuery({ viewed });
+  const { data: rows = [], isLoading, refetch } = useGetAiEmailProposalsQuery({
+    viewed,
+    ...(filterGeo?.trim() ? { geo: filterGeo.trim() } : {}),
+    ...(filterCasinoId != null && filterCasinoId > 0 ? { casinoId: filterCasinoId } : {}),
+  });
   const { data: casinos = [] } = useGetAllCasinosQuery();
   const { data: geos = [] } = useGetGeosQuery();
 
@@ -198,7 +201,6 @@ export default function AiProposals() {
   const [rejectProposal, { isLoading: rejecting }] = useRejectAiEmailProposalMutation();
   const [approveBonus, { isLoading: approvingB }] = useApproveAiEmailProposalBonusMutation();
   const [approvePromo, { isLoading: approvingP }] = useApproveAiEmailProposalPromoMutation();
-  const [devTrigger, { isLoading: devLoading }] = useDevTriggerAiEmailProposalMutation();
 
   const [form] = Form.useForm();
   /** Повторный сев при появлении GEO в письме после первого ответа API */
@@ -207,10 +209,6 @@ export default function AiProposals() {
   const [bonusCategory, setBonusCategory] = useState<BonusCategory>('casino');
   const [selectedBonusKind, setSelectedBonusKind] = useState<BonusKind | undefined>();
   const [selectedBonusType, setSelectedBonusType] = useState<BonusType | undefined>();
-
-  const [devEmailId, setDevEmailId] = useState<string>('');
-  const [devType, setDevType] = useState<AiEmailProposalType>('bonus');
-  const [devForce, setDevForce] = useState(false);
 
   const casinoOptions = useMemo(
     () => casinos.map((c) => ({ value: c.id, label: c.name })),
@@ -360,25 +358,6 @@ export default function AiProposals() {
     }
   };
 
-  const handleDevTrigger = async () => {
-    const id = Number(devEmailId);
-    if (!id || Number.isNaN(id)) {
-      message.warning('Введите числовой ID письма');
-      return;
-    }
-    try {
-      const res = await devTrigger({ emailId: id, type: devType, force: devForce }).unwrap();
-      if (res.skipped) {
-        message.info(res.message ?? 'Уже есть предложение');
-      } else {
-        message.success('ИИ обработал письмо');
-      }
-      void refetch();
-    } catch (e: any) {
-      message.error(e?.data?.error ?? 'Ошибка');
-    }
-  };
-
   const imgSrc = screenshotFullUrl(detail?.emails?.screenshot_url);
 
   return (
@@ -392,43 +371,43 @@ export default function AiProposals() {
         }
       />
 
-      {isAdmin ? (
-        <Card size="small" title={<Space><ExperimentOutlined />Тест: сгенерировать предложение по письму</Space>}>
-          <Space wrap align="start">
-            <Space direction="vertical" size={4}>
-              <Typography.Text type="secondary">ID письма (emails.id)</Typography.Text>
-              <InputNumber
-                min={1}
-                placeholder="например 42"
-                value={devEmailId ? Number(devEmailId) : undefined}
-                onChange={(v) => setDevEmailId(v != null ? String(v) : '')}
-                style={{ width: 160 }}
-              />
-            </Space>
-            <Space direction="vertical" size={4}>
-              <Typography.Text type="secondary">Тип</Typography.Text>
-              <Select
-                style={{ width: 140 }}
-                value={devType}
-                onChange={(v) => setDevType(v)}
-                options={[
-                  { value: 'bonus', label: 'Бонус' },
-                  { value: 'promo', label: 'Промо' },
-                ]}
-              />
-            </Space>
-            <Checkbox checked={devForce} onChange={(e) => setDevForce(e.target.checked)}>
-              Пересоздать (удалить старое)
-            </Checkbox>
-            <Button type="primary" loading={devLoading} onClick={() => void handleDevTrigger()}>
-              Запустить ИИ
+      {/* Фильтры — как на странице «Казино» */}
+      <Card size="small">
+        <Space wrap size={[12, 12]} style={{ width: '100%' }}>
+          <Select
+            allowClear
+            placeholder="GEO письма"
+            style={{ width: 200 }}
+            options={geoOptions}
+            value={filterGeo}
+            onChange={(v) => setFilterGeo(v)}
+            showSearch
+            optionFilterProp="label"
+            popupMatchSelectWidth={false}
+          />
+          <Select
+            allowClear
+            showSearch
+            optionFilterProp="label"
+            placeholder="Казино"
+            style={{ width: 260 }}
+            options={casinoOptions}
+            value={filterCasinoId}
+            onChange={(v) => setFilterCasinoId(v)}
+            popupMatchSelectWidth={false}
+          />
+          {(filterGeo?.trim() || (filterCasinoId != null && filterCasinoId > 0)) && (
+            <Button
+              onClick={() => {
+                setFilterGeo(undefined);
+                setFilterCasinoId(undefined);
+              }}
+            >
+              Сбросить
             </Button>
-          </Space>
-          <Typography.Paragraph type="secondary" style={{ marginTop: 12, marginBottom: 0, fontSize: 12 }}>
-            Нужны скриншот письма и тема с ai_target или назначенная тема у письма. Требуется OPENAI_API_KEY на сервере.
-          </Typography.Paragraph>
-        </Card>
-      ) : null}
+          )}
+        </Space>
+      </Card>
 
       <div
         style={{
@@ -444,7 +423,7 @@ export default function AiProposals() {
           block
           size="large"
           value={tab}
-          onChange={(v) => setTab(String(v))}
+          onChange={(v) => setTab(v as 'new' | 'seen' | 'all')}
           options={[
             {
               value: 'new',
@@ -461,6 +440,15 @@ export default function AiProposals() {
                 <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                   <EyeOutlined />
                   Просмотрены
+                </span>
+              ),
+            },
+            {
+              value: 'all',
+              label: (
+                <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                  <UnorderedListOutlined />
+                  Все
                 </span>
               ),
             },

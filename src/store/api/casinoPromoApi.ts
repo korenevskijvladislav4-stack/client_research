@@ -22,6 +22,8 @@ export interface CasinoPromo {
   min_bet?: string | null;
   wagering_prize?: string | null;
   status: PromoStatus;
+  /** Создано из входящего письма (утверждение ИИ-предложения) */
+  created_from_email?: boolean;
   created_at?: string;
   updated_at?: string;
 }
