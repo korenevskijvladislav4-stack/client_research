@@ -94,6 +94,26 @@ export const emailApi = baseApi.injectEndpoints({
       },
       providesTags: ['Email'],
     }),
+    getEmailTopicAnalytics: builder.query<
+      {
+        data: { topic_id: number | null; topic_name: string; ai_target: string | null; cnt: number }[];
+        date_from: string;
+        date_to: string;
+        total: number;
+      },
+      { date_from?: string; date_to?: string; to_email?: string; geo?: string }
+    >({
+      query: ({ date_from, date_to, to_email, geo } = {}) => {
+        const p = new URLSearchParams();
+        if (date_from) p.set('date_from', date_from);
+        if (date_to) p.set('date_to', date_to);
+        if (to_email) p.set('to_email', to_email);
+        if (geo) p.set('geo', geo);
+        const qs = p.toString();
+        return `/emails/analytics/topics${qs ? `?${qs}` : ''}`;
+      },
+      providesTags: ['Email'],
+    }),
     getEmailById: builder.query<Email, number>({
       query: (id) => `/emails/${id}`,
       providesTags: (_result, _error, id) => [{ type: 'Email', id }],
@@ -191,6 +211,7 @@ export const {
   useGetEmailsQuery,
   useGetEmailsForCasinoByNameQuery,
   useGetEmailAnalyticsQuery,
+  useGetEmailTopicAnalyticsQuery,
   useSyncEmailsMutation,
   useRelinkEmailsMutation,
   useMarkEmailAsReadMutation,

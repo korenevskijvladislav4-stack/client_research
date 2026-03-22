@@ -20,6 +20,7 @@ const ProfileFields = lazy(() => import('./pages/ProfileFields/ProfileFields'));
 const ProfileSettings = lazy(() => import('./pages/ProfileSettings/ProfileSettings'));
 const ProfileSettingsAnalytics = lazy(() => import('./pages/ProfileSettingsAnalytics/ProfileSettingsAnalytics'));
 const EmailAnalytics = lazy(() => import('./pages/EmailAnalytics/EmailAnalytics'));
+const EmailTopicsAnalytics = lazy(() => import('./pages/EmailTopicsAnalytics/EmailTopicsAnalytics'));
 const ProviderAnalytics = lazy(() => import('./pages/ProviderAnalytics/ProviderAnalytics'));
 const EmailTopics = lazy(() => import('./pages/EmailTopics/EmailTopics'));
 const Users = lazy(() => import('./pages/Users/Users'));
@@ -63,6 +64,7 @@ function App() {
           <Route path="profile-settings" element={<ProfileSettings />} />
           <Route path="profile-settings-analytics" element={<ProfileSettingsAnalytics />} />
           <Route path="email-analytics" element={<EmailAnalytics />} />
+          <Route path="email-topics-analytics" element={<EmailTopicsAnalytics />} />
           <Route path="provider-analytics" element={<ProviderAnalytics />} />
 
           <Route path="email-topics" element={<EmailTopics />} />

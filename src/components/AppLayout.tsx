@@ -25,6 +25,7 @@ import {
   UpOutlined,
   DownOutlined,
   FormOutlined,
+  TagsOutlined,
 } from '@ant-design/icons';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../hooks/redux';
@@ -85,6 +86,11 @@ function buildMenuItems(isAdmin: boolean) {
       children: [
         { key: '/profile-settings-analytics', icon: <BarChartOutlined />, label: <Link to="/profile-settings-analytics">Профиль</Link> },
         { key: '/email-analytics', icon: <MailOutlined />, label: <Link to="/email-analytics">Почта</Link> },
+        {
+          key: '/email-topics-analytics',
+          icon: <TagsOutlined />,
+          label: <Link to="/email-topics-analytics">Тематики писем</Link>,
+        },
         { key: '/provider-analytics', icon: <ApiOutlined />, label: <Link to="/provider-analytics">Провайдеры</Link> },
       ],
     },
@@ -159,7 +165,13 @@ export function AppLayout() {
   
   // Determine which submenu should be open
   const getOpenKeys = () => {
-    if (location.pathname === '/profile-settings-analytics' || location.pathname === '/email-analytics' || location.pathname === '/provider-analytics') return ['analytics-submenu'];
+    if (
+      location.pathname === '/profile-settings-analytics' ||
+      location.pathname === '/email-analytics' ||
+      location.pathname === '/email-topics-analytics' ||
+      location.pathname === '/provider-analytics'
+    )
+      return ['analytics-submenu'];
     if (
       location.pathname.startsWith('/profile') ||
       location.pathname === '/email-topics' ||
