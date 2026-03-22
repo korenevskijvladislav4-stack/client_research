@@ -362,7 +362,13 @@ export default function Bonuses() {
                   if (b.freespins_count) {
                     parts.push(`${fmt(b.freespins_count)} FS`);
                   }
-                  if (b.cashback_percent) {
+                  if (b.cashback_percent_min != null || b.cashback_percent_max != null) {
+                    const from = b.cashback_percent_min != null ? fmt(b.cashback_percent_min) : null;
+                    const to = b.cashback_percent_max != null ? fmt(b.cashback_percent_max) : null;
+                    if (from != null && to != null) parts.push(`${from}–${to}%`);
+                    else if (from != null) parts.push(`${from}%`);
+                    else if (to != null) parts.push(`${to}%`);
+                  } else if (b.cashback_percent != null) {
                     parts.push(`${fmt(b.cashback_percent)}%`);
                   }
                   return parts.length > 0 ? parts.join('+') : '—';
@@ -549,10 +555,20 @@ export default function Bonuses() {
                     </Descriptions.Item>
                   )}
 
-                {/* Кешбек/Рейкбек */}
+                {/* Кешбек/Рейкбек — как в профиле казино */}
                 {selectedBonus.cashback_percent != null && (
                   <Descriptions.Item label="Процент возврата">
                     {fmt(selectedBonus.cashback_percent)}%
+                  </Descriptions.Item>
+                )}
+                {selectedBonus.cashback_percent_min != null && (
+                  <Descriptions.Item label="Мин. % кешбека">
+                    {fmt(selectedBonus.cashback_percent_min)}%
+                  </Descriptions.Item>
+                )}
+                {selectedBonus.cashback_percent_max != null && (
+                  <Descriptions.Item label="Макс. % кешбека">
+                    {fmt(selectedBonus.cashback_percent_max)}%
                   </Descriptions.Item>
                 )}
                 {selectedBonus.cashback_period && (
