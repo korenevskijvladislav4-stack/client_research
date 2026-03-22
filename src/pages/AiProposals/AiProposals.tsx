@@ -179,13 +179,13 @@ const proposalDrawerDescriptionsStyles = {
 export default function AiProposals() {
   const { token } = theme.useToken();
   const isAdmin = useAppSelector((s) => s.auth.user?.role === 'admin');
-  const [tab, setTab] = useState<string>('new');
-  const viewed = tab === 'seen';
+  const [tab, setTab] = useState<'new' | 'seen' | 'all'>('new');
+  const viewedArg: boolean | 'all' = tab === 'all' ? 'all' : tab === 'seen';
   const [filterGeo, setFilterGeo] = useState<string | undefined>(undefined);
   const [filterCasinoId, setFilterCasinoId] = useState<number | undefined>(undefined);
 
   const { data: rows = [], isLoading, refetch } = useGetAiEmailProposalsQuery({
-    viewed,
+    viewed: viewedArg,
     ...(filterGeo?.trim() ? { geo: filterGeo.trim() } : {}),
     ...(filterCasinoId != null && filterCasinoId > 0 ? { casinoId: filterCasinoId } : {}),
   });
