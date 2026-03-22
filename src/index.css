@@ -318,6 +318,36 @@ body,
   }
 }
 
+/* Карусель статусов лояльности: несколько карточек в ряд, одинаковая высота ряда */
+.loyalty-status-carousel .slick-list {
+  margin: 0 -4px;
+}
+.loyalty-status-carousel .slick-track {
+  display: flex !important;
+  align-items: stretch;
+}
+.loyalty-status-carousel .slick-slide {
+  height: auto;
+}
+.loyalty-status-carousel .slick-slide > div {
+  height: 100%;
+}
+.loyalty-status-carousel .slick-slide > div > div {
+  height: 100%;
+}
+.loyalty-status-carousel .slick-prev,
+.loyalty-status-carousel .slick-next {
+  z-index: 2;
+  width: 32px;
+  height: 32px;
+}
+.loyalty-status-carousel .slick-prev {
+  left: -4px;
+}
+.loyalty-status-carousel .slick-next {
+  right: -4px;
+}
+
 /* Print styles */
 @media print {
   .ant-layout-sider,

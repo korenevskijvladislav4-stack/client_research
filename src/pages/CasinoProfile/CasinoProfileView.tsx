@@ -33,6 +33,7 @@ import {
   MailOutlined,
   CommentOutlined,
   SettingOutlined,
+  CrownOutlined,
 } from '@ant-design/icons';
 import { ProfileSettingsTable } from '../../components/ProfileSettingsTable';
 import { AccountsTable } from '../../components/AccountsTable';
@@ -44,6 +45,7 @@ import BonusSection from './components/BonusSection';
 import PromoSection from './components/PromoSection';
 import PaymentSection from './components/PaymentSection';
 import EmailSection from './components/EmailSection';
+import LoyaltySection from './components/LoyaltySection';
 
 import { useGetCasinoByIdQuery } from '../../store/api/casinoApi';
 import {
@@ -78,6 +80,7 @@ const CASINO_PROFILE_TAB_KEYS = new Set([
   'overview',
   'bonuses',
   'promos',
+  'loyalty',
   'payments',
   'accounts',
   'screenshots',
@@ -587,6 +590,7 @@ export default function CasinoProfileView() {
 
       <BonusSection casinoId={casinoId} bonuses={bonuses} isLoading={bonusesLoading} activeGeo={activeGeo} />
       <PromoSection casinoId={casinoId} casinoName={casino?.name} promos={promos} isLoading={promosLoading} activeGeo={activeGeo} />
+      <LoyaltySection casinoId={casinoId} activeGeo={activeGeo} />
 
       <Card size="small" title={<Space><AppstoreOutlined /><span>Провайдеры{(activeProviderGeo ?? activeGeo) ? ` (${activeProviderGeo ?? activeGeo})` : ''}</span></Space>}>
         {casinoProvidersLoading ? (
@@ -623,6 +627,11 @@ export default function CasinoProfileView() {
       key: 'promos',
       label: <Space size={6}><ThunderboltOutlined />Промо</Space>,
       children: <PromoSection casinoId={casinoId} casinoName={casino?.name} promos={promos} isLoading={promosLoading} activeGeo={activeGeo} />,
+    },
+    {
+      key: 'loyalty',
+      label: <Space size={6}><CrownOutlined />Лояльность</Space>,
+      children: <LoyaltySection casinoId={casinoId} activeGeo={activeGeo} />,
     },
     {
       key: 'payments',

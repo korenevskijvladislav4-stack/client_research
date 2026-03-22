@@ -21,6 +21,7 @@ import './api/userApi';
 import './api/chatApi';
 import './api/chatModelsApi';
 import './api/aiEmailProposalsApi';
+import './api/casinoLoyaltyApi';
 
 export const store = configureStore({
   reducer: {

@@ -36,6 +36,7 @@ import {
   MailOutlined,
   CommentOutlined,
   SettingOutlined,
+  CrownOutlined,
 } from '@ant-design/icons';
 import { ProfileSettingsTable } from '../../components/ProfileSettingsTable';
 import { useGetCasinoByIdQuery } from '../../store/api/casinoApi';
@@ -60,11 +61,13 @@ import ScreenshotsEditSection from './components/ScreenshotsEditSection';
 import ProvidersEditSection from './components/ProvidersEditSection';
 import CommentsEditSection from './components/CommentsEditSection';
 import EmailEditSection from './components/EmailEditSection';
+import LoyaltyEditSection from './components/LoyaltyEditSection';
 
 const CASINO_PROFILE_TAB_KEYS = new Set([
   'overview',
   'bonuses',
   'promos',
+  'loyalty',
   'payments',
   'accounts',
   'screenshots',
@@ -341,6 +344,11 @@ export default function CasinoProfile() {
         <PromoEditSection {...sharedSectionProps} />
       </Card>
 
+      {/* Loyalty */}
+      <Card size="small" title={<Space><CrownOutlined /><span>Программа лояльности</span></Space>}>
+        <LoyaltyEditSection {...sharedSectionProps} />
+      </Card>
+
       {/* Providers */}
       <Card size="small" title={<Space><AppstoreOutlined /><span>Провайдеры</span></Space>}>
         <ProvidersEditSection casinoId={casinoId} activeGeo={activeGeo} />
@@ -378,6 +386,15 @@ export default function CasinoProfile() {
       key: 'promos',
       label: <Space size={6}><ThunderboltOutlined />Промо</Space>,
       children: <Card size="small" title={<Space><ThunderboltOutlined /><span>Промо</span></Space>}><PromoEditSection {...sharedSectionProps} /></Card>,
+    },
+    {
+      key: 'loyalty',
+      label: <Space size={6}><CrownOutlined />Лояльность</Space>,
+      children: (
+        <Card size="small" title={<Space><CrownOutlined /><span>Программа лояльности</span></Space>}>
+          <LoyaltyEditSection {...sharedSectionProps} />
+        </Card>
+      ),
     },
     {
       key: 'payments',
