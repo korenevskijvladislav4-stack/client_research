@@ -6,6 +6,7 @@ import {
   type MouseEvent,
   type ComponentProps,
 } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Button,
   Card,
@@ -236,8 +237,15 @@ export default function Chat() {
   const { token } = theme.useToken();
   const dispatch = useAppDispatch();
   const authToken = useAppSelector((s) => s.auth.token);
+  const [, setSearchParams] = useSearchParams();
 
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(() => {
+    const raw = new URLSearchParams(
+      typeof window !== 'undefined' ? window.location.search : '',
+    ).get('session');
+    const n = raw ? Number(raw) : NaN;
+    return Number.isFinite(n) && n > 0 ? n : null;
+  });
   const [inputValue, setInputValue] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamedContent, setStreamedContent] = useState('');
@@ -248,6 +256,18 @@ export default function Chat() {
 
   const { data: chatConfig, isLoading: chatConfigLoading } = useGetChatConfigQuery();
   const { data: sessions = [], isLoading: sessionsLoading } = useGetChatSessionsQuery();
+
+  useEffect(() => {
+    setSearchParams(
+      (prev: URLSearchParams) => {
+        const next = new URLSearchParams(prev);
+        if (selectedId != null && selectedId > 0) next.set('session', String(selectedId));
+        else next.delete('session');
+        return next;
+      },
+      { replace: true },
+    );
+  }, [selectedId, setSearchParams]);
   const [createSession, { isLoading: creating }] = useCreateChatSessionMutation();
   const {
     data: currentSession,

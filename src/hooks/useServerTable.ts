@@ -2,15 +2,28 @@
  * Hook for managing server-side pagination, sorting, and filtering
  */
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { TablePaginationConfig } from 'antd';
 import { SorterResult, FilterValue } from 'antd/es/table/interface';
 import { QueryParams, DEFAULT_PAGE, DEFAULT_PAGE_SIZE } from '../types/api.types';
+import {
+  readTableStateFromWindowSearch,
+  mergeTableStateIntoSearchParams,
+  type UrlTableDefaults,
+} from './tableUrlPersistence';
 
 export interface UseServerTableOptions {
   defaultPageSize?: number;
   defaultSortField?: string;
   defaultSortOrder?: 'asc' | 'desc';
+  /** Сохранять page / фильтры / сортировку / поиск в URL (F5 и шаринг) */
+  persistInUrl?: boolean;
+  /**
+   * Доп. query-параметры в том же URL, что и таблица (напр. tag_id на странице казино).
+   * Пустая строка или undefined — удалить ключ.
+   */
+  urlExtraParams?: Record<string, string | undefined>;
 }
 
 export interface UseServerTableReturn<F = Record<string, any>> {
@@ -50,14 +63,76 @@ export function useServerTable<F = Record<string, any>>(
     defaultPageSize = DEFAULT_PAGE_SIZE,
     defaultSortField,
     defaultSortOrder = 'desc',
+    persistInUrl = false,
+    urlExtraParams,
   } = options;
 
-  const [page, setPage] = useState(DEFAULT_PAGE);
-  const [pageSize, setPageSize] = useState(defaultPageSize);
-  const [search, setSearchState] = useState('');
-  const [filters, setFilters] = useState<F>({} as F);
-  const [sortField, setSortField] = useState<string | undefined>(defaultSortField);
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(defaultSortOrder);
+  const urlExtraSerialized = useMemo(
+    () => JSON.stringify(urlExtraParams ?? {}),
+    [urlExtraParams],
+  );
+
+  const urlDefaults: UrlTableDefaults = useMemo(
+    () => ({
+      defaultPageSize,
+      defaultSortField,
+      defaultSortOrder,
+    }),
+    [defaultPageSize, defaultSortField, defaultSortOrder],
+  );
+
+  const initialFromUrl = persistInUrl ? readTableStateFromWindowSearch(urlDefaults) : null;
+
+  const [, setSearchParams] = useSearchParams();
+
+  const [page, setPage] = useState(initialFromUrl?.page ?? DEFAULT_PAGE);
+  const [pageSize, setPageSize] = useState(initialFromUrl?.pageSize ?? defaultPageSize);
+  const [search, setSearchState] = useState(initialFromUrl?.search ?? '');
+  const [filters, setFilters] = useState<F>((initialFromUrl?.filters ?? {}) as F);
+  const [sortField, setSortField] = useState<string | undefined>(
+    initialFromUrl?.sortField ?? defaultSortField,
+  );
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(
+    initialFromUrl?.sortOrder ?? defaultSortOrder,
+  );
+
+  useEffect(() => {
+    if (!persistInUrl) return;
+    const extras = urlExtraSerialized ? (JSON.parse(urlExtraSerialized) as Record<string, string | undefined>) : {};
+    setSearchParams(
+      (prev) => {
+        let next = mergeTableStateIntoSearchParams(
+          prev,
+          {
+            page,
+            pageSize,
+            search,
+            sortField,
+            sortOrder,
+            filters: filters as Record<string, unknown>,
+          },
+          urlDefaults,
+        );
+        for (const [k, v] of Object.entries(extras)) {
+          if (v === undefined || v === '') next.delete(k);
+          else next.set(k, v);
+        }
+        return next;
+      },
+      { replace: true },
+    );
+  }, [
+    persistInUrl,
+    page,
+    pageSize,
+    search,
+    sortField,
+    sortOrder,
+    filters,
+    setSearchParams,
+    urlDefaults,
+    urlExtraSerialized,
+  ]);
 
   // Reset to first page when filters change
   const setSearch = useCallback((value: string) => {

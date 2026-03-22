@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Button,
   Card,
@@ -46,6 +47,15 @@ import { getApiErrorMessage } from '../../store/api/baseApi';
 
 type TabKey = 'geo' | 'providers' | 'bonusNames' | 'paymentTypes' | 'paymentMethods' | 'promoTypes';
 
+const DIR_TAB_KEYS = new Set<string>([
+  'geo',
+  'providers',
+  'bonusNames',
+  'paymentTypes',
+  'paymentMethods',
+  'promoTypes',
+]);
+
 function filterByName<T extends { name: string }>(items: T[], q: string): T[] {
   const s = q.trim().toLowerCase();
   if (!s) return items;
@@ -62,8 +72,31 @@ function filterGeos(items: Geo[], q: string): Geo[] {
 
 export default function Directories() {
   const { token } = theme.useToken();
-  const [activeKey, setActiveKey] = useState<TabKey>('geo');
-  const [search, setSearch] = useState('');
+  const [, setSearchParams] = useSearchParams();
+  const urlInit = useMemo(() => {
+    const sp = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+    const d = sp.get('dir')?.trim();
+    const activeKey: TabKey =
+      d && DIR_TAB_KEYS.has(d) ? (d as TabKey) : 'geo';
+    return { activeKey, q: sp.get('q') ?? '' };
+  }, []);
+
+  const [activeKey, setActiveKey] = useState<TabKey>(urlInit.activeKey);
+  const [search, setSearch] = useState(urlInit.q);
+
+  useEffect(() => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (activeKey === 'geo') next.delete('dir');
+        else next.set('dir', activeKey);
+        if (search.trim()) next.set('q', search.trim());
+        else next.delete('q');
+        return next;
+      },
+      { replace: true },
+    );
+  }, [activeKey, search, setSearchParams]);
 
   useEffect(() => {
     setSearch('');

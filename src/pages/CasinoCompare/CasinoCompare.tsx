@@ -164,21 +164,43 @@ function ComparisonValue({ value, isDifferent, hasValue }: { value: any; isDiffe
   );
 }
 
+function parseCompareUrl() {
+  const sp = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+  const p1 = sp.get('casino1');
+  const p2 = sp.get('casino2');
+  const g = sp.get('geo')?.trim();
+  const n1 = p1 ? Number(p1) : NaN;
+  const n2 = p2 ? Number(p2) : NaN;
+  return {
+    casino1Id: Number.isFinite(n1) && n1 > 0 ? n1 : undefined,
+    casino2Id: Number.isFinite(n2) && n2 > 0 ? n2 : undefined,
+    filterGeo: g || undefined,
+  };
+}
+
 export default function CasinoCompare() {
   const nav = useNavigate();
-  const [searchParams] = useSearchParams();
-  const [casino1Id, setCasino1Id] = useState<number | undefined>(undefined);
-  const [casino2Id, setCasino2Id] = useState<number | undefined>(undefined);
+  const [, setSearchParams] = useSearchParams();
+  const urlInit = useMemo(() => parseCompareUrl(), []);
+  const [casino1Id, setCasino1Id] = useState<number | undefined>(urlInit.casino1Id);
+  const [casino2Id, setCasino2Id] = useState<number | undefined>(urlInit.casino2Id);
+  const [filterGeo, setFilterGeo] = useState<string | undefined>(urlInit.filterGeo);
 
-  // Pre-fill casino1 from URL query params (e.g. /casinos/compare?casino1=5)
   useEffect(() => {
-    const c1 = searchParams.get('casino1');
-    if (c1 && !casino1Id) {
-      const parsed = Number(c1);
-      if (!isNaN(parsed)) setCasino1Id(parsed);
-    }
-  }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
-  const [filterGeo, setFilterGeo] = useState<string | undefined>(undefined);
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (casino1Id != null && casino1Id > 0) next.set('casino1', String(casino1Id));
+        else next.delete('casino1');
+        if (casino2Id != null && casino2Id > 0) next.set('casino2', String(casino2Id));
+        else next.delete('casino2');
+        if (filterGeo?.trim()) next.set('geo', filterGeo.trim());
+        else next.delete('geo');
+        return next;
+      },
+      { replace: true },
+    );
+  }, [casino1Id, casino2Id, filterGeo, setSearchParams]);
 
   const { data: casinos, isLoading: casinosLoading } = useGetAllCasinosQuery();
   const { data: casino1, isLoading: casino1Loading } = useGetCasinoByIdQuery(casino1Id!, {

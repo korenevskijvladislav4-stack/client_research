@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button, Card, Select, Space, Table, Typography, theme, message } from 'antd';
 import { CheckOutlined, ApiOutlined, DownloadOutlined } from '@ant-design/icons';
 import { useGetProviderAnalyticsQuery } from '../../store/api/casinoProviderApi';
@@ -15,13 +15,55 @@ interface AnalyticsRow {
   hasProvider: Record<number, boolean>;
 }
 
+function parseCsvNumbers(raw: string | null): number[] {
+  if (!raw?.trim()) return [];
+  return raw
+    .split(',')
+    .map((s) => Number(s.trim()))
+    .filter((n) => Number.isFinite(n) && n > 0);
+}
+
+function parseCsvStrings(raw: string | null): string[] {
+  if (!raw?.trim()) return [];
+  return raw
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 export default function ProviderAnalytics() {
   const nav = useNavigate();
   const { token } = theme.useToken();
   const authToken = useAppSelector((s) => s.auth.token);
-  const [filterGeos, setFilterGeos] = useState<string[]>([]);
-  const [filterCasinoIds, setFilterCasinoIds] = useState<number[]>([]);
-  const [filterProviderIds, setFilterProviderIds] = useState<number[]>([]);
+  const [, setSearchParams] = useSearchParams();
+  const urlInit = useMemo(() => {
+    const sp = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+    return {
+      filterGeos: parseCsvStrings(sp.get('geos')),
+      filterCasinoIds: parseCsvNumbers(sp.get('casino_ids')),
+      filterProviderIds: parseCsvNumbers(sp.get('provider_ids')),
+    };
+  }, []);
+
+  const [filterGeos, setFilterGeos] = useState<string[]>(urlInit.filterGeos);
+  const [filterCasinoIds, setFilterCasinoIds] = useState<number[]>(urlInit.filterCasinoIds);
+  const [filterProviderIds, setFilterProviderIds] = useState<number[]>(urlInit.filterProviderIds);
+
+  useEffect(() => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (filterGeos.length > 0) next.set('geos', filterGeos.join(','));
+        else next.delete('geos');
+        if (filterCasinoIds.length > 0) next.set('casino_ids', filterCasinoIds.join(','));
+        else next.delete('casino_ids');
+        if (filterProviderIds.length > 0) next.set('provider_ids', filterProviderIds.join(','));
+        else next.delete('provider_ids');
+        return next;
+      },
+      { replace: true },
+    );
+  }, [filterGeos, filterCasinoIds, filterProviderIds, setSearchParams]);
 
   const { data: casinos = [] } = useGetAllCasinosQuery();
   const { data: geos = [] } = useGetGeosQuery();

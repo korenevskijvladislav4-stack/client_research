@@ -31,6 +31,7 @@ import dayjs from 'dayjs';
 export default function Users() {
   const table = useServerTable<{ role?: string; is_active?: boolean }>({
     defaultPageSize: 20,
+    persistInUrl: true,
     defaultSortField: 'username',
     defaultSortOrder: 'asc',
   });

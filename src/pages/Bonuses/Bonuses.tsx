@@ -97,6 +97,7 @@ export default function Bonuses() {
     bonus_type?: string;
   }>({
     defaultPageSize: 20,
+    persistInUrl: true,
     defaultSortField: 'created_at',
     defaultSortOrder: 'desc',
   });

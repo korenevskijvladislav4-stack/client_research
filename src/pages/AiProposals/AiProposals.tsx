@@ -29,6 +29,7 @@ import {
   UnorderedListOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import { useSearchParams } from 'react-router-dom';
 import { resolvePublicUploadUrl } from '../../config/api';
 import { PageHeaderCard } from '../../components/PageHeaderCard';
 import { useGetAllCasinosQuery } from '../../store/api/casinoApi';
@@ -176,13 +177,47 @@ const proposalDrawerDescriptionsStyles = {
   content: { minWidth: 300 },
 } as const;
 
+function parseAiProposalsUrl(): {
+  tab: 'new' | 'seen' | 'all';
+  filterGeo?: string;
+  filterCasinoId?: number;
+} {
+  const sp = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+  const t = sp.get('tab');
+  const tab: 'new' | 'seen' | 'all' =
+    t === 'seen' || t === 'all' || t === 'new' ? t : 'new';
+  const geo = sp.get('geo')?.trim() || undefined;
+  const cid = sp.get('casino_id');
+  const n = cid ? Number(cid) : NaN;
+  const filterCasinoId = Number.isFinite(n) && n > 0 ? n : undefined;
+  return { tab, filterGeo: geo, filterCasinoId };
+}
+
 export default function AiProposals() {
   const { token } = theme.useToken();
   const isAdmin = useAppSelector((s) => s.auth.user?.role === 'admin');
-  const [tab, setTab] = useState<'new' | 'seen' | 'all'>('new');
+  const [, setSearchParams] = useSearchParams();
+  const urlInit = useMemo(() => parseAiProposalsUrl(), []);
+  const [tab, setTab] = useState<'new' | 'seen' | 'all'>(urlInit.tab);
   const viewedArg: boolean | 'all' = tab === 'all' ? 'all' : tab === 'seen';
-  const [filterGeo, setFilterGeo] = useState<string | undefined>(undefined);
-  const [filterCasinoId, setFilterCasinoId] = useState<number | undefined>(undefined);
+  const [filterGeo, setFilterGeo] = useState<string | undefined>(urlInit.filterGeo);
+  const [filterCasinoId, setFilterCasinoId] = useState<number | undefined>(urlInit.filterCasinoId);
+
+  useEffect(() => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (tab === 'new') next.delete('tab');
+        else next.set('tab', tab);
+        if (filterGeo?.trim()) next.set('geo', filterGeo.trim());
+        else next.delete('geo');
+        if (filterCasinoId != null && filterCasinoId > 0) next.set('casino_id', String(filterCasinoId));
+        else next.delete('casino_id');
+        return next;
+      },
+      { replace: true },
+    );
+  }, [tab, filterGeo, filterCasinoId, setSearchParams]);
 
   const { data: rows = [], isLoading, refetch } = useGetAiEmailProposalsQuery({
     viewed: viewedArg,

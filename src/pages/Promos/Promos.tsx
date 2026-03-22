@@ -94,6 +94,7 @@ export default function Promos() {
     status?: string;
   }>({
     defaultPageSize: 20,
+    persistInUrl: true,
     defaultSortField: 'created_at',
     defaultSortOrder: 'desc',
   });

@@ -269,9 +269,25 @@ export default function Casinos() {
   const { token } = theme.useToken();
 
   // Server-side table state
+  const [filterTag, setFilterTag] = useState<number | undefined>(() => {
+    const raw = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '').get(
+      'tag_id',
+    );
+    if (!raw) return undefined;
+    const n = Number(raw);
+    return Number.isFinite(n) && n > 0 ? n : undefined;
+  });
+
+  const tagUrlExtra = useMemo(
+    () => ({ tag_id: filterTag != null && filterTag > 0 ? String(filterTag) : '' }),
+    [filterTag],
+  );
+
   const table = useServerTable<CasinoFilters>({
     defaultSortField: 'created_at',
     defaultSortOrder: 'desc',
+    persistInUrl: true,
+    urlExtraParams: tagUrlExtra,
   });
 
   const sortSelectValue = useMemo(() => {
@@ -299,7 +315,6 @@ export default function Casinos() {
   const { data: allTags = [] } = useGetTagsQuery();
   const { data: allCasinoTags = {} } = useGetAllCasinoTagsQuery();
 
-  const [filterTag, setFilterTag] = useState<number | undefined>(undefined);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Casino | null>(null);
   const [form] = Form.useForm();

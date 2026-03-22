@@ -23,6 +23,7 @@ export default function Accounts() {
   const [transactionAccount, setTransactionAccount] = useState<CasinoAccount | null>(null);
   const table = useServerTable<AccountFilters>({
     defaultPageSize: 20,
+    persistInUrl: true,
     defaultSortField: 'last_modified_at',
     defaultSortOrder: 'desc',
   });

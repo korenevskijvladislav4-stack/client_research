@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Button, Card, Select, Space, Table, Tag, Tooltip, Typography, theme } from 'antd';
 import { CheckCircleFilled } from '@ant-design/icons';
 import {
@@ -12,10 +13,42 @@ import { useGetAllCasinosQuery } from '../../store/api/casinoApi';
 
 const { Title, Text } = Typography;
 
+function parseCsvIds(raw: string | null): number[] {
+  if (!raw?.trim()) return [];
+  return raw
+    .split(',')
+    .map((s) => Number(s.trim()))
+    .filter((n) => Number.isFinite(n) && n > 0);
+}
+
 export default function ProfileSettingsAnalytics() {
   const { token } = theme.useToken();
-  const [selectedGeo, setSelectedGeo] = useState<string | undefined>(undefined);
-  const [selectedCasinos, setSelectedCasinos] = useState<number[]>([]);
+  const [, setSearchParams] = useSearchParams();
+  const urlInit = useMemo(() => {
+    const sp = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+    const g = sp.get('geo')?.trim();
+    return {
+      selectedGeo: g || undefined,
+      selectedCasinos: parseCsvIds(sp.get('casino_ids')),
+    };
+  }, []);
+
+  const [selectedGeo, setSelectedGeo] = useState<string | undefined>(urlInit.selectedGeo);
+  const [selectedCasinos, setSelectedCasinos] = useState<number[]>(urlInit.selectedCasinos);
+
+  useEffect(() => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (selectedGeo?.trim()) next.set('geo', selectedGeo.trim());
+        else next.delete('geo');
+        if (selectedCasinos.length > 0) next.set('casino_ids', selectedCasinos.join(','));
+        else next.delete('casino_ids');
+        return next;
+      },
+      { replace: true },
+    );
+  }, [selectedGeo, selectedCasinos, setSearchParams]);
 
   const { data: fields = [] } = useGetSettingsFieldsQuery();
   const { data: contexts = [] } = useGetProfileContextsQuery();

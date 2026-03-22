@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Button,
   Card,
@@ -32,6 +33,25 @@ import { PageHeaderCard } from '../../components/PageHeaderCard';
 import { CasinoProfileTable } from '../../components/CasinoProfileTable';
 
 export default function ProfileSettings() {
+  const [, setSearchParams] = useSearchParams();
+  const initialTab = useMemo(() => {
+    const t = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '').get('tab');
+    return t === 'contexts' ? 'contexts' : 'fields';
+  }, []);
+  const [activeTab, setActiveTab] = useState<'fields' | 'contexts'>(initialTab);
+
+  useEffect(() => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (activeTab === 'fields') next.delete('tab');
+        else next.set('tab', activeTab);
+        return next;
+      },
+      { replace: true },
+    );
+  }, [activeTab, setSearchParams]);
+
   return (
     <Space direction="vertical" size={24} style={{ width: '100%' }}>
       <PageHeaderCard
@@ -41,6 +61,8 @@ export default function ProfileSettings() {
       <Tabs
         type="card"
         size="middle"
+        activeKey={activeTab}
+        onChange={(k) => setActiveTab(k as 'fields' | 'contexts')}
         items={[
           {
             key: 'fields',

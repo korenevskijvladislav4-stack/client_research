@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   Badge,
   Button,
@@ -61,6 +61,28 @@ import ProvidersEditSection from './components/ProvidersEditSection';
 import CommentsEditSection from './components/CommentsEditSection';
 import EmailEditSection from './components/EmailEditSection';
 
+const CASINO_PROFILE_TAB_KEYS = new Set([
+  'overview',
+  'bonuses',
+  'promos',
+  'payments',
+  'accounts',
+  'screenshots',
+  'providers',
+  'emails',
+  'comments',
+]);
+
+function parseCasinoProfileUrl() {
+  const sp = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+  const g = sp.get('geo')?.trim();
+  const t = sp.get('tab')?.trim();
+  return {
+    geo: g || undefined,
+    tab: t && CASINO_PROFILE_TAB_KEYS.has(t) ? t : 'overview',
+  };
+}
+
 function buildFieldInput(field: ProfileField) {
   switch (field.field_type) {
     case 'textarea':
@@ -102,18 +124,37 @@ export default function CasinoProfile() {
   const casinoId = Number(id);
   const nav = useNavigate();
   const { token } = theme.useToken();
+  const [, setSearchParams] = useSearchParams();
+  const urlInit = useMemo(() => parseCasinoProfileUrl(), []);
 
   const { data: casino, isLoading: casinoLoading } = useGetCasinoByIdQuery(casinoId);
   const casinoGeos = useMemo(() => casino?.geo ?? [], [casino?.geo]);
-  const [activeGeo, setActiveGeo] = useState<string | undefined>(() =>
-    Array.isArray(casinoGeos) && casinoGeos.length > 0 ? casinoGeos[0] : undefined,
-  );
+  const [activeGeo, setActiveGeo] = useState<string | undefined>(urlInit.geo);
+  const [activeTab, setActiveTab] = useState<string>(urlInit.tab);
 
   useEffect(() => {
-    if (!activeGeo && Array.isArray(casinoGeos) && casinoGeos.length > 0) {
+    if (!Array.isArray(casinoGeos) || casinoGeos.length === 0) return;
+    if (activeGeo && casinoGeos.includes(activeGeo)) return;
+    if (activeGeo && !casinoGeos.includes(activeGeo)) {
       setActiveGeo(casinoGeos[0]);
+      return;
     }
+    if (!activeGeo) setActiveGeo(casinoGeos[0]);
   }, [casinoGeos, activeGeo]);
+
+  useEffect(() => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (activeGeo?.trim()) next.set('geo', activeGeo.trim());
+        else next.delete('geo');
+        if (activeTab && activeTab !== 'overview') next.set('tab', activeTab);
+        else next.delete('tab');
+        return next;
+      },
+      { replace: true },
+    );
+  }, [activeGeo, activeTab, setSearchParams]);
 
   const { data: profileResp, isLoading: profileLoading } = useGetCasinoProfileQuery(
     { casinoId, geo: activeGeo },
@@ -458,7 +499,8 @@ export default function CasinoProfile() {
         styles={{ body: { padding: '12px 16px' } }}
       >
         <Tabs
-          defaultActiveKey="overview"
+          activeKey={activeTab}
+          onChange={setActiveTab}
           items={tabItems}
           size="middle"
           tabBarStyle={{ marginBottom: 16 }}

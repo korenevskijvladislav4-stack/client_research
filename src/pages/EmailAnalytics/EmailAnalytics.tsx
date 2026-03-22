@@ -1,5 +1,5 @@
-import { useCallback, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button, Card, DatePicker, Select, Space, Table, Tag, Tooltip, Typography, message, theme } from 'antd';
 import { DownloadOutlined, LinkOutlined, MailOutlined } from '@ant-design/icons';
 import dayjs, { Dayjs } from 'dayjs';
@@ -25,18 +25,55 @@ interface CasinoRow {
 // Component
 // ---------------------------------------------------------------------------
 
+function parseEmailAnalyticsUrl(): {
+  range: [Dayjs, Dayjs];
+  toEmail?: string;
+  filterGeo?: string;
+  filterTopicId?: number;
+} {
+  const sp = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+  const df = sp.get('date_from');
+  const dt = sp.get('date_to');
+  let range: [Dayjs, Dayjs] = [dayjs().subtract(29, 'day'), dayjs()];
+  if (df && dt && dayjs(df).isValid() && dayjs(dt).isValid()) {
+    range = [dayjs(df), dayjs(dt)];
+  }
+  const toEmail = sp.get('to_email') || undefined;
+  const filterGeo = sp.get('geo') || undefined;
+  const tid = sp.get('topic_id');
+  const n = tid ? Number(tid) : NaN;
+  const filterTopicId = Number.isFinite(n) && n > 0 ? n : undefined;
+  return { range, toEmail, filterGeo, filterTopicId };
+}
+
 export default function EmailAnalytics() {
   const nav = useNavigate();
   const { token: themeToken } = theme.useToken();
+  const [, setSearchParams] = useSearchParams();
+  const urlInit = useMemo(() => parseEmailAnalyticsUrl(), []);
 
-  // Default: last 30 days
-  const [range, setRange] = useState<[Dayjs, Dayjs]>([
-    dayjs().subtract(29, 'day'),
-    dayjs(),
-  ]);
-  const [toEmail, setToEmail] = useState<string | undefined>(undefined);
-  const [filterGeo, setFilterGeo] = useState<string | undefined>(undefined);
-  const [filterTopicId, setFilterTopicId] = useState<number | undefined>(undefined);
+  const [range, setRange] = useState<[Dayjs, Dayjs]>(urlInit.range);
+  const [toEmail, setToEmail] = useState<string | undefined>(urlInit.toEmail);
+  const [filterGeo, setFilterGeo] = useState<string | undefined>(urlInit.filterGeo);
+  const [filterTopicId, setFilterTopicId] = useState<number | undefined>(urlInit.filterTopicId);
+
+  useEffect(() => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.set('date_from', range[0].format('YYYY-MM-DD'));
+        next.set('date_to', range[1].format('YYYY-MM-DD'));
+        if (toEmail?.trim()) next.set('to_email', toEmail.trim());
+        else next.delete('to_email');
+        if (filterGeo?.trim()) next.set('geo', filterGeo.trim());
+        else next.delete('geo');
+        if (filterTopicId != null && filterTopicId > 0) next.set('topic_id', String(filterTopicId));
+        else next.delete('topic_id');
+        return next;
+      },
+      { replace: true },
+    );
+  }, [range, toEmail, filterGeo, filterTopicId, setSearchParams]);
 
   const dateFrom = range[0].format('YYYY-MM-DD');
   const dateTo = range[1].format('YYYY-MM-DD');
@@ -96,7 +133,7 @@ export default function EmailAnalytics() {
     p.set('token', token);
 
     window.open(`${baseUrl}/emails/export?${p.toString()}`, '_blank');
-  }, [dateFrom, dateTo, toEmail, filterGeo]);
+  }, [dateFrom, dateTo, toEmail, filterGeo, filterTopicId]);
 
   // Build unique sorted dates and casino rows
   const { dates, rows, grandTotal } = useMemo(() => {

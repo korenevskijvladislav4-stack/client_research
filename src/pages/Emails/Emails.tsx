@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 import { Button, Card, Space, Typography, message } from 'antd';
 import { DownloadOutlined, SettingOutlined, SyncOutlined } from '@ant-design/icons';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -26,28 +26,84 @@ const { Title } = Typography;
 // Page
 // ---------------------------------------------------------------------------
 
+function parseEmailsUrl() {
+  const sp = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+  const pageRaw = Number(sp.get('page'));
+  const page = Number.isFinite(pageRaw) && pageRaw >= 1 ? pageRaw : 1;
+  const rc = sp.get('related_casino_id');
+  const filterCasinoId = rc ? Number(rc) : undefined;
+  const filterToEmail = sp.get('to_email') || undefined;
+  const filterGeo = sp.get('geo') || undefined;
+  const tid = sp.get('topic_id');
+  const filterTopicId = tid ? Number(tid) : undefined;
+  const readRaw = sp.get('read');
+  const readFilter: ReadFilter =
+    readRaw === 'read' || readRaw === 'unread' ? readRaw : 'all';
+  return {
+    currentPage: page,
+    filterCasinoId: filterCasinoId != null && Number.isFinite(filterCasinoId) ? filterCasinoId : undefined,
+    filterToEmail,
+    filterGeo,
+    filterTopicId: filterTopicId != null && Number.isFinite(filterTopicId) ? filterTopicId : undefined,
+    readFilter,
+    filterDateFrom: sp.get('date_from') || undefined,
+    filterDateTo: sp.get('date_to') || undefined,
+  };
+}
+
 export default function Emails() {
-  const [searchParams] = useSearchParams();
+  const [, setSearchParams] = useSearchParams();
+  const initialUrl = useMemo(() => parseEmailsUrl(), []);
 
   // -------------------------------------------------------------------------
   // Filters state (pre-filled from URL query params if present)
   // -------------------------------------------------------------------------
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const [filterCasinoId, setFilterCasinoId] = useState<number | undefined>(() => {
-    const v = searchParams.get('related_casino_id');
-    return v ? Number(v) : undefined;
-  });
-  const [filterToEmail, setFilterToEmail] = useState<string | undefined>();
-  const [filterGeo, setFilterGeo] = useState<string | undefined>();
-  const [filterTopicId, setFilterTopicId] = useState<number | undefined>();
-  const [readFilter, setReadFilter] = useState<ReadFilter>('all');
-  const [filterDateFrom, setFilterDateFrom] = useState<string | undefined>(() =>
-    searchParams.get('date_from') || undefined,
-  );
-  const [filterDateTo, setFilterDateTo] = useState<string | undefined>(() =>
-    searchParams.get('date_to') || undefined,
-  );
+  const [currentPage, setCurrentPage] = useState(initialUrl.currentPage);
+  const [filterCasinoId, setFilterCasinoId] = useState<number | undefined>(initialUrl.filterCasinoId);
+  const [filterToEmail, setFilterToEmail] = useState<string | undefined>(initialUrl.filterToEmail);
+  const [filterGeo, setFilterGeo] = useState<string | undefined>(initialUrl.filterGeo);
+  const [filterTopicId, setFilterTopicId] = useState<number | undefined>(initialUrl.filterTopicId);
+  const [readFilter, setReadFilter] = useState<ReadFilter>(initialUrl.readFilter);
+  const [filterDateFrom, setFilterDateFrom] = useState<string | undefined>(initialUrl.filterDateFrom);
+  const [filterDateTo, setFilterDateTo] = useState<string | undefined>(initialUrl.filterDateTo);
+
+  useEffect(() => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (currentPage > 1) next.set('page', String(currentPage));
+        else next.delete('page');
+        if (filterCasinoId != null && filterCasinoId > 0) next.set('related_casino_id', String(filterCasinoId));
+        else next.delete('related_casino_id');
+        if (filterToEmail?.trim()) next.set('to_email', filterToEmail.trim());
+        else next.delete('to_email');
+        if (filterGeo?.trim()) next.set('geo', filterGeo.trim());
+        else next.delete('geo');
+        if (filterTopicId != null && filterTopicId > 0) next.set('topic_id', String(filterTopicId));
+        else next.delete('topic_id');
+        if (readFilter === 'read') next.set('read', 'read');
+        else if (readFilter === 'unread') next.set('read', 'unread');
+        else next.delete('read');
+        if (filterDateFrom) next.set('date_from', filterDateFrom);
+        else next.delete('date_from');
+        if (filterDateTo) next.set('date_to', filterDateTo);
+        else next.delete('date_to');
+        return next;
+      },
+      { replace: true },
+    );
+  }, [
+    currentPage,
+    filterCasinoId,
+    filterToEmail,
+    filterGeo,
+    filterTopicId,
+    readFilter,
+    filterDateFrom,
+    filterDateTo,
+    setSearchParams,
+  ]);
 
   // -------------------------------------------------------------------------
   // RTK Query

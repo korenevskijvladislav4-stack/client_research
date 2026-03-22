@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Card,
   Col,
@@ -86,9 +87,53 @@ function galleryMetaItems(s: ScreenshotGalleryItem, geos: { code: string; name: 
   ];
 }
 
+function parseGalleryUrl(): ScreenshotFilters {
+  const sp = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+  const out: ScreenshotFilters = {};
+  const g = sp.get('geo')?.trim();
+  if (g) out.geo = g;
+  const sec = sp.get('section')?.trim();
+  if (sec) out.section = sec;
+  const cat = sp.get('category')?.trim();
+  if (cat) out.category = cat;
+  const cid = sp.get('casino_id');
+  if (cid) {
+    const n = Number(cid);
+    if (Number.isFinite(n) && n > 0) out.casinoId = n;
+  }
+  const df = sp.get('date_from')?.trim();
+  const dt = sp.get('date_to')?.trim();
+  if (df) out.dateFrom = df;
+  if (dt) out.dateTo = dt;
+  return out;
+}
+
 export default function ScreenshotsGallery() {
   const { token } = theme.useToken();
-  const [filters, setFilters] = useState<ScreenshotFilters>({});
+  const [, setSearchParams] = useSearchParams();
+  const [filters, setFilters] = useState<ScreenshotFilters>(() => parseGalleryUrl());
+
+  useEffect(() => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (filters.geo?.trim()) next.set('geo', filters.geo.trim());
+        else next.delete('geo');
+        if (filters.section?.trim()) next.set('section', filters.section.trim());
+        else next.delete('section');
+        if (filters.category?.trim()) next.set('category', filters.category.trim());
+        else next.delete('category');
+        if (filters.casinoId != null && filters.casinoId > 0) next.set('casino_id', String(filters.casinoId));
+        else next.delete('casino_id');
+        if (filters.dateFrom) next.set('date_from', filters.dateFrom);
+        else next.delete('date_from');
+        if (filters.dateTo) next.set('date_to', filters.dateTo);
+        else next.delete('date_to');
+        return next;
+      },
+      { replace: true },
+    );
+  }, [filters, setSearchParams]);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const { data: screenshots = [], isLoading } = useGetAllScreenshotsQuery(filters);

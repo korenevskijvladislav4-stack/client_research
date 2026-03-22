@@ -11,6 +11,7 @@ import { PageHeaderCard } from '../../components/PageHeaderCard';
 export default function TransactionHistory() {
   const table = useServerTable<{ casino_id?: number; account_id?: number; type?: 'deposit' | 'withdrawal'; date_from?: string; date_to?: string }>({
     defaultPageSize: 20,
+    persistInUrl: true,
     defaultSortField: 'transaction_date',
     defaultSortOrder: 'desc',
   });

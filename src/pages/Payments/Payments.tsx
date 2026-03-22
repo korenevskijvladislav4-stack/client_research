@@ -75,6 +75,7 @@ export default function Payments() {
     method?: string;
   }>({
     defaultPageSize: 20,
+    persistInUrl: true,
     defaultSortField: 'created_at',
     defaultSortOrder: 'desc',
   });
