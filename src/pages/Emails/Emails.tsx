@@ -1,6 +1,6 @@
 import { useMemo, useState, useCallback, useEffect } from 'react';
-import { Button, Card, Space, Typography, message } from 'antd';
-import { DownloadOutlined, SettingOutlined, SyncOutlined } from '@ant-design/icons';
+import { Button, Card, Space, message } from 'antd';
+import { DownloadOutlined, MailOutlined, SettingOutlined, SyncOutlined } from '@ant-design/icons';
 import { Link, useSearchParams } from 'react-router-dom';
 import { getApiBaseUrl } from '../../config/api';
 import {
@@ -19,8 +19,7 @@ import {
 } from '../../store/api/emailApi';
 import { useGetAllCasinosQuery } from '../../store/api/casinoApi';
 import { useGetGeosQuery } from '../../store/api/geoApi';
-
-const { Title } = Typography;
+import { PageHeaderCard } from '../../components/PageHeaderCard';
 
 // ---------------------------------------------------------------------------
 // Page
@@ -259,25 +258,17 @@ export default function Emails() {
 
   return (
     <Space direction="vertical" size={24} style={{ width: '100%' }}>
-      {/* Header */}
-      <Card size="small">
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: 12,
-          }}
-        >
-          <Title level={4} style={{ margin: 0 }}>
+      <PageHeaderCard
+        title={
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <MailOutlined />
             Почта
-          </Title>
-          <Space>
-            <Button
-              icon={<DownloadOutlined />}
-              onClick={handleExport}
-            >
+          </span>
+        }
+        description="Входящие письма и привязка к казино. Синхронизация с почтовыми ящиками — по кнопке справа."
+        actions={
+          <>
+            <Button icon={<DownloadOutlined />} onClick={handleExport}>
               Выгрузить XLSX
             </Button>
             <Link to="/emails/imap-accounts">
@@ -291,9 +282,9 @@ export default function Emails() {
             >
               Синхронизировать
             </Button>
-          </Space>
-        </div>
-      </Card>
+          </>
+        }
+      />
 
       {/* Content */}
       <Card>
@@ -305,7 +296,7 @@ export default function Emails() {
           filterCasinoId={filterCasinoId}
           filterToEmail={filterToEmail}
           filterGeo={filterGeo}
-           filterTopicId={filterTopicId}
+          filterTopicId={filterTopicId}
           readFilter={readFilter}
           dateFrom={filterDateFrom}
           dateTo={filterDateTo}

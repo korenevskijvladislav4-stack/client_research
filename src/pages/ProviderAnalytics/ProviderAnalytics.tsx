@@ -8,6 +8,7 @@ import { useAppSelector } from '../../hooks/redux';
 import { useGetAllCasinosQuery } from '../../store/api/casinoApi';
 import { useGetGeosQuery } from '../../store/api/geoApi';
 import { useGetProvidersQuery } from '../../store/api/referenceApi';
+import { PageHeaderCard } from '../../components/PageHeaderCard';
 
 interface AnalyticsRow {
   casino_id: number;
@@ -175,24 +176,20 @@ export default function ProviderAnalytics() {
 
   return (
     <Space direction="vertical" size={24} style={{ width: '100%' }}>
-      <Card size="small">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
-          <Space direction="vertical" size={0}>
-            <Typography.Title level={4} style={{ margin: 0 }}>
-              <ApiOutlined style={{ marginRight: 8 }} />
-              Аналитика по провайдерам
-            </Typography.Title>
-            <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-              Строки — казино, столбцы — провайдеры. Галочка — подключено для выбранного GEO, прочерк — нет.
-            </Typography.Text>
-          </Space>
-          <Space wrap>
-            <Button icon={<DownloadOutlined />} onClick={handleExport}>
-              Выгрузить XLSX
-            </Button>
-          </Space>
-        </div>
-      </Card>
+      <PageHeaderCard
+        title={
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <ApiOutlined />
+            Аналитика по провайдерам
+          </span>
+        }
+        description="Строки — казино, столбцы — провайдеры. Галочка — подключено для выбранного GEO, прочерк — нет."
+        actions={
+          <Button icon={<DownloadOutlined />} onClick={handleExport}>
+            Выгрузить XLSX
+          </Button>
+        }
+      />
 
       <Card size="small">
         <Space wrap size={16}>

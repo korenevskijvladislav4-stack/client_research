@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button, Card, Select, Space, Table, Tag, Tooltip, Typography, theme } from 'antd';
-import { CheckCircleFilled } from '@ant-design/icons';
+import { BarChartOutlined, CheckCircleFilled } from '@ant-design/icons';
 import {
   useGetSettingsFieldsQuery,
   useGetProfileContextsQuery,
@@ -10,8 +10,9 @@ import {
 } from '../../store/api/profileSettingsApi';
 import { useGetGeosQuery } from '../../store/api/geoApi';
 import { useGetAllCasinosQuery } from '../../store/api/casinoApi';
+import { PageHeaderCard } from '../../components/PageHeaderCard';
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
 function parseCsvIds(raw: string | null): number[] {
   if (!raw?.trim()) return [];
@@ -198,19 +199,35 @@ export default function ProfileSettingsAnalytics() {
     [casinos]
   );
 
+  const hasMatrix = activeFields.length > 0 && activeContexts.length > 0;
+
   return (
     <Space direction="vertical" size={24} style={{ width: '100%' }}>
+      <PageHeaderCard
+        title={
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <BarChartOutlined />
+            Аналитика настроек профиля
+          </span>
+        }
+        description="Матрица: поля профиля × контексты (этапы). В ячейке — число казино с включённой настройкой; наведите для списка."
+        actions={
+          hasMatrix ? (
+            <>
+              <Tag style={{ padding: '2px 10px', fontSize: 13 }}>Полей: {activeFields.length}</Tag>
+              <Tag color="blue" style={{ padding: '2px 10px', fontSize: 13 }}>
+                Контекстов: {activeContexts.length}
+              </Tag>
+            </>
+          ) : undefined
+        }
+      />
+
       <Card size="small">
-        <Title level={4} style={{ margin: 0 }}>
-          Аналитика настроек профиля
-        </Title>
-      </Card>
-      <Card>
-        <Space style={{ marginBottom: 24 }} wrap size={16}>
-          {/* GEO Filter */}
-          <Space>
-            <Typography.Text type="secondary">GEO:</Typography.Text>
-            <Space wrap>
+        <Space wrap size={16}>
+          <Space align="center">
+            <Text type="secondary">GEO:</Text>
+            <Space wrap size={8}>
               <Button
                 size="small"
                 type={!selectedGeo ? 'primary' : 'default'}
@@ -230,10 +247,8 @@ export default function ProfileSettingsAnalytics() {
               ))}
             </Space>
           </Space>
-
-          {/* Casino Filter */}
-          <Space>
-            <Typography.Text type="secondary">Казино:</Typography.Text>
+          <Space align="center">
+            <Text type="secondary">Казино:</Text>
             <Select
               mode="multiple"
               allowClear
@@ -241,20 +256,24 @@ export default function ProfileSettingsAnalytics() {
               value={selectedCasinos}
               onChange={setSelectedCasinos}
               options={casinoOptions}
-              style={{ width: '100%', maxWidth: 300, minWidth: 200 }}
-              maxTagCount={3}
+              style={{ minWidth: 200, maxWidth: 320 }}
+              maxTagCount="responsive"
               filterOption={(input, option) =>
                 (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
               }
             />
           </Space>
         </Space>
+      </Card>
 
-        {activeFields.length === 0 || activeContexts.length === 0 ? (
+      {!hasMatrix ? (
+        <Card>
           <div style={{ textAlign: 'center', padding: '40px 0', color: token.colorTextTertiary }}>
-            Настройки профиля не настроены. Добавьте поля и контексты в разделе "Настройки профиля".
+            Настройки профиля не настроены. Добавьте поля и контексты в разделе «Настройки профиля».
           </div>
-        ) : (
+        </Card>
+      ) : (
+        <Card bodyStyle={{ padding: 0 }}>
           <div style={{ overflowX: 'auto', width: '100%' }}>
             <Table
               dataSource={dataSource}
@@ -266,8 +285,8 @@ export default function ProfileSettingsAnalytics() {
               scroll={{ x: 'max-content' }}
             />
           </div>
-        )}
-      </Card>
+        </Card>
+      )}
     </Space>
   );
 }

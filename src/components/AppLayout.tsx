@@ -24,6 +24,7 @@ import {
   BulbOutlined,
   UpOutlined,
   DownOutlined,
+  FormOutlined,
 } from '@ant-design/icons';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../hooks/redux';
@@ -47,7 +48,7 @@ function readWorkspaceBannerExpanded(): boolean {
 function buildMenuItems(isAdmin: boolean) {
   const settingsChildren: Array<Record<string, unknown>> = [
     { key: '/profile-settings', icon: <SettingOutlined />, label: <Link to="/profile-settings">Профиль</Link> },
-    { key: '/profile-fields', icon: <SettingOutlined />, label: <Link to="/profile-fields">Поля</Link> },
+    { key: '/profile-fields', icon: <FormOutlined />, label: <Link to="/profile-fields">Поля</Link> },
     { key: '/email-topics', icon: <MailOutlined />, label: <Link to="/email-topics">Темы писем</Link> },
     { key: '/directories', icon: <BookOutlined />, label: <Link to="/directories">Справочники</Link> },
   ];

@@ -6,8 +6,9 @@ import dayjs, { Dayjs } from 'dayjs';
 import { useGetEmailAnalyticsQuery, useGetRecipientsQuery, useRelinkEmailsMutation, useGetEmailTopicsQuery } from '../../store/api/emailApi';
 import { useGetGeosQuery } from '../../store/api/geoApi';
 import { getApiBaseUrl } from '../../config/api';
+import { PageHeaderCard } from '../../components/PageHeaderCard';
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 const { RangePicker } = DatePicker;
 
 // ---------------------------------------------------------------------------
@@ -276,58 +277,36 @@ export default function EmailAnalytics() {
 
   return (
     <Space direction="vertical" size={24} style={{ width: '100%' }}>
-      {/* Header */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          flexWrap: 'wrap',
-          gap: 16,
-        }}
-      >
-        <Space direction="vertical" size={0}>
-          <Title level={4} style={{ margin: 0 }}>
-            <MailOutlined style={{ marginRight: 8 }} />
+      <PageHeaderCard
+        title={
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <MailOutlined />
             Аналитика почты
-          </Title>
-          <Text type="secondary">
-            Количество писем по казино и датам. Кликните на число для перехода к письмам.
-          </Text>
-        </Space>
-        <Space>
-          <Tag style={{ padding: '2px 10px', fontSize: 13 }}>
-            Всего: {grandTotal}
-          </Tag>
-          <Tag color="blue" style={{ padding: '2px 10px', fontSize: 13 }}>
-            Казино: {rows.length}
-          </Tag>
-          <Button
-            icon={<DownloadOutlined />}
-            onClick={handleExport}
-          >
-            Выгрузить XLSX
-          </Button>
-          <Tooltip title="Привязать только новые (непривязанные) письма к казино">
-            <Button
-              icon={<LinkOutlined />}
-              loading={relinking}
-              onClick={() => handleRelink(false)}
-            >
-              Привязать новые
+          </span>
+        }
+        description="Количество писем по казино и датам. Кликните на число для перехода к письмам."
+        actions={
+          <>
+            <Tag style={{ padding: '2px 10px', fontSize: 13 }}>Всего: {grandTotal}</Tag>
+            <Tag color="blue" style={{ padding: '2px 10px', fontSize: 13 }}>
+              Казино: {rows.length}
+            </Tag>
+            <Button icon={<DownloadOutlined />} onClick={handleExport}>
+              Выгрузить XLSX
             </Button>
-          </Tooltip>
-          <Tooltip title="Сбросить все привязки и пересканировать все письма заново">
-            <Button
-              icon={<LinkOutlined />}
-              loading={relinking}
-              onClick={() => handleRelink(true)}
-            >
-              Перепривязать все
-            </Button>
-          </Tooltip>
-        </Space>
-      </div>
+            <Tooltip title="Привязать только новые (непривязанные) письма к казино">
+              <Button icon={<LinkOutlined />} loading={relinking} onClick={() => handleRelink(false)}>
+                Привязать новые
+              </Button>
+            </Tooltip>
+            <Tooltip title="Сбросить все привязки и пересканировать все письма заново">
+              <Button icon={<LinkOutlined />} loading={relinking} onClick={() => handleRelink(true)}>
+                Перепривязать все
+              </Button>
+            </Tooltip>
+          </>
+        }
+      />
 
       {/* Filters */}
       <Card size="small">
