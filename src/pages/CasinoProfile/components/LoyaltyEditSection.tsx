@@ -4,6 +4,7 @@ import {
   Avatar,
   Button,
   Card,
+  Divider,
   Drawer,
   Form,
   Image,
@@ -11,6 +12,7 @@ import {
   Select,
   Space,
   Tabs,
+  Tag,
   Typography,
   Upload,
   message,
@@ -462,16 +464,25 @@ export default function LoyaltyEditSection({ casinoId, activeGeo, geoOptions }: 
 
   return (
     <>
-      <Space style={{ marginBottom: 12 }} wrap>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-          Добавить программу
-        </Button>
-        {activeGeo && (
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: activeGeo ? 'space-between' : 'flex-end',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 8,
+          marginBottom: 16,
+        }}
+      >
+        {activeGeo ? (
           <Typography.Text type="secondary" style={{ fontSize: 12 }}>
             Фильтр списка: GEO {activeGeo}
           </Typography.Text>
-        )}
-      </Space>
+        ) : null}
+        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
+          Добавить программу
+        </Button>
+      </div>
 
       <CasinoProfileTable<CasinoLoyaltyProgram>
         rowKey="id"
@@ -484,14 +495,6 @@ export default function LoyaltyEditSection({ casinoId, activeGeo, geoOptions }: 
             dataIndex: 'orientation',
             width: 100,
             render: (o: LoyaltyOrientation) => orientationLabel(o),
-          },
-          {
-            title: 'Условия (фрагмент)',
-            render: (_, r) => (
-              <Typography.Text ellipsis style={{ maxWidth: 280 }} type="secondary">
-                {r.conditions_md.replace(/\s+/g, ' ').slice(0, 120)}
-              </Typography.Text>
-            ),
           },
           {
             title: 'Статусов',
@@ -769,33 +772,53 @@ export default function LoyaltyEditSection({ casinoId, activeGeo, geoOptions }: 
           <Typography.Text strong>Статусы</Typography.Text>
           <Form.List name="statuses">
             {(fields, { add, remove }) => (
-              <Space direction="vertical" style={{ width: '100%', marginTop: 8 }} size={12}>
-                {fields.map((field, index) => {
-                  const serverImages: CasinoLoyaltyStatusImage[] =
-                    editing?.statuses[index]?.images ?? [];
-                  return (
-                    <CardMini
-                      key={field.key}
-                      token={token}
-                      field={field}
-                      index={index}
-                      serverImages={serverImages}
-                      pendingFiles={pendingByIndex.get(index) ?? []}
-                      analyzingStatus={analyzingStatus}
-                      onRemove={() => remove(field.name)}
-                      onFormatAi={() => formatStatusDescription(field.name)}
-                      formatting={formatting}
-                      onStatusAiFile={(file) => handleStatusImageFile(file, field.name)}
-                      onAddPendingFiles={(files) => appendPendingOnly(field.name, files)}
-                      onRemovePendingFile={(fileIndex) => removePendingFile(field.name, fileIndex)}
-                      onDeleteServerImage={onDeleteServerImage}
+              <>
+                <Space
+                  direction="vertical"
+                  size={0}
+                  style={{ width: '100%', marginTop: 12 }}
+                  split={
+                    <Divider
+                      style={{
+                        margin: '20px 0',
+                        borderColor: token.colorBorder,
+                      }}
                     />
-                  );
-                })}
-                <Button type="dashed" onClick={() => add({ name: '', description_md: '' })} block icon={<PlusOutlined />}>
+                  }
+                >
+                  {fields.map((field, index) => {
+                    const serverImages: CasinoLoyaltyStatusImage[] =
+                      editing?.statuses[index]?.images ?? [];
+                    return (
+                      <CardMini
+                        key={field.key}
+                        token={token}
+                        field={field}
+                        index={index}
+                        serverImages={serverImages}
+                        pendingFiles={pendingByIndex.get(index) ?? []}
+                        analyzingStatus={analyzingStatus}
+                        onRemove={() => remove(field.name)}
+                        onFormatAi={() => formatStatusDescription(field.name)}
+                        formatting={formatting}
+                        onStatusAiFile={(file) => handleStatusImageFile(file, field.name)}
+                        onAddPendingFiles={(files) => appendPendingOnly(field.name, files)}
+                        onRemovePendingFile={(fileIndex) => removePendingFile(field.name, fileIndex)}
+                        onDeleteServerImage={onDeleteServerImage}
+                      />
+                    );
+                  })}
+                </Space>
+                <Button
+                  type="dashed"
+                  onClick={() => add({ name: '', description_md: '' })}
+                  block
+                  icon={<PlusOutlined />}
+                  style={{ marginTop: 20 }}
+                >
                   Добавить статус
                 </Button>
-              </Space>
+              </>
             )}
           </Form.List>
         </Form>
@@ -849,34 +872,50 @@ function CardMini({
   return (
     <div
       style={{
-        border: `1px solid ${token.colorBorderSecondary}`,
+        border: `1px solid ${token.colorBorder}`,
         borderRadius: token.borderRadiusLG,
-        padding: 12,
+        overflow: 'hidden',
         background: token.colorBgContainer,
+        boxShadow: `0 1px 4px ${token.colorFillSecondary}`,
+        borderLeft: `3px solid ${token.colorPrimary}`,
       }}
     >
-      <Space align="start" style={{ width: '100%', justifyContent: 'space-between' }}>
-        <Typography.Text type="secondary">Статус {index + 1}</Typography.Text>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 8,
+          padding: '10px 14px',
+          background: token.colorFillAlter,
+          borderBottom: `1px solid ${token.colorBorderSecondary}`,
+        }}
+      >
+        <Tag color="blue" style={{ margin: 0 }}>
+          Уровень {index + 1}
+        </Tag>
         <Space>
           <Button size="small" icon={<RobotOutlined />} loading={formatting} onClick={onFormatAi}>
             ИИ оформит
           </Button>
           <Button size="small" danger type="text" icon={<DeleteOutlined />} onClick={onRemove} />
         </Space>
-      </Space>
+      </div>
 
-      <Form.Item name={[field.name, 'id']} hidden>
-        <Input type="hidden" />
-      </Form.Item>
+      <div style={{ padding: '14px 14px 16px' }}>
+        <Form.Item name={[field.name, 'id']} hidden>
+          <Input type="hidden" />
+        </Form.Item>
 
-      <Form.Item
-        name={[field.name, 'name']}
-        label="Название"
-        rules={[{ required: true, message: 'Название статуса' }]}
-        style={{ marginBottom: 8 }}
-      >
-        <Input placeholder="Bronze, Silver…" />
-      </Form.Item>
+        <Form.Item
+          name={[field.name, 'name']}
+          label="Название"
+          rules={[{ required: true, message: 'Название статуса' }]}
+          style={{ marginBottom: 8 }}
+        >
+          <Input placeholder="Bronze, Silver…" />
+        </Form.Item>
 
       <Card
         size="small"
@@ -1084,6 +1123,7 @@ function CardMini({
           </div>
         )}
       </Card>
+      </div>
     </div>
   );
 }

@@ -319,8 +319,11 @@ body,
 }
 
 /* Карусель статусов лояльности: несколько карточек в ряд, одинаковая высота ряда */
+/* Не использовать adaptiveHeight при slidesToShow>1: slick задаёт высоту списку по одному слайду —
+   при коротком тексте offsetHeight малый или 0, список схлопывается и карточки не видны. */
 .loyalty-status-carousel .slick-list {
   margin: 0 -4px;
+  min-height: 140px;
 }
 .loyalty-status-carousel .slick-track {
   display: flex !important;
@@ -341,11 +344,42 @@ body,
   width: 32px;
   height: 32px;
 }
+/* Кнопка 32px, а Ant Design позиционирует chevron в ::after под arrowSize 16 — без этого стрелка уезжает */
+.loyalty-status-carousel .slick-prev::after,
+.loyalty-status-carousel .slick-next::after {
+  top: 50% !important;
+  inset-inline-start: 50% !important;
+}
+.loyalty-status-carousel .slick-prev::after {
+  transform: translate(-50%, -50%) rotate(-45deg) !important;
+}
+.loyalty-status-carousel .slick-next::after {
+  transform: translate(-50%, -50%) rotate(135deg) !important;
+}
 .loyalty-status-carousel .slick-prev {
   left: -4px;
 }
 .loyalty-status-carousel .slick-next {
   right: -4px;
+}
+
+/* Ant Design Carousel рисует стрелки цветом #fff — на светлых карточках их не видно */
+[data-theme='light'] .loyalty-status-carousel .slick-prev,
+[data-theme='light'] .loyalty-status-carousel .slick-next {
+  color: rgba(0, 0, 0, 0.72) !important;
+  opacity: 1 !important;
+  background: rgba(255, 255, 255, 0.96) !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  border-radius: 50% !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+[data-theme='light'] .loyalty-status-carousel .slick-prev:hover,
+[data-theme='light'] .loyalty-status-carousel .slick-next:hover,
+[data-theme='light'] .loyalty-status-carousel .slick-prev:focus,
+[data-theme='light'] .loyalty-status-carousel .slick-next:focus {
+  color: rgba(0, 0, 0, 0.88) !important;
+  background: #fff !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 }
 
 /* Print styles */

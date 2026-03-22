@@ -60,7 +60,6 @@ function ProgramBlock({ program }: { program: CasinoLoyaltyProgram }) {
             infinite={false}
             draggable
             swipeToSlide
-            adaptiveHeight
             slidesToShow={3}
             slidesToScroll={1}
             responsive={[
@@ -83,13 +82,13 @@ function ProgramBlock({ program }: { program: CasinoLoyaltyProgram }) {
                     style={{
                       borderColor: token.colorBorderSecondary,
                       background: token.colorFillAlter,
-                      minHeight: 200,
+                      minHeight: 140,
                       height: '100%',
                       display: 'flex',
                       flexDirection: 'column',
                     }}
                     styles={{
-                      body: { flex: 1, overflow: 'auto', maxHeight: 320 },
+                      body: { flex: 1, overflow: 'auto', maxHeight: 240 },
                     }}
                     title={<Typography.Text strong ellipsis={{ tooltip: s.name }}>{s.name}</Typography.Text>}
                   >
