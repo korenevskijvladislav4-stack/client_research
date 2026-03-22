@@ -1,11 +1,16 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Card, Form, Input, Space, Typography, message } from 'antd';
+import { Button, Card, Form, Input, Space, Typography, message, theme } from 'antd';
 import { useAppDispatch } from '../../hooks/redux';
 import { setCredentials } from '../../store/slices/authSlice';
 import { authService } from '../../services/authService';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const Login = () => {
+  const { token } = theme.useToken();
+  const { mode } = useTheme();
+  const isDark = mode === 'dark';
+
   const [loading, setLoading] = useState(false);
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
@@ -29,6 +34,22 @@ const Login = () => {
     }
   };
 
+  const pageBg = isDark
+    ? 'radial-gradient(circle at top left, #1d2344 0, #020617 55%), radial-gradient(circle at bottom right, #0f172a 0, #020617 55%)'
+    : token.colorBgLayout;
+
+  const cardSurface = isDark
+    ? {
+        boxShadow: '0 20px 55px rgba(15, 23, 42, 0.9), 0 0 0 1px rgba(15, 23, 42, 0.9)',
+        border: '1px solid rgba(148,163,184,0.45)',
+        background: 'linear-gradient(145deg, rgba(15,23,42,0.96), rgba(15,23,42,0.98))',
+      }
+    : {
+        boxShadow: token.boxShadowSecondary,
+        border: `1px solid ${token.colorBorder}`,
+        background: token.colorBgContainer,
+      };
+
   return (
     <div
       style={{
@@ -37,8 +58,7 @@ const Login = () => {
         alignItems: 'center',
         justifyContent: 'center',
         padding: 16,
-        background:
-          'radial-gradient(circle at top left, #1d2344 0, #020617 55%), radial-gradient(circle at bottom right, #0f172a 0, #020617 55%)',
+        background: pageBg,
       }}
     >
       <div
@@ -52,7 +72,7 @@ const Login = () => {
             display: 'flex',
             flexDirection: 'column',
             gap: 16,
-            color: '#e2e8f0',
+            color: token.colorText,
           }}
         >
           <Space size={10} align="center">
@@ -62,8 +82,12 @@ const Login = () => {
                 width: 34,
                 height: 34,
                 fontSize: 18,
-                boxShadow:
-                  '0 18px 40px rgba(15, 23, 42, 0.8), 0 0 0 1px rgba(15, 23, 42, 0.9)',
+                ...(isDark
+                  ? {
+                      boxShadow:
+                        '0 18px 40px rgba(15, 23, 42, 0.8), 0 0 0 1px rgba(15, 23, 42, 0.9)',
+                    }
+                  : {}),
               }}
             >
               R
@@ -71,7 +95,7 @@ const Login = () => {
             <div>
               <Typography.Title
                 level={4}
-                style={{ margin: 0, color: '#e2e8f0', letterSpacing: '-0.03em' }}
+                style={{ margin: 0, color: token.colorText, letterSpacing: '-0.03em' }}
               >
                 Research CRM
               </Typography.Title>
@@ -82,11 +106,7 @@ const Login = () => {
             style={{
               width: '100%',
               borderRadius: 18,
-              boxShadow:
-                '0 20px 55px rgba(15, 23, 42, 0.9), 0 0 0 1px rgba(15, 23, 42, 0.9)',
-              border: '1px solid rgba(148,163,184,0.45)',
-              background:
-                'linear-gradient(145deg, rgba(15,23,42,0.96), rgba(15,23,42,0.98))',
+              ...cardSurface,
             }}
             bodyStyle={{ padding: 28 }}
           >
@@ -97,7 +117,7 @@ const Login = () => {
                   style={{
                     marginBottom: 4,
                     fontWeight: 600,
-                    color: '#e5e7eb',
+                    color: token.colorText,
                     letterSpacing: '-0.03em',
                   }}
                 >
