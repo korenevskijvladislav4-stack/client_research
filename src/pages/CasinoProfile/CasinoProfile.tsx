@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   Badge,
@@ -161,7 +161,7 @@ export default function CasinoProfile() {
 
   const { data: profileResp, isLoading: profileLoading } = useGetCasinoProfileQuery(
     { casinoId, geo: activeGeo },
-    { skip: !casinoId } as any,
+    { skip: !casinoId, refetchOnMountOrArgChange: true } as any,
   );
   useGetCasinoProfileHistoryQuery({ casinoId, limit: 200 }, { skip: !casinoId } as any);
   const [updateProfile, { isLoading: saving }] = useUpdateCasinoProfileMutation();
@@ -185,6 +185,25 @@ export default function CasinoProfile() {
     }
     return v;
   }, [items]);
+
+  const dynamicFieldNames = useMemo(
+    () => items.map((it) => `f_${it.field.id}`),
+    [items],
+  );
+  const prevDynamicFieldNamesRef = useRef<string[]>([]);
+
+  useEffect(() => {
+    // Antd Form применяет initialValues только при первом маунте.
+    // При повторном открытии/смене GEO явно синхронизируем значения, чтобы не оставались старые.
+    const namesToReset = Array.from(
+      new Set([...prevDynamicFieldNamesRef.current, ...dynamicFieldNames]),
+    );
+    if (namesToReset.length > 0) {
+      form.resetFields(namesToReset);
+    }
+    form.setFieldsValue(initialValues);
+    prevDynamicFieldNamesRef.current = dynamicFieldNames;
+  }, [form, initialValues, dynamicFieldNames, casinoId, activeGeo]);
 
   // Image gallery
   const IMAGES_PAGE_SIZE = 12;
@@ -249,7 +268,7 @@ export default function CasinoProfile() {
         {items.length === 0 ? (
           <Typography.Text type="secondary">Нет дополнительных полей для этого профиля.</Typography.Text>
         ) : (
-          <Form form={form} layout="vertical" initialValues={initialValues} key={`${casinoId}-${activeGeo}`}>
+          <Form form={form} layout="vertical" key={`${casinoId}-${activeGeo}`}>
             <Descriptions
               column={1}
               bordered
