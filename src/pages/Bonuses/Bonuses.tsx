@@ -91,7 +91,7 @@ export default function Bonuses() {
   const token = useAppSelector((s) => s.auth.token);
   const table = useServerTable<{
     casino_id?: number;
-    geo?: string;
+    geo?: string[];
     bonus_category?: string;
     bonus_kind?: string;
     bonus_type?: string;
@@ -154,7 +154,7 @@ export default function Bonuses() {
   const hasFilters =
     Boolean(table.search) ||
     Boolean(table.filters.casino_id) ||
-    Boolean(table.filters.geo) ||
+    (table.filters.geo?.length ?? 0) > 0 ||
     Boolean(table.filters.bonus_category) ||
     Boolean(table.filters.bonus_kind) ||
     Boolean(table.filters.bonus_type);
@@ -169,7 +169,7 @@ export default function Bonuses() {
 
       const filters = params.filters || {};
       if (filters.casino_id != null) urlParams.set('casino_id', String(filters.casino_id));
-      if (filters.geo) urlParams.set('geo', String(filters.geo));
+      if (Array.isArray(filters.geo) && filters.geo.length > 0) filters.geo.forEach((g: string) => urlParams.append('geo', g));
       if (filters.bonus_category) urlParams.set('bonus_category', String(filters.bonus_category));
       if (filters.bonus_kind) urlParams.set('bonus_kind', String(filters.bonus_kind));
       if (filters.bonus_type) urlParams.set('bonus_type', String(filters.bonus_type));
@@ -225,13 +225,15 @@ export default function Bonuses() {
               }
             />
             <Select
+              mode="multiple"
               placeholder="GEO"
               value={table.filters.geo}
               onChange={(v) => table.updateFilter('geo', v)}
               options={geoOptions}
-              style={{ width: '100%', maxWidth: 120, minWidth: 100 }}
+              style={{ width: 220 }}
               allowClear
               showSearch
+              maxTagCount="responsive"
             />
             <Select
               placeholder="Категория"

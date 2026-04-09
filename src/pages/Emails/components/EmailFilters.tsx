@@ -34,14 +34,14 @@ interface EmailFiltersProps {
   topicOptions: TopicOption[];
   filterCasinoId: number | undefined;
   filterToEmail: string | undefined;
-  filterGeo: string | undefined;
+  filterGeo: string[];
   filterTopicId: number | undefined;
   readFilter: ReadFilter;
   dateFrom: string | undefined;
   dateTo: string | undefined;
   onCasinoChange: (value: number | undefined) => void;
   onRecipientChange: (value: string | undefined) => void;
-  onGeoChange: (value: string | undefined) => void;
+  onGeoChange: (value: string[]) => void;
   onTopicChange: (value: number | undefined) => void;
   onReadFilterChange: (value: ReadFilter) => void;
   onDateFromChange: (value: string | undefined) => void;
@@ -77,7 +77,7 @@ export default function EmailFilters({
   const hasFilters =
     filterCasinoId ||
     filterToEmail ||
-    filterGeo ||
+    filterGeo.length > 0 ||
     filterTopicId ||
     readFilter !== 'all' ||
     dateFrom ||
@@ -131,16 +131,18 @@ export default function EmailFilters({
             }
           />
           <Select
+            mode="multiple"
             allowClear
             showSearch
             placeholder="GEO"
-            style={{ minWidth: 140 }}
+            style={{ width: 220 }}
             options={geoOptions}
             value={filterGeo}
             onChange={onGeoChange}
             filterOption={(input, option) =>
               (option?.label ?? '').toString().toLowerCase().includes(input.toLowerCase())
             }
+            maxTagCount="responsive"
           />
           <Select
             allowClear

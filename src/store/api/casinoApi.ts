@@ -25,6 +25,7 @@ export interface CreateCasinoDto {
 export interface CasinoFilters {
   status?: string;
   is_our?: boolean;
+  geo?: string[];
   search?: string;
 }
 

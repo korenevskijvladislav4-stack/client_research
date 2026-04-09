@@ -57,7 +57,7 @@ export interface ScreenshotGalleryItem {
 }
 
 export interface ScreenshotFilters {
-  geo?: string;
+  geo?: string[];
   section?: string;
   category?: string;
   casinoId?: number;
@@ -203,7 +203,7 @@ export const slotSelectorApi = baseApi.injectEndpoints({
     getAllScreenshots: builder.query<ScreenshotGalleryItem[], ScreenshotFilters | void>({
       query: (filters) => {
         const params = new URLSearchParams();
-        if (filters && filters.geo) params.append('geo', filters.geo);
+        if (filters && filters.geo && filters.geo.length > 0) filters.geo.forEach((g) => params.append('geo', g));
         if (filters && filters.section) params.append('section', filters.section);
         if (filters && filters.category) params.append('category', filters.category);
         if (filters && filters.casinoId) params.append('casinoId', filters.casinoId.toString());

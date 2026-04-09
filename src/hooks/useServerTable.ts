@@ -198,6 +198,7 @@ export function useServerTable<F = Record<string, any>>(
     const cleanFilters: Record<string, any> = {};
     for (const [key, value] of Object.entries(filters as Record<string, any>)) {
       if (value !== undefined && value !== null && value !== '') {
+        if (Array.isArray(value) && value.length === 0) continue;
         cleanFilters[key] = value;
       }
     }

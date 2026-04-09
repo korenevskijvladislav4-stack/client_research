@@ -21,7 +21,7 @@ function parseUrl() {
   return {
     range,
     toEmail: sp.get('to_email') || undefined,
-    filterGeo: sp.get('geo') || undefined,
+    filterGeo: sp.getAll('geo').filter(Boolean),
   };
 }
 
@@ -39,7 +39,7 @@ export default function EmailTopicsAnalytics() {
 
   const [range, setRange] = useState<[Dayjs, Dayjs]>(urlInit.range);
   const [toEmail, setToEmail] = useState<string | undefined>(urlInit.toEmail);
-  const [filterGeo, setFilterGeo] = useState<string | undefined>(urlInit.filterGeo);
+  const [filterGeo, setFilterGeo] = useState<string[]>(urlInit.filterGeo);
 
   useEffect(() => {
     setSearchParams(
@@ -49,8 +49,8 @@ export default function EmailTopicsAnalytics() {
         next.set('date_to', range[1].format('YYYY-MM-DD'));
         if (toEmail?.trim()) next.set('to_email', toEmail.trim());
         else next.delete('to_email');
-        if (filterGeo?.trim()) next.set('geo', filterGeo.trim());
-        else next.delete('geo');
+        next.delete('geo');
+        filterGeo.forEach((g) => { if (g.trim()) next.append('geo', g.trim()); });
         return next;
       },
       { replace: true },
@@ -64,7 +64,7 @@ export default function EmailTopicsAnalytics() {
     date_from: dateFrom,
     date_to: dateTo,
     to_email: toEmail,
-    geo: filterGeo,
+    geo: filterGeo.length > 0 ? filterGeo : undefined,
   });
 
   const { data: accountEmails = [] } = useGetRecipientsQuery();
@@ -105,7 +105,7 @@ export default function EmailTopicsAnalytics() {
     p.set('date_from', dateFrom);
     p.set('date_to', dateTo);
     if (toEmail?.trim()) p.set('to_email', toEmail.trim());
-    if (filterGeo?.trim()) p.set('geo', filterGeo.trim());
+    filterGeo.forEach((g) => { if (g.trim()) p.append('geo', g.trim()); });
     p.set('topic_id', String(topicId));
     nav(`/emails?${p.toString()}`);
   };
@@ -235,16 +235,18 @@ export default function EmailTopicsAnalytics() {
           <Space>
             <Text type="secondary">GEO:</Text>
             <Select
-              style={{ minWidth: 160 }}
+              mode="multiple"
+              style={{ width: 220 }}
               placeholder="Все GEO"
               allowClear
               showSearch
               value={filterGeo}
-              onChange={(v) => setFilterGeo(v || undefined)}
+              onChange={(v) => setFilterGeo(v)}
               options={geoOptions}
               filterOption={(input, option) =>
                 (option?.label ?? '').toString().toLowerCase().includes(input.toLowerCase())
               }
+              maxTagCount="responsive"
             />
           </Space>
         </Space>

@@ -14,7 +14,7 @@ import { PageHeaderCard } from '../../components/PageHeaderCard';
 
 interface AccountFilters {
   casino_id?: number;
-  geo?: string;
+  geo?: string[];
   owner_id?: number;
 }
 
@@ -91,7 +91,8 @@ export default function Accounts() {
             }
           />
           <Select
-            style={{ minWidth: 180 }}
+            mode="multiple"
+            style={{ width: 220 }}
             allowClear
             showSearch
             placeholder="GEO"
@@ -101,6 +102,7 @@ export default function Accounts() {
             filterOption={(input, option) =>
               (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
             }
+            maxTagCount="responsive"
           />
           <Select
             style={{ minWidth: 220 }}

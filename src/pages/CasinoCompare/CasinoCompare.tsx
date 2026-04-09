@@ -168,13 +168,13 @@ function parseCompareUrl() {
   const sp = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
   const p1 = sp.get('casino1');
   const p2 = sp.get('casino2');
-  const g = sp.get('geo')?.trim();
+  const gArr = sp.getAll('geo').map((s) => s.trim()).filter(Boolean);
   const n1 = p1 ? Number(p1) : NaN;
   const n2 = p2 ? Number(p2) : NaN;
   return {
     casino1Id: Number.isFinite(n1) && n1 > 0 ? n1 : undefined,
     casino2Id: Number.isFinite(n2) && n2 > 0 ? n2 : undefined,
-    filterGeo: g || undefined,
+    filterGeo: gArr,
   };
 }
 
@@ -184,7 +184,7 @@ export default function CasinoCompare() {
   const urlInit = useMemo(() => parseCompareUrl(), []);
   const [casino1Id, setCasino1Id] = useState<number | undefined>(urlInit.casino1Id);
   const [casino2Id, setCasino2Id] = useState<number | undefined>(urlInit.casino2Id);
-  const [filterGeo, setFilterGeo] = useState<string | undefined>(urlInit.filterGeo);
+  const [filterGeo, setFilterGeo] = useState<string[]>(urlInit.filterGeo);
 
   useEffect(() => {
     setSearchParams(
@@ -194,8 +194,8 @@ export default function CasinoCompare() {
         else next.delete('casino1');
         if (casino2Id != null && casino2Id > 0) next.set('casino2', String(casino2Id));
         else next.delete('casino2');
-        if (filterGeo?.trim()) next.set('geo', filterGeo.trim());
-        else next.delete('geo');
+        next.delete('geo');
+        filterGeo.forEach((g) => { if (g.trim()) next.append('geo', g.trim()); });
         return next;
       },
       { replace: true },
@@ -217,21 +217,23 @@ export default function CasinoCompare() {
     skip: !casino2Id,
   } as any);
 
+  const geoParam = filterGeo.length > 0 ? filterGeo : undefined;
+
   const { data: bonuses1, isLoading: bonuses1Loading } = useGetCasinoBonusesQuery(
-    { casinoId: casino1Id!, geo: filterGeo },
+    { casinoId: casino1Id!, geo: geoParam },
     { skip: !casino1Id } as any
   );
   const { data: bonuses2, isLoading: bonuses2Loading } = useGetCasinoBonusesQuery(
-    { casinoId: casino2Id!, geo: filterGeo },
+    { casinoId: casino2Id!, geo: geoParam },
     { skip: !casino2Id } as any
   );
 
   const { data: payments1, isLoading: payments1Loading } = useGetCasinoPaymentsQuery(
-    { casinoId: casino1Id!, geo: filterGeo },
+    { casinoId: casino1Id!, geo: geoParam },
     { skip: !casino1Id } as any
   );
   const { data: payments2, isLoading: payments2Loading } = useGetCasinoPaymentsQuery(
-    { casinoId: casino2Id!, geo: filterGeo },
+    { casinoId: casino2Id!, geo: geoParam },
     { skip: !casino2Id } as any
   );
 
@@ -245,11 +247,11 @@ export default function CasinoCompare() {
   } as any);
 
   const { data: settings1 = [], isLoading: settings1Loading } = useGetCasinoProfileSettingsQuery(
-    { casinoId: casino1Id!, geo: filterGeo },
+    { casinoId: casino1Id!, geo: geoParam },
     { skip: !casino1Id } as any
   );
   const { data: settings2 = [], isLoading: settings2Loading } = useGetCasinoProfileSettingsQuery(
-    { casinoId: casino2Id!, geo: filterGeo },
+    { casinoId: casino2Id!, geo: geoParam },
     { skip: !casino2Id } as any
   );
 
@@ -456,12 +458,14 @@ export default function CasinoCompare() {
           </Col>
           <Col xs={24}>
             <Select
+              mode="multiple"
               style={{ width: '100%', marginTop: 16 }}
               placeholder="Фильтр по GEO (все GEO)"
-              options={[{ value: undefined, label: 'Все GEO' }, ...geoOptions]}
+              options={geoOptions}
               value={filterGeo}
               onChange={setFilterGeo}
               allowClear
+              maxTagCount="responsive"
             />
           </Col>
         </Row>
@@ -470,7 +474,7 @@ export default function CasinoCompare() {
       {casino1 && casino2 && (
         <>
           {/* Общая информация */}
-          <Card title={`Общая информация${filterGeo ? ` (${filterGeo})` : ''}`}>
+          <Card title={`Общая информация${filterGeo.length > 0 ? ` (${filterGeo.join(', ')})` : ''}`}>
             <Row gutter={16}>
               <Col xs={24} md={12}>
                 <Typography.Title level={5} style={{ textAlign: 'center', marginBottom: 16 }}>
@@ -509,7 +513,7 @@ export default function CasinoCompare() {
 
           {/* Дополнительные поля */}
           {profileFieldsComparison.length > 0 && (
-            <Card title={`Дополнительные поля${filterGeo ? ` (${filterGeo})` : ''}`}>
+            <Card title={`Дополнительные поля${filterGeo.length > 0 ? ` (${filterGeo.join(', ')})` : ''}`}>
               <Row gutter={16}>
                 <Col xs={24} md={12}>
                   <Typography.Title level={5} style={{ textAlign: 'center', marginBottom: 16 }}>
@@ -548,7 +552,7 @@ export default function CasinoCompare() {
           )}
 
           {/* Бонусы */}
-          <Card title={`Бонусы${filterGeo ? ` (${filterGeo})` : ''}`}>
+          <Card title={`Бонусы${filterGeo.length > 0 ? ` (${filterGeo.join(', ')})` : ''}`}>
             <Row gutter={16}>
               <Col xs={24} md={12}>
                 <Typography.Title level={5} style={{ textAlign: 'center', marginBottom: 16 }}>
@@ -690,7 +694,7 @@ export default function CasinoCompare() {
           </Card>
 
           {/* Платежные решения */}
-          <Card title={`Платежные решения${filterGeo ? ` (${filterGeo})` : ''}`}>
+          <Card title={`Платежные решения${filterGeo.length > 0 ? ` (${filterGeo.join(', ')})` : ''}`}>
             <Row gutter={16}>
               <Col xs={24} md={12}>
                 <Typography.Title level={5} style={{ textAlign: 'center', marginBottom: 16 }}>
@@ -799,7 +803,7 @@ export default function CasinoCompare() {
 
           {/* Настройки профиля */}
           {fields.length > 0 && contexts.length > 0 && (
-            <Card title={`Настройки профиля${filterGeo ? ` (${filterGeo})` : ''}`}>
+            <Card title={`Настройки профиля${filterGeo.length > 0 ? ` (${filterGeo.join(', ')})` : ''}`}>
               <Row gutter={16}>
                 <Col xs={24} md={12}>
                   <Typography.Title level={5} style={{ textAlign: 'center', marginBottom: 16 }}>
@@ -914,7 +918,7 @@ export default function CasinoCompare() {
           )}
 
           {/* Изображения */}
-          <Card title={`Изображения${filterGeo ? ` (${filterGeo})` : ''}`}>
+          <Card title={`Изображения${filterGeo.length > 0 ? ` (${filterGeo.join(', ')})` : ''}`}>
             <Row gutter={16}>
               <Col xs={24} md={12}>
                 <Typography.Title level={5} style={{ textAlign: 'center', marginBottom: 16 }}>

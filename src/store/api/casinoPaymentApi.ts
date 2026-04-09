@@ -105,10 +105,13 @@ export const casinoPaymentApi = baseApi.injectEndpoints({
       },
       providesTags: ['CasinoPayment'],
     }),
-    getCasinoPayments: builder.query<CasinoPayment[], { casinoId: number; geo?: string }>({
+    getCasinoPayments: builder.query<CasinoPayment[], { casinoId: number; geo?: string | string[] }>({
       query: ({ casinoId, geo }) => {
         const params = new URLSearchParams();
-        if (geo) params.append('geo', geo);
+        if (geo) {
+          const geos = Array.isArray(geo) ? geo : [geo];
+          geos.forEach((g) => params.append('geo', g));
+        }
         const qs = params.toString();
         return `/casinos/${casinoId}/payments${qs ? `?${qs}` : ''}`;
       },

@@ -179,18 +179,18 @@ const proposalDrawerDescriptionsStyles = {
 
 function parseAiProposalsUrl(): {
   tab: 'new' | 'seen' | 'all';
-  filterGeo?: string;
+  filterGeo: string[];
   filterCasinoId?: number;
 } {
   const sp = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
   const t = sp.get('tab');
   const tab: 'new' | 'seen' | 'all' =
     t === 'seen' || t === 'all' || t === 'new' ? t : 'new';
-  const geo = sp.get('geo')?.trim() || undefined;
+  const geo = sp.getAll('geo').map((s) => s.trim()).filter(Boolean);
   const cid = sp.get('casino_id');
   const n = cid ? Number(cid) : NaN;
   const filterCasinoId = Number.isFinite(n) && n > 0 ? n : undefined;
-  return { tab, filterGeo: geo, filterCasinoId };
+  return { tab, filterGeo: geo.length > 0 ? geo : [], filterCasinoId };
 }
 
 export default function AiProposals() {
@@ -200,7 +200,7 @@ export default function AiProposals() {
   const urlInit = useMemo(() => parseAiProposalsUrl(), []);
   const [tab, setTab] = useState<'new' | 'seen' | 'all'>(urlInit.tab);
   const viewedArg: boolean | 'all' = tab === 'all' ? 'all' : tab === 'seen';
-  const [filterGeo, setFilterGeo] = useState<string | undefined>(urlInit.filterGeo);
+  const [filterGeo, setFilterGeo] = useState<string[]>(urlInit.filterGeo);
   const [filterCasinoId, setFilterCasinoId] = useState<number | undefined>(urlInit.filterCasinoId);
 
   useEffect(() => {
@@ -209,8 +209,8 @@ export default function AiProposals() {
         const next = new URLSearchParams(prev);
         if (tab === 'new') next.delete('tab');
         else next.set('tab', tab);
-        if (filterGeo?.trim()) next.set('geo', filterGeo.trim());
-        else next.delete('geo');
+        next.delete('geo');
+        filterGeo.forEach((g) => { if (g.trim()) next.append('geo', g.trim()); });
         if (filterCasinoId != null && filterCasinoId > 0) next.set('casino_id', String(filterCasinoId));
         else next.delete('casino_id');
         return next;
@@ -221,7 +221,7 @@ export default function AiProposals() {
 
   const { data: rows = [], isLoading, refetch } = useGetAiEmailProposalsQuery({
     viewed: viewedArg,
-    ...(filterGeo?.trim() ? { geo: filterGeo.trim() } : {}),
+      ...(filterGeo.length > 0 ? { geo: filterGeo } : {}),
     ...(filterCasinoId != null && filterCasinoId > 0 ? { casinoId: filterCasinoId } : {}),
   });
   const { data: casinos = [] } = useGetAllCasinosQuery();
@@ -410,15 +410,17 @@ export default function AiProposals() {
       <Card size="small">
         <Space wrap size={[12, 12]} style={{ width: '100%' }}>
           <Select
+            mode="multiple"
             allowClear
             placeholder="GEO письма"
-            style={{ width: 200 }}
+            style={{ width: 240 }}
             options={geoOptions}
             value={filterGeo}
             onChange={(v) => setFilterGeo(v)}
             showSearch
             optionFilterProp="label"
             popupMatchSelectWidth={false}
+            maxTagCount="responsive"
           />
           <Select
             allowClear
@@ -431,10 +433,10 @@ export default function AiProposals() {
             onChange={(v) => setFilterCasinoId(v)}
             popupMatchSelectWidth={false}
           />
-          {(filterGeo?.trim() || (filterCasinoId != null && filterCasinoId > 0)) && (
+          {(filterGeo.length > 0 || (filterCasinoId != null && filterCasinoId > 0)) && (
             <Button
               onClick={() => {
-                setFilterGeo(undefined);
+                setFilterGeo([]);
                 setFilterCasinoId(undefined);
               }}
             >

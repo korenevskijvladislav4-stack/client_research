@@ -431,6 +431,20 @@ export default function Casinos() {
             ]}
           />
           <Select
+            mode="multiple"
+            placeholder="GEO"
+            allowClear
+            showSearch
+            style={{ width: 220 }}
+            value={table.filters.geo}
+            onChange={(v) => table.updateFilter('geo', v)}
+            options={(geos ?? []).map((g) => ({ value: g.code, label: `${g.code} — ${g.name}` }))}
+            filterOption={(input, option) =>
+              (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+            }
+            maxTagCount="responsive"
+          />
+          <Select
             placeholder="Тег"
             allowClear
             style={{ width: 160 }}
@@ -457,7 +471,7 @@ export default function Casinos() {
               );
             }}
           />
-          {(table.search || table.filters.status || table.filters.is_our !== undefined || filterTag) && (
+          {(table.search || table.filters.status || table.filters.is_our !== undefined || (table.filters.geo?.length ?? 0) > 0 || filterTag) && (
             <Button onClick={() => { table.reset(); setFilterTag(undefined); }}>Сбросить</Button>
           )}
         </Space>

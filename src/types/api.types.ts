@@ -52,7 +52,15 @@ export function buildQueryString(params: QueryParams): string {
   if (params.filters) {
     for (const [key, value] of Object.entries(params.filters)) {
       if (value !== undefined && value !== null && value !== '') {
-        searchParams.append(`filter_${key}`, String(value));
+        if (Array.isArray(value)) {
+          for (const item of value) {
+            if (item !== undefined && item !== null && item !== '') {
+              searchParams.append(`filter_${key}`, String(item));
+            }
+          }
+        } else {
+          searchParams.append(`filter_${key}`, String(value));
+        }
       }
     }
   }

@@ -36,17 +36,19 @@ export const aiEmailProposalsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getAiEmailProposals: builder.query<
       AiEmailProposalListItem[],
-      { viewed: boolean | 'all'; type?: AiEmailProposalType; geo?: string; casinoId?: number }
+      { viewed: boolean | 'all'; type?: AiEmailProposalType; geo?: string | string[]; casinoId?: number }
     >({
-      query: ({ viewed, type, geo, casinoId }) => ({
-        url: '/ai-email-proposals',
-        params: {
-          viewed: viewed === 'all' ? 'all' : viewed ? '1' : '0',
-          ...(type ? { type } : {}),
-          ...(geo?.trim() ? { geo: geo.trim() } : {}),
-          ...(casinoId != null && casinoId > 0 ? { casino_id: String(casinoId) } : {}),
-        },
-      }),
+      query: ({ viewed, type, geo, casinoId }) => {
+        const params = new URLSearchParams();
+        params.set('viewed', viewed === 'all' ? 'all' : viewed ? '1' : '0');
+        if (type) params.set('type', type);
+        if (geo) {
+          const geos = Array.isArray(geo) ? geo : [geo];
+          geos.forEach((g) => { if (g.trim()) params.append('geo', g.trim()); });
+        }
+        if (casinoId != null && casinoId > 0) params.set('casino_id', String(casinoId));
+        return { url: `/ai-email-proposals?${params.toString()}` };
+      },
       providesTags: ['AiEmailProposals'],
     }),
     getAiEmailProposal: builder.query<AiEmailProposalListItem, number>({

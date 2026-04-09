@@ -156,11 +156,16 @@ export const profileSettingsApi = baseApi.injectEndpoints({
     }),
 
     // Profile Settings
-    getCasinoProfileSettings: builder.query<ProfileSetting[], { casinoId: number; geo?: string }>({
-      query: ({ casinoId, geo }) => ({
-        url: `/profile-settings/casino/${casinoId}`,
-        params: geo ? { geo } : {},
-      }),
+    getCasinoProfileSettings: builder.query<ProfileSetting[], { casinoId: number; geo?: string | string[] }>({
+      query: ({ casinoId, geo }) => {
+        const p = new URLSearchParams();
+        if (geo) {
+          const geos = Array.isArray(geo) ? geo : [geo];
+          geos.forEach((g) => p.append('geo', g));
+        }
+        const qs = p.toString();
+        return `/profile-settings/casino/${casinoId}${qs ? `?${qs}` : ''}`;
+      },
       providesTags: (_result, _error, { casinoId }) => [{ type: 'ProfileSetting', id: casinoId }],
     }),
     updateProfileSetting: builder.mutation<ProfileSetting, { casinoId: number; data: UpdateProfileSettingDto }>({

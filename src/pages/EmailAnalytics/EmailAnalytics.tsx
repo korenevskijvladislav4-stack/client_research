@@ -29,7 +29,7 @@ interface CasinoRow {
 function parseEmailAnalyticsUrl(): {
   range: [Dayjs, Dayjs];
   toEmail?: string;
-  filterGeo?: string;
+  filterGeo: string[];
   filterTopicId?: number;
 } {
   const sp = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
@@ -40,7 +40,7 @@ function parseEmailAnalyticsUrl(): {
     range = [dayjs(df), dayjs(dt)];
   }
   const toEmail = sp.get('to_email') || undefined;
-  const filterGeo = sp.get('geo') || undefined;
+  const filterGeo = sp.getAll('geo').filter(Boolean);
   const tid = sp.get('topic_id');
   const n = tid ? Number(tid) : NaN;
   const filterTopicId = Number.isFinite(n) && n > 0 ? n : undefined;
@@ -55,7 +55,7 @@ export default function EmailAnalytics() {
 
   const [range, setRange] = useState<[Dayjs, Dayjs]>(urlInit.range);
   const [toEmail, setToEmail] = useState<string | undefined>(urlInit.toEmail);
-  const [filterGeo, setFilterGeo] = useState<string | undefined>(urlInit.filterGeo);
+  const [filterGeo, setFilterGeo] = useState<string[]>(urlInit.filterGeo);
   const [filterTopicId, setFilterTopicId] = useState<number | undefined>(urlInit.filterTopicId);
 
   useEffect(() => {
@@ -66,8 +66,8 @@ export default function EmailAnalytics() {
         next.set('date_to', range[1].format('YYYY-MM-DD'));
         if (toEmail?.trim()) next.set('to_email', toEmail.trim());
         else next.delete('to_email');
-        if (filterGeo?.trim()) next.set('geo', filterGeo.trim());
-        else next.delete('geo');
+        next.delete('geo');
+        filterGeo.forEach((g) => { if (g.trim()) next.append('geo', g.trim()); });
         if (filterTopicId != null && filterTopicId > 0) next.set('topic_id', String(filterTopicId));
         else next.delete('topic_id');
         return next;
@@ -86,7 +86,7 @@ export default function EmailAnalytics() {
     date_from: dateFrom,
     date_to: dateTo,
     to_email: toEmail,
-    geo: filterGeo,
+    geo: filterGeo.length > 0 ? filterGeo : undefined,
     topic_id: filterTopicId,
   });
 
@@ -126,7 +126,7 @@ export default function EmailAnalytics() {
     p.set('date_from', dateFrom);
     p.set('date_to', dateTo);
     if (toEmail) p.set('to_email', toEmail);
-    if (filterGeo) p.set('geo', filterGeo);
+    filterGeo.forEach((g) => p.append('geo', g));
     if (filterTopicId) p.set('topic_id', String(filterTopicId));
 
     const baseUrl = getApiBaseUrl().replace(/\/+$/, '');
@@ -350,16 +350,18 @@ export default function EmailAnalytics() {
           <Space>
             <Text type="secondary">GEO:</Text>
             <Select
-              style={{ minWidth: 160 }}
+              mode="multiple"
+              style={{ width: 220 }}
               placeholder="Все GEO"
               allowClear
               showSearch
               value={filterGeo}
-              onChange={(v) => setFilterGeo(v || undefined)}
+              onChange={(v) => setFilterGeo(v)}
               options={geoOptions}
               filterOption={(input, option) =>
                 (option?.label ?? '').toString().toLowerCase().includes(input.toLowerCase())
               }
+              maxTagCount="responsive"
             />
           </Space>
           <Space>

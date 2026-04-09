@@ -69,7 +69,7 @@ export default function Payments() {
   const token = useAppSelector((s) => s.auth.token);
   const table = useServerTable<{
     casino_id?: number;
-    geo?: string;
+    geo?: string[];
     direction?: PaymentDirection;
     type?: string;
     method?: string;
@@ -126,7 +126,7 @@ export default function Payments() {
   const hasFilters =
     Boolean(table.search) ||
     Boolean(table.filters.casino_id) ||
-    Boolean(table.filters.geo) ||
+    (table.filters.geo?.length ?? 0) > 0 ||
     Boolean(table.filters.direction) ||
     Boolean(table.filters.type) ||
     Boolean(table.filters.method);
@@ -141,7 +141,7 @@ export default function Payments() {
 
       const filters = params.filters || {};
       if (filters.casino_id != null) urlParams.set('casino_id', String(filters.casino_id));
-      if (filters.geo) urlParams.set('geo', String(filters.geo));
+      if (Array.isArray(filters.geo) && filters.geo.length > 0) filters.geo.forEach((g: string) => urlParams.append('geo', g));
       if (filters.direction) urlParams.set('direction', String(filters.direction));
       if (filters.type) urlParams.set('type', String(filters.type));
       if (filters.method) urlParams.set('method', String(filters.method));
@@ -196,13 +196,15 @@ export default function Payments() {
               }
             />
             <Select
+              mode="multiple"
               placeholder="GEO"
               value={table.filters.geo}
               onChange={(v) => table.updateFilter('geo', v)}
               options={geoOptions}
-              style={{ width: '100%', maxWidth: 120, minWidth: 100 }}
+              style={{ width: 220 }}
               allowClear
               showSearch
+              maxTagCount="responsive"
             />
             <Select<PaymentDirection>
               placeholder="Направление"

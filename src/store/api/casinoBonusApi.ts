@@ -154,10 +154,13 @@ export const casinoBonusApi = baseApi.injectEndpoints({
       },
       providesTags: ['Bonus'],
     }),
-    getCasinoBonuses: builder.query<CasinoBonus[], { casinoId: number; geo?: string }>({
+    getCasinoBonuses: builder.query<CasinoBonus[], { casinoId: number; geo?: string | string[] }>({
       query: ({ casinoId, geo }) => {
         const params = new URLSearchParams();
-        if (geo) params.append('geo', geo);
+        if (geo) {
+          const geos = Array.isArray(geo) ? geo : [geo];
+          geos.forEach((g) => params.append('geo', g));
+        }
         const qs = params.toString();
         return `/casinos/${casinoId}/bonuses${qs ? `?${qs}` : ''}`;
       },

@@ -32,7 +32,7 @@ function parseEmailsUrl() {
   const rc = sp.get('related_casino_id');
   const filterCasinoId = rc ? Number(rc) : undefined;
   const filterToEmail = sp.get('to_email') || undefined;
-  const filterGeo = sp.get('geo') || undefined;
+  const filterGeo = sp.getAll('geo').filter(Boolean);
   const tid = sp.get('topic_id');
   const filterTopicId = tid ? Number(tid) : undefined;
   const readRaw = sp.get('read');
@@ -61,7 +61,7 @@ export default function Emails() {
   const [currentPage, setCurrentPage] = useState(initialUrl.currentPage);
   const [filterCasinoId, setFilterCasinoId] = useState<number | undefined>(initialUrl.filterCasinoId);
   const [filterToEmail, setFilterToEmail] = useState<string | undefined>(initialUrl.filterToEmail);
-  const [filterGeo, setFilterGeo] = useState<string | undefined>(initialUrl.filterGeo);
+  const [filterGeo, setFilterGeo] = useState<string[]>(initialUrl.filterGeo);
   const [filterTopicId, setFilterTopicId] = useState<number | undefined>(initialUrl.filterTopicId);
   const [readFilter, setReadFilter] = useState<ReadFilter>(initialUrl.readFilter);
   const [filterDateFrom, setFilterDateFrom] = useState<string | undefined>(initialUrl.filterDateFrom);
@@ -77,8 +77,8 @@ export default function Emails() {
         else next.delete('related_casino_id');
         if (filterToEmail?.trim()) next.set('to_email', filterToEmail.trim());
         else next.delete('to_email');
-        if (filterGeo?.trim()) next.set('geo', filterGeo.trim());
-        else next.delete('geo');
+        next.delete('geo');
+        filterGeo.forEach((g) => { if (g.trim()) next.append('geo', g.trim()); });
         if (filterTopicId != null && filterTopicId > 0) next.set('topic_id', String(filterTopicId));
         else next.delete('topic_id');
         if (readFilter === 'read') next.set('read', 'read');
@@ -114,7 +114,7 @@ export default function Emails() {
     ...(readFilter !== 'all' ? { is_read: readFilter === 'read' } : {}),
     ...(filterCasinoId ? { related_casino_id: filterCasinoId } : {}),
     ...(filterToEmail ? { to_email: filterToEmail } : {}),
-    ...(filterGeo ? { geo: filterGeo } : {}),
+    ...(filterGeo.length > 0 ? { geo: filterGeo } : {}),
     ...(filterDateFrom ? { date_from: filterDateFrom } : {}),
     ...(filterDateTo ? { date_to: filterDateTo } : {}),
     ...(filterTopicId ? { topic_id: filterTopicId } : {}),
@@ -187,7 +187,7 @@ export default function Emails() {
     const p = new URLSearchParams();
     if (filterCasinoId) p.set('related_casino_id', String(filterCasinoId));
     if (filterToEmail) p.set('to_email', filterToEmail);
-    if (filterGeo) p.set('geo', filterGeo);
+    filterGeo.forEach((g) => p.append('geo', g));
     if (filterDateFrom) p.set('date_from', filterDateFrom);
     if (filterDateTo) p.set('date_to', filterDateTo);
     if (readFilter !== 'all') p.set('is_read', readFilter === 'read' ? 'true' : 'false');
@@ -214,7 +214,7 @@ export default function Emails() {
     setCurrentPage(1);
   }, []);
 
-  const handleGeoChange = useCallback((v: string | undefined) => {
+  const handleGeoChange = useCallback((v: string[]) => {
     setFilterGeo(v);
     setCurrentPage(1);
   }, []);
@@ -242,7 +242,7 @@ export default function Emails() {
   const handleResetFilters = useCallback(() => {
     setFilterCasinoId(undefined);
     setFilterToEmail(undefined);
-    setFilterGeo(undefined);
+    setFilterGeo([]);
     setFilterTopicId(undefined);
     setReadFilter('all');
     setFilterDateFrom(undefined);

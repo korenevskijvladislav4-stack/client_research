@@ -88,7 +88,7 @@ export default function Promos() {
 
   const table = useServerTable<{
     casino_id?: number;
-    geo?: string;
+    geo?: string[];
     promo_category?: string;
     promo_type?: string;
     status?: string;
@@ -126,7 +126,7 @@ export default function Promos() {
   const hasFilters =
     Boolean(table.search) ||
     Boolean(table.filters.casino_id) ||
-    Boolean(table.filters.geo) ||
+    (table.filters.geo?.length ?? 0) > 0 ||
     Boolean(table.filters.promo_category) ||
     Boolean(table.filters.promo_type) ||
     Boolean(table.filters.status);
@@ -138,7 +138,7 @@ export default function Promos() {
       if (table.search) urlParams.set('search', table.search);
       const f = table.filters;
       if (f.casino_id != null) urlParams.set('casino_id', String(f.casino_id));
-      if (f.geo) urlParams.set('geo', f.geo);
+      if (Array.isArray(f.geo) && f.geo.length > 0) f.geo.forEach((g) => urlParams.append('geo', g));
       if (f.promo_category) urlParams.set('promo_category', f.promo_category);
       if (f.promo_type) urlParams.set('promo_type', f.promo_type);
       if (f.status) urlParams.set('status', f.status);
@@ -313,13 +313,15 @@ export default function Promos() {
             }
           />
           <Select
+            mode="multiple"
             placeholder="GEO"
             value={table.filters.geo}
             onChange={(v) => table.updateFilter('geo', v)}
             options={geoOptions}
-            style={{ width: '100%', maxWidth: 120, minWidth: 100 }}
+            style={{ width: 220 }}
             allowClear
             showSearch
+            maxTagCount="responsive"
           />
           <Select
             placeholder="Категория"

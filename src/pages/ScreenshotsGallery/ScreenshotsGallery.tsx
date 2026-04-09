@@ -90,8 +90,8 @@ function galleryMetaItems(s: ScreenshotGalleryItem, geos: { code: string; name: 
 function parseGalleryUrl(): ScreenshotFilters {
   const sp = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
   const out: ScreenshotFilters = {};
-  const g = sp.get('geo')?.trim();
-  if (g) out.geo = g;
+  const gArr = sp.getAll('geo').map((s) => s.trim()).filter(Boolean);
+  if (gArr.length > 0) out.geo = gArr;
   const sec = sp.get('section')?.trim();
   if (sec) out.section = sec;
   const cat = sp.get('category')?.trim();
@@ -117,8 +117,8 @@ export default function ScreenshotsGallery() {
     setSearchParams(
       (prev) => {
         const next = new URLSearchParams(prev);
-        if (filters.geo?.trim()) next.set('geo', filters.geo.trim());
-        else next.delete('geo');
+        next.delete('geo');
+        if (filters.geo && filters.geo.length > 0) filters.geo.forEach((g) => next.append('geo', g));
         if (filters.section?.trim()) next.set('section', filters.section.trim());
         else next.delete('section');
         if (filters.category?.trim()) next.set('category', filters.category.trim());
@@ -212,11 +212,13 @@ export default function ScreenshotsGallery() {
         <Row gutter={[16, 16]}>
           <Col xs={24} sm={12} md={6}>
             <Select
+              mode="multiple"
               placeholder="GEO"
               allowClear
               style={{ width: '100%' }}
-              value={filters.geo}
-              onChange={(value) => handleFilterChange('geo', value)}
+              value={filters.geo ?? []}
+              onChange={(value) => setFilters((prev) => ({ ...prev, geo: value.length > 0 ? value : undefined }))}
+              maxTagCount="responsive"
             >
               {geos.map((geo) => (
                 <Select.Option key={geo.code} value={geo.code as string}>

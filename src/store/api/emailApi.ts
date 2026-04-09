@@ -47,7 +47,7 @@ export const emailApi = baseApi.injectEndpoints({
       query: () => '/emails/recipients',
       providesTags: ['Email'],
     }),
-    getEmails: builder.query<EmailsResponse, { limit?: number; offset?: number; is_read?: boolean; related_casino_id?: number; to_email?: string; date_from?: string; date_to?: string; geo?: string; topic_id?: number }>({
+    getEmails: builder.query<EmailsResponse, { limit?: number; offset?: number; is_read?: boolean; related_casino_id?: number; to_email?: string; date_from?: string; date_to?: string; geo?: string | string[]; topic_id?: number }>({
       query: (params = {}) => {
         const queryParams = new URLSearchParams();
         if (params.limit) queryParams.append('limit', params.limit.toString());
@@ -57,7 +57,10 @@ export const emailApi = baseApi.injectEndpoints({
         if (params.to_email) queryParams.append('to_email', params.to_email);
         if (params.date_from) queryParams.append('date_from', params.date_from);
         if (params.date_to) queryParams.append('date_to', params.date_to);
-        if (params.geo) queryParams.append('geo', params.geo);
+        if (params.geo) {
+          const geos = Array.isArray(params.geo) ? params.geo : [params.geo];
+          geos.forEach((g) => queryParams.append('geo', g));
+        }
         if (params.topic_id) queryParams.append('topic_id', params.topic_id.toString());
         return `/emails?${queryParams.toString()}`;
       },
@@ -80,14 +83,17 @@ export const emailApi = baseApi.injectEndpoints({
         date_from: string;
         date_to: string;
       },
-      { date_from?: string; date_to?: string; to_email?: string; geo?: string; topic_id?: number }
+      { date_from?: string; date_to?: string; to_email?: string; geo?: string | string[]; topic_id?: number }
     >({
       query: ({ date_from, date_to, to_email, geo, topic_id } = {}) => {
         const p = new URLSearchParams();
         if (date_from) p.set('date_from', date_from);
         if (date_to) p.set('date_to', date_to);
         if (to_email) p.set('to_email', to_email);
-        if (geo) p.set('geo', geo);
+        if (geo) {
+          const geos = Array.isArray(geo) ? geo : [geo];
+          geos.forEach((g) => p.append('geo', g));
+        }
         if (topic_id) p.set('topic_id', topic_id.toString());
         const qs = p.toString();
         return `/emails/analytics${qs ? `?${qs}` : ''}`;
@@ -101,14 +107,17 @@ export const emailApi = baseApi.injectEndpoints({
         date_to: string;
         total: number;
       },
-      { date_from?: string; date_to?: string; to_email?: string; geo?: string }
+      { date_from?: string; date_to?: string; to_email?: string; geo?: string | string[] }
     >({
       query: ({ date_from, date_to, to_email, geo } = {}) => {
         const p = new URLSearchParams();
         if (date_from) p.set('date_from', date_from);
         if (date_to) p.set('date_to', date_to);
         if (to_email) p.set('to_email', to_email);
-        if (geo) p.set('geo', geo);
+        if (geo) {
+          const geos = Array.isArray(geo) ? geo : [geo];
+          geos.forEach((g) => p.append('geo', g));
+        }
         const qs = p.toString();
         return `/emails/analytics/topics${qs ? `?${qs}` : ''}`;
       },
